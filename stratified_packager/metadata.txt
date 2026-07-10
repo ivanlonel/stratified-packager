@@ -1,0 +1,27 @@
+[general]
+name=Stratified Packager
+description=Exports vector layers to multiple geopackages split by attributes or spatial intersection
+category=
+hasProcessingProvider=yes
+about=Partitions the open project’s layers against a stratification layer — by attribute (following project relations) or spatially — and publishes one zipped GeoPackage per stratum, optionally with an embedded per-stratum QGIS project, layer styles, metadata and referenced style assets. Runs from the Processing Toolbox and from qgis_process.
+icon=resources/images/icon.svg
+tags=export,geopackage,gpkg,stratify
+server=False
+
+# credits and contact
+author=Ivan Donisete Lonel
+email=ivanlonel91@gmail.com
+homepage=https://ivanlonel.github.io/stratified-packager/
+repository=https://github.com/ivanlonel/stratified-packager
+tracker=https://github.com/ivanlonel/stratified-packager/issues/
+
+# QGIS context
+deprecated=False
+experimental=True
+plugin_dependencies=
+qgisMinimumVersion=3.40
+qgisMaximumVersion=4.99
+
+# versioning
+version=0.1.0
+changelog=

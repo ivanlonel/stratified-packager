@@ -1,0 +1,54 @@
+// https://gispo.fi/en/blog/cooking-with-gispo-qgis-plugin-development-in-vs-code/
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Attaching to the debugpy server that the plugin opens on the QGIS side when QGIS_DEBUGPY=1
+      // is set in the environment (e.g. in .env, inherited by `just qgis` / `just qgis-process`).
+      // See stratified_packager/toolbelt/debugging.py.
+      "name": "Python: Remote Attach",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "justMyCode": false,
+      "windows": {
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}/stratified_packager",
+            "remoteRoot": "${env:AppData}/QGIS/QGIS4/profiles/default/python/plugins/stratified_packager"
+          }
+        ]
+      },
+      "linux": {
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}/stratified_packager",
+            "remoteRoot": "${env:HOME}/.local/share/QGIS/QGIS4/profiles/default/python/plugins/stratified_packager"
+          }
+        ]
+      },
+      "osx": {
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}/stratified_packager",
+            "remoteRoot": "${env:HOME}/Library/Application Support/QGIS/QGIS4/profiles/default/python/plugins/stratified_packager"
+          }
+        ]
+      },
+    },
+    {
+      // Make sure that tests can be debugged in VS Code even if using testing coverage.
+      "name": "Debug Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTEST_ADDOPTS": "--no-cov"
+      }
+    }
+  ]
+}

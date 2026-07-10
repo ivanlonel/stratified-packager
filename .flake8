@@ -1,0 +1,88 @@
+[flake8]
+count = True
+exclude =
+    .*
+    __pycache__
+    build
+    dist
+    docs/_build
+extend-select =
+    # Section is over-indented (pydocstyle)
+    D214
+    # Section underline is over-indented (pydocstyle)
+    D215
+extend-ignore =
+    # Use a blank line to separate the docstring from the class definition
+    D203
+    # Multi-line docstring summary should start at the first line
+    D212
+    # Function/method has “Raises” section in docstring, but no “raise” statements in the body (pydoclint)
+    ## Exceptions may be raised implicitly from another function called in the body.
+    DOC502
+    # Exceptions in the “Raises” section in the docstring do not match those in the function body (pydoclint)
+    ## Exceptions may be raised implicitly from another function called in the body.
+    DOC503
+    # Whitespace before ‘,’, ‘;’, or ‘:’
+    ## (Black enforces an equal amount of whitespace around slice operators)
+    E203
+    # Module level import not at top of file (pycodestyle) — governed by ruff
+    E402
+    # Line too long (pycodestyle) — governed by ruff
+    E501
+    # Multiple statements on one line (colon)
+    ## (Black collapses classes/functions consisting of ... to a single line)
+    E701
+    # Avoid passing QgisInterface as an argument (flake8-qgis)
+    ## Actually, dependency injection makes code cleaner, more modular, and easier to test.
+    QGS105
+    # Doc line too long (pycodestyle) — governed by ruff
+    W505
+max-complexity = 15
+max-doc-length = 99
+max-line-length = 90
+max-cognitive-complexity = 25
+per-file-ignores =
+    # Avoid using from-imports from PyQt directly (flake8-qgis)
+    ## pylupdate.py isn't part of the plugin codebase and needs PyQt6.lupdate, absent in qgis.PyQt.
+    scripts/pylupdate.py: QGS103
+    tests/scripts/test_pylupdate.py: QGS103
+    # Check return values from a possible PyQgs method call (flake8-qgis)
+    ## Too unnecessarily verbose for tests.
+    tests/*.py: QGS202
+statistics = True
+
+# flake8-rst-docstrings
+rst-directives =
+    envvar
+rst-roles =
+    # https://www.sphinx-doc.org/en/master/usage/domains/python.html#cross-referencing-python-objects
+    attr
+    class
+    const
+    data
+    deco
+    exc
+    func
+    meth
+    mod
+    obj
+    type
+    # https://www.sphinx-doc.org/en/master/usage/referencing.html
+    any
+    confval
+    doc
+    download
+    envvar
+    keyword
+    numref
+    option
+    ref
+    term
+    token
+
+# pydoclint
+style = sphinx
+allow-init-docstring = True
+arg-type-hints-in-docstring = False
+check-return-types = False
+check-yield-types = False

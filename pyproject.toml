@@ -1,0 +1,316 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=83",
+]
+
+[project]
+name = "stratified-packager"
+readme = "README.md"
+license = "GPL-2.0-or-later"
+license-files = [ "LICENSE" ]
+authors = [
+  { name = "Ivan Donisete Lonel", email = "ivanlonel91@gmail.com" },
+]
+requires-python = ">=3.12"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dynamic = [
+  "version",
+]
+optional-dependencies.debugpy = [
+  "debugpy~=1.8.21",
+]
+optional-dependencies.zlib-ng = [
+  "zlib-ng~=1.0.0",
+]
+urls.Repository = "https://github.com/ivanlonel/stratified-packager"
+
+[dependency-groups]
+dev = [
+  "deptry~=0.25.1",
+  "flake8~=7.3.0",
+  "flake8-cognitive-complexity~=0.1.0",
+  "flake8-qgis~=2.1.0",
+  "flake8-rst-docstrings~=0.4.0",
+  "prek~=0.4.8",
+  "pydoclint[flake8]~=0.9.1",
+  "pylint~=4.0.6",
+  "ruff~=0.15.21",
+  { include-group = "test" },
+  { include-group = "type" },
+]
+test = [
+  "hypothesis~=6.156.5",
+  "pytest~=9.1.1",
+  "pytest-cov~=7.1.0",
+  "pytest-qgis~=4.0.1",
+  "pytest-qt~=4.5.0",    # requires either PyQt6, PyQt5 or PySide6 installed.
+  "semver~=3.0.4",
+  "validators~=0.35.0",
+  { include-group = "test-and-type" },
+]
+type = [
+  "lxml-stubs~=0.5.1",
+  "mypy[faster-cache]~=2.2.0",
+  "pyqt6-stubs==20250824",
+  "ty~=0.0.58",
+  "types-docutils~=0.22.3",
+  { include-group = "doc-and-type" },
+  { include-group = "test-and-type" },
+]
+doc = [
+  "myst-parser[linkify]~=5.1.0",
+  "sphinx-autobuild~=2025.8.25",
+  "sphinx-autodoc-typehints~=3.12.1",
+  "sphinx-copybutton~=0.5.2",
+  "sphinx-rtd-theme~=3.1.0",
+  { include-group = "doc-and-type" },
+]
+doc-and-type = [
+  "keepachangelog~=2.0.0",
+  "sphinx~=9.1.0",
+  "typing-extensions~=4.16.0", # Without this, autodoc raises warnings (which we treat as errors).
+]
+# This group lists packages that are not installed in the local environment but are used
+# as pre-commit hooks. The goal is to keep the package versions controlled by uv and
+# synchronized in .pre-commit-config.yaml through sync-with-uv, since `prek autoupdate`
+# ignores certain interpreter version constraints.
+hook = [
+  "mdformat~=1.0.0",
+  "pre-commit-hooks~=6.0.0",
+  "pyproject-fmt~=2.25.2",
+  "sync-with-uv~=0.5.0",
+  "uv~=0.11.28",
+  "zizmor~=1.26.1",
+]
+pack = [
+  "lxml~=6.1.1",
+  "pyqt6~=6.11",                           # For pylupdate. Soon to be replaced by qgis-plugin-ci[qt]~=3.0.0
+  "qgis-plugin-ci~=2.10.0",
+  "tzdata>=2026.3; sys_platform=='win32'",
+]
+test-and-type = [
+  "python-dotenv~=1.2.2",
+]
+
+[tool.setuptools]
+packages.find.include = [ "stratified_packager*" ]
+dynamic.version = { attr = "stratified_packager.__about__.__version__" }
+
+[tool.uv]
+required-version = ">=0.11"
+required-environments = [
+  "sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+  "sys_platform == 'linux' and platform_machine == 'aarch64'",
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "sys_platform == 'win32' and platform_machine == 'AMD64'",
+]
+
+[tool.ruff]
+required-version = ">=0.15"
+line-length = 99
+format.docstring-code-line-length = 99
+format.docstring-code-format = true
+lint.select = [ "ALL" ]
+lint.ignore = [
+  "COM812", # Trailing comma missing
+  "D203",   # Use a blank line to separate the docstring from the class definition
+  "D212",   # Multi-line docstring summary should start at the first line
+]
+lint.per-file-ignores."docs/conf.py" = [
+  "INP001", # Sphinx conf.py is configuration, not an importable package module.
+]
+lint.per-file-ignores."scripts/*.py" = [
+  "T201", # Use of `print` detected
+]
+lint.per-file-ignores."stratified_packager/__about__.py" = [
+  "T201", # Use of `print` detected
+]
+lint.per-file-ignores."stratified_packager/toolbelt/debugging.py" = [
+  "T100", # This module is the sanctioned entry point for the debugpy debugger.
+]
+lint.per-file-ignores."tests/**/*.py" = [
+  "ANN401",  # Dynamically typed expressions (Any) are fine in test helpers/fixtures.
+  "D205",    # Allow multi-line docstring summaries in descriptive test docstrings.
+  "FBT001",  # Boolean positional values are normal in parametrized test cases.
+  "PLR2004", # Magic values are OK in tests
+  "S101",    # assert is a first class citizen in pytest tests
+  "SLF001",  # Tests legitimately probe private members to assert internal state.
+]
+lint.external = [
+  "QGS", # flake8-qgis
+]
+lint.mccabe.max-complexity = 12  # default 10  # C901
+lint.pylint.max-args = 10  # default 5  # PLR0913
+
+[tool.pylint]
+messages_control.disable = [
+  "broad-exception-caught",     # W0718 — governed by ruff BLE001.
+  "import-error",               # E0401 — governed by mypy and ty.
+  "import-outside-toplevel",    # C0415 — governed by ruff PLC0415.
+  "invalid-name",               # C0103 — governed by ruff N*.
+  "line-too-long",              # C0301 — governed by ruff E501.
+  "missing-function-docstring", # C0116 — governed by ruff D103.
+  "no-member",                  # E1101 — governed by mypy and ty (pylint cannot introspect C extensions).
+  "no-name-in-module",          # E0611 — governed by mypy and ty.
+  "protected-access",           # W0212 — governed by ruff SLF001 (enforced in non-test code).
+  "redefined-builtin",          # W0622 — governed by ruff A001/A002/A004.
+  "too-few-public-methods",     # R0903 — I just don't care about this one.
+  "too-many-arguments",         # R0913 — governed by ruff (lint.pylint.max-args).
+  "unused-argument",            # W0613 — governed by ruff ARG001/ARG002.
+  "wrong-import-order",         # C0411 — governed by ruff I001.
+  "wrong-import-position",      # C0413 — governed by ruff E402 (which sanctions the pytest.importorskip guard).
+]
+format.max-module-lines = 1500  # default 1000 # C0302 — well-documented code can be pretty verbose
+design.max-attributes = 14  # default 7  # R0902
+design.max-locals = 18  # default 15 # R0914
+design.max-positional-arguments = 9  # default 5  # R0917
+# lxml.etree is a C extension; let pylint introspect it instead of flagging I1101.
+extension-pkg-allow-list = [ "lxml" ]
+ignore-paths = [
+  ".*/__pycache__/.*",
+  "^[.].*/.*",         # Can't use \. because pylint reads backslashes as folder separators
+  "^build/.*",
+  "^dist/.*",
+  "^docs/_build/.*",
+]
+jobs = 0
+
+[tool.deptry]
+per_rule_ignores.DEP001 = [
+  # PyQt6 (used by scripts/pylupdate.py) is declared in the `pack` group but absent from the
+  # QGIS 3.x/PyQt5 CI environment, where deptry then reports it as a missing import.
+  "PyQt6",
+]
+per_rule_ignores.DEP002 = [
+  "zlib-ng", # If installed, will be silently used instead of standard zlib.
+]
+per_rule_ignores.DEP003 = [
+  # In the venv, these deps are not explicitly installed, but inherited from system site packages.
+  "osgeo",
+  "PyQt6", # QGIS 4.x's site-packages provide it transitively; scripts/pylupdate.py imports it
+  "qgis",
+]
+per_rule_ignores.DEP004 = [
+  # dev dependencies imported in developer tools and scripts, but not in the main codebase.
+  "dotenv",
+  "keepachangelog",
+  "lxml",
+  "PyQt6",
+  "qgispluginci",
+  "sphinx",
+]
+package_module_name_map = { qgis-plugin-ci = "qgispluginci" }
+
+[tool.mypy]
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+enable_error_code = [
+  "deprecated",
+  "exhaustive-match",
+  "explicit-override",
+  "ignore-without-code",
+  "mutable-override",
+  "possibly-undefined",
+  "redundant-expr",
+  "redundant-self",
+  "truthy-bool",
+  "truthy-iterable",
+  "unimported-reveal",
+  "unused-awaitable",
+]
+extra_checks = true
+strict_equality = true
+strict_equality_for_none = true
+show_error_context = true
+show_column_numbers = true
+warn_unused_configs = true
+overrides = [
+  { module = [ "PyQt6.*", "qgis.*" ], follow_untyped_imports = true },
+  # debugpy is an optional extra (not installed in the venv); the bootstrap imports it lazily.
+  { module = [ "debugpy" ], ignore_missing_imports = true },
+  # keepachangelog is untyped and re-exports to_dict implicitly from a submodule.
+  { module = [ "keepachangelog" ], follow_untyped_imports = true, implicit_reexport = true },
+  # pylupdate wraps the untyped PyQt6.lupdate API; its calls (and the tests exercising them) are
+  # unavoidably untyped.
+  { module = [ "scripts.pylupdate", "tests.scripts.test_pylupdate" ], disallow_untyped_calls = false },
+  # GDAL's Python bindings ship no stubs and no py.typed marker.
+  { module = [ "osgeo.*" ], ignore_missing_imports = true },
+]
+no_implicit_reexport = true
+
+[tool.pyright]
+# Ensure Pylance/Pyright can use the venv's pyqt6-stubs to resolve qgis.PyQt.* imports.
+venv = ".venv"
+venvPath = "."
+
+[tool.ty]
+analysis.respect-type-ignore-comments = false
+
+[tool.pytest]
+addopts = [
+  "-v",
+  "--cov=stratified_packager",
+  "--cov-report=html",
+]
+markers = [
+  "e2e: marks end-to-end tests driving the qgis_process CLI (self-skipping when no QGIS install is found)",
+  "qgis: marks tests as requiring QGIS to run (deselect with '-m \"not qgis\"')",
+]
+minversion = "9.0"
+norecursedirs = [
+  ".*",
+  "__pycache__",
+  "build",
+  "dist",
+  "docs",
+]
+python_files = [
+  "test_*.py",
+]
+qgis_gui_enabled = false  # pytest-qgis
+strict = true
+testpaths = [
+  "tests",
+]
+
+[tool.coverage]
+run.branch = true
+run.omit = [
+  "*tests*",
+  ".venv/*",
+]
+run.relative_files = true
+run.source = [ "stratified_packager" ]
+report.exclude_also = [
+  "if __name__ == .__main__.:",
+  "if DEBUG:",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+]
+report.ignore_errors = true
+report.show_missing = true
+
+[tool.qgis-plugin-ci]
+plugin_path = "stratified_packager"
+github_organization_slug = "ivanlonel"
+project_slug = "stratified-packager"
+
+[tool.sync-with-uv]
+repo-to-package."https://github.com/astral-sh/uv-pre-commit" = "uv"
+repo-to-package."https://github.com/renovatebot/pre-commit-hooks" = ""

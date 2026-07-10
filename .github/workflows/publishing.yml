@@ -1,0 +1,233 @@
+name: "📦 Package & 🚀 Release"
+
+env:
+  PROJECT_FOLDER: stratified_packager
+  PYTHON_VERSION: "3.12"
+  TIMEZONE: America/Sao_Paulo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # Output = the plugin zip + plugins.xml. That's the plugin dir plus the scripts that
+      # generate those artifacts. Tag pushes are exempt from path filters, so the release
+      # job always runs regardless of this list.
+      - .github/workflows/publishing.yml
+      - scripts/build_qgis_repo_xml.py
+      - scripts/pylupdate.py
+      - stratified_packager/**/*
+    tags:
+      - "*"
+
+  # Manual runs (e.g. to verify translations/packaging on a branch). A non-tag dispatch runs
+  # only the translation + packaging jobs; the release job is gated on a tag ref (see below).
+  workflow_dispatch:
+
+# One run per ref (branch or tag). A newer push supersedes an in-flight run for the same
+# branch, but tag releases run to completion: re-pushing a tag must not cancel a publish
+# mid-flight (GitHub release creation + OSGeo deploy).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  translation:
+    name: "💬 i18n compilation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          # Release workflow: don't restore a cross-run cache into a publishing job
+          # (zizmor cache-poisoning). The `pack` group is small, so the cost is negligible.
+          enable-cache: false
+
+      - name: Install translation requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-tools-dev qt6-l10n-tools
+          uv venv
+
+      - name: Update translations
+        run: >-
+          uv run --only-group pack scripts/pylupdate.py
+          --no-obsolete
+          --verbose
+          stratified_packager
+          --ts stratified_packager/resources/i18n/stratified_packager_*.ts
+
+      - name: Compile translations
+        # qt6-l10n-tools installs lrelease under /usr/lib/qt6/bin (not on PATH as bare
+        # `lrelease`). Prefer the `lrelease-qt6` alias when present, else resolve the exact
+        # path from the installed package.
+        run: |
+          lrelease="$(command -v lrelease-qt6 || true)"
+          [ -n "$lrelease" ] || lrelease="$(dpkg -L qt6-l10n-tools | grep -m1 '/lrelease$')"
+          : "${lrelease:?could not locate lrelease from qt6-l10n-tools}"
+          "$lrelease" ${{ env.PROJECT_FOLDER }}/resources/i18n/*.ts
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: translations-build
+          path: ${{ env.PROJECT_FOLDER }}/**/*.qm
+          if-no-files-found: error
+
+  # -- NO TAGS ----------------------------------------------------------------------
+  packaging:
+    name: "📦 Packaging plugin"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - translation
+    permissions:
+      contents: read
+      pages: read # `gh api repos/<repo>/pages` reads the published Pages URL.
+
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # qgis-plugin-ci inspects git history and tags.
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          # Release workflow: don't restore a cross-run cache into a publishing job
+          # (zizmor cache-poisoning). The `pack` group is small, so the cost is negligible.
+          enable-cache: false
+
+      - name: Download translations
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: translations-build
+          path: ${{ env.PROJECT_FOLDER }}
+
+      - name: Amend gitignore to include compiled translations and add it to tracked files
+        run: |
+          # include compiled translations
+          sed -i "s|^*.qm.*| |" .gitignore
+
+          # git add full project
+          git add ${{ env.PROJECT_FOLDER }}/
+
+      - name: Generate plugins.xml
+        run: >-
+          uv run --only-group pack scripts/build_qgis_repo_xml.py
+          --timezone ${{ env.TIMEZONE }}
+
+      - name: Package the latest version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          uv run --only-group pack qgis-plugin-ci package
+          latest
+          --allow-uncommitted-changes
+          --plugin-repo-url "$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url')"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.PROJECT_FOLDER }}-latest
+          path: |
+            build/plugins.xml
+            ${{ env.PROJECT_FOLDER }}.*.zip
+          if-no-files-found: error
+
+  # -- ONLY TAGS ----------------------------------------------------------------------
+  release:
+    name: "🚀 Release on tag"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    needs:
+      - translation
+
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # qgis-plugin-ci changelog/release inspect git history and tags.
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          # Release workflow: don't restore a cross-run cache into a publishing job
+          # (zizmor cache-poisoning). The `pack` group is small, so the cost is negligible.
+          enable-cache: false
+
+      - name: Download translations
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: translations-build
+          path: ${{ env.PROJECT_FOLDER }}
+
+      - name: Amend gitignore to include compiled translations and add it to tracked files
+        run: |
+          # include compiled translations
+          sed -i "s|^*.qm.*| |" .gitignore
+
+          # git add full project
+          git add ${{ env.PROJECT_FOLDER }}/
+
+      - name: Get current changelog for ${{ github.ref_name }}
+        run: uv run --only-group pack qgis-plugin-ci changelog "$GITHUB_REF_NAME" >> release.md
+
+      - name: Create GitHub Release
+        # Use the runner's built-in gh CLI instead of a third-party action (zizmor
+        # superfluous-actions). --generate-notes prepends release.md to GitHub's
+        # auto-generated notes, matching the previous body_path + generate_release_notes.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          --verify-tag
+          --title "$GITHUB_REF_NAME"
+          --notes-file release.md
+          --generate-notes
+
+      - name: Generate plugins.xml
+        # Pass the tag-controlled URL through env so github.ref_name can't inject shell
+        # code into the run block (zizmor template-injection).
+        env:
+          DOWNLOAD_URL: ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.PROJECT_FOLDER }}.${{ github.ref_name }}.zip
+        run: >-
+          uv run --only-group pack scripts/build_qgis_repo_xml.py
+          --download-url "$DOWNLOAD_URL"
+          --timezone ${{ env.TIMEZONE }}
+
+      - name: Upload plugins.xml to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" build/plugins.xml
+
+      - name: Deploy plugin
+        run: >-
+          uv run --only-group pack qgis-plugin-ci release
+          "$GITHUB_REF_NAME"
+          --allow-uncommitted-changes
+          --github-token ${{ secrets.GITHUB_TOKEN }}
+          --osgeo-username ${{ secrets.OSGEO_USER }}
+          --osgeo-password ${{ secrets.OSGEO_PASSWORD }}

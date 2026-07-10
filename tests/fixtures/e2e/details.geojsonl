@@ -1,0 +1,4 @@
+{"type": "Feature", "geometry": null, "properties": {"region": "A", "info": "alpha-1"}}
+{"type": "Feature", "geometry": null, "properties": {"region": "A", "info": "alpha-2"}}
+{"type": "Feature", "geometry": null, "properties": {"region": "B", "info": "bravo"}}
+{"type": "Feature", "geometry": null, "properties": {"region": "C", "info": "charlie"}}

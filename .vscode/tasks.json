@@ -1,0 +1,89 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Mirror working directory into the QGIS plugins directory",
+      "type": "shell",
+      "command": "if (Get-Command just -ErrorAction SilentlyContinue) { just deploy } else { Write-Error '`just` command not found. Make sure Just is installed and available on the PATH.'; exit 1 }",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": false,
+        "focus": true
+      },
+      "problemMatcher": [ ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Sync virtual environment dependencies using uv",
+      "type": "shell",
+      "command": "if (Get-Command just -ErrorAction SilentlyContinue) { just sync } else { Write-Error '`just` command not found. Make sure Just is installed and available on the PATH.'; exit 1 }",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": false,
+        "focus": true
+      },
+      "problemMatcher": [ ]
+    },
+    {
+      "label": "Create virtual environment in the workspace using the QGIS Python",
+      "type": "shell",
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-ExecutionPolicy", "Bypass",
+          "-File", "${workspaceFolder}/scripts/venv_setup.ps1",
+          "${input:qgisPrefixPath}",
+          "${input:qgisProfilePath}"
+        ]
+      },
+      "linux": {
+        "command": "pwsh",
+        "args": [
+          "-File", "${workspaceFolder}/scripts/venv_setup.ps1",
+          "${input:qgisPrefixPath}",
+          "${input:qgisProfilePath}"
+        ]
+      },
+      "osx": {
+        "command": "pwsh",
+        "args": [
+          "-File", "${workspaceFolder}/scripts/venv_setup.ps1",
+          "${input:qgisPrefixPath}",
+          "${input:qgisProfilePath}"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "focus": true
+      },
+      "problemMatcher": [ ]
+    }
+  ],
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "qgisPrefixPath",
+      "description": "Absolute path of the `apps/qgis` or `apps/qgis-ltr` folder in the QGIS installation directory",
+      "default": "C:\\Program Files\\QGIS 3.44.10\\apps\\qgis-ltr"
+    },
+    {
+      "type": "promptString",
+      "id": "qgisProfilePath",
+      "description": "Absolute path of the QGIS profile folder (which contains the user settings and plugins). Leave blank to use the default profile.",
+    }
+  ]
+}

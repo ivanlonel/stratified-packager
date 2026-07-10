@@ -1,0 +1,10 @@
+/* Hides the external link icon (if using Furo or related themes) */
+.reference.external::after {
+  display: none !important;
+  content: "" !important;
+}
+
+/* Hides the icon if the theme wraps external links in an external class */
+.external::after {
+  display: none !important;
+}

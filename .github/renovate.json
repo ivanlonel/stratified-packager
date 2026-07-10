@@ -1,0 +1,172 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":configMigration",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "America/Sao_Paulo",
+  "schedule": [
+    // Before 8am every Monday.
+    "* 0-7 * * 1"
+  ],
+  "minimumReleaseAge": "1 day",
+  "prHourlyLimit": 5,
+  // Automatically merge updates if CI build status is passing.
+  "automerge": true,
+  "automergeStrategy": "squash",
+  // The pep621 and pre-commit managers are not enabled by default.
+  // github-actions is enabled by default and listed here for explicitness.
+  "enabledManagers": [
+    "github-actions",
+    "pep621",
+    "pre-commit",
+    // Enables the custom regex manager below (tracks the QGIS Chocolatey packages
+    // pinned in the Windows QA matrix). enabledManagers is a strict allowlist, so
+    // custom.regex must be named explicitly or the custom manager never runs.
+    "custom.regex"
+  ],
+  // pre-commit support is currently in beta and requires explicit opt-in.
+  "pre-commit": {
+    "enabled": true
+  },
+  // Renovate will rebase only if the branch is conflicted with the base branch.
+  "rebaseWhen": "conflicted",
+  // Raise PRs for known vulnerabilities from the osv.dev database, independent of the schedule.
+  "osvVulnerabilityAlerts": true,
+  // Renovate has no Chocolatey datasource, so the QGIS / QGIS-LTR Chocolatey
+  // packages pinned in the Windows QA matrix (.github/workflows/testing.yml) are tracked
+  // by querying the Chocolatey community feed (a NuGet v2 OData API) through the
+  // nuget datasource. depName is the choco package id captured from qgis_variant;
+  // the version comes from the adjacent qgis_version line.
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/qa\\.yml$/"
+      ],
+      // RE2 matches per-file (not per-line), so \s spans the newline + indentation
+      // between the paired qgis_variant / qgis_version lines. Quotes are optional to
+      // tolerate either YAML quoting style.
+      "matchStrings": [
+        "qgis_variant:\\s*[\"']?(?<depName>[\\w.-]+)[\"']?\\s+qgis_version:\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?"
+      ],
+      "datasourceTemplate": "nuget",
+      "versioningTemplate": "nuget",
+      "registryUrlTemplate": "https://community.chocolatey.org/api/v2/"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": [
+        // Don't suggest upgrades for the project's required Python version.
+        "python"
+      ],
+      "enabled": false
+    },
+    {
+      // Don't suggest upgrades for the pre-commit repos themselves. That's done
+      // by sync-with-uv in the workflow, which mirrors each repo's rev from the
+      // tool pinned in uv.lock, so a Renovate PR would only fight it. Renovate's
+      // pre-commit manager still offers upgrades for additional_dependencies
+      // packages (a different depType). The next rule carves out the repos whose
+      // tool ISN'T in uv.lock, which sync-with-uv can't keep current.
+      "matchManagers": [
+        "pre-commit"
+      ],
+      "matchDepTypes": [
+        "repository"
+      ],
+      "enabled": false
+    },
+    {
+      // Re-enable the pre-commit repos with no uv.lock-pinned tool for sync-with-uv
+      // to track (no PyPI distribution / non-Python tools), so Renovate owns their
+      // rev bumps. Keep this list aligned with .pre-commit-config.yaml.
+      "matchManagers": [
+        "pre-commit"
+      ],
+      "matchDepTypes": [
+        "repository"
+      ],
+      "matchDepNames": [
+        "pre-commit/pygrep-hooks",
+        "renovatebot/pre-commit-hooks",
+        "rhysd/actionlint"
+      ],
+      "enabled": true
+    },
+    {
+      "matchManagers": [
+        "pre-commit"
+      ],
+      "addLabels": [
+        "pre-commit"
+      ]
+    },
+    {
+      "matchManagers": [
+        "pep621"
+      ],
+      "addLabels": [
+        "pep621"
+      ]
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "addLabels": [
+        "github-actions"
+      ]
+    },
+    {
+      // QGIS is pulled from the Chocolatey community feed by the custom.regex
+      // manager (see customManagers), so tag those PRs `chocolatey` to match how the
+      // other ecosystems are labelled. (The path labeler also adds `ci-cd` for the
+      // workflow-file edit.)
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "qgis",
+        "qgis-ltr"
+      ],
+      "addLabels": [
+        "chocolatey"
+      ]
+    },
+    {
+      // Only bump the micro (patch) version of the QGIS Chocolatey packages so CI
+      // keeps exercising the pinned major.minor lines (3.34, 3.44, 4.0). Major/minor
+      // moves change the tested QGIS baseline and stay a deliberate, manual edit.
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "qgis",
+        "qgis-ltr"
+      ],
+      "matchUpdateTypes": [
+        "major",
+        "minor"
+      ],
+      "enabled": false
+    },
+    {
+      // Group pep621 and pre-commit updates into a single PR so the pre-commit
+      // additional_dependencies and pyproject.toml deps land together.
+      "matchManagers": [
+        "pep621",
+        "pre-commit"
+      ],
+      "groupName": "pep621 and pre-commit",
+      "groupSlug": "pep621-pre-commit",
+      // Bump the range even if the new version satisfies the existing range.
+      "rangeStrategy": "bump",
+      // Don't update uv.lock as an artifact. The update-dependencies workflow
+      // runs `uv lock --upgrade` directly on Renovate PRs.
+      "skipArtifactsUpdate": true
+    }
+  ]
+}

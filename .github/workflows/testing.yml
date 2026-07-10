@@ -1,0 +1,246 @@
+name: "🎳 Testing"
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+# Supersede in-progress runs for the same branch/PR instead of stacking the
+# (expensive) QGIS matrix.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa-non-qgis:
+    name: "🧪 Tests (no QGIS) · py${{ matrix.python_version }} · ${{ matrix.runner }}"
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version:
+          - "3.12"
+          - "3.13"
+          - "3.14"
+        runner:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: ${{ matrix.python_version }}
+          # Persist uv's download cache across runs (rolling restore-keys).
+          enable-cache: true
+
+      # pytest-qgis (imports qgis) and pytest-qt (imports PyQt6) both crash without a QGIS/Qt
+      # runtime, so disable both here; tests/conftest.py registers inert fallbacks for the
+      # qgis_gui_enabled / qt_api ini options they own. The qgis-marked modules guard their
+      # imports with pytest.importorskip("qgis"), so they skip cleanly. (A missing QGIS with
+      # pytest-qgis left enabled still fails loudly: the plugin errors on autoload.)
+      - name: Run non-QGIS tests
+        run: uv run --only-group test --exact pytest -p no:pytest_qgis -p no:pytest-qt
+
+  qa-qgis-linux:
+    name: "🐧 QGIS QA · ${{ matrix.qgis_tag }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        qgis_tag:
+          - "3.40-noble" # Ubuntu 24.04, Python 3.12
+          - "3.44-trixie" # Debian 13, Python 3.13
+          - "4.2"
+          # - "4.2-resolute" # Ubuntu 26.04, Python 3.14
+
+    container:
+      image: qgis/qgis:${{ matrix.qgis_tag }}
+      # Container is headless, so Qt needs the offscreen platform plugin or QgsApplication aborts.
+      # GitHub sets CI=true automatically.
+      env:
+        QT_QPA_PLATFORM: "offscreen"
+
+    steps:
+      - name: Install git and mark the workspace safe for it
+        # Must run BEFORE checkout: images without git (e.g. 4.2) make actions/checkout
+        # fall back to the REST-API tarball download, leaving no .git directory and
+        # breaking `prek install` later. Also, the container runs git as root while the
+        # mounted workspace is owned by the host runner UID, so git refuses with "dubious
+        # ownership". Mark it safe system-wide (read regardless of $HOME) so prek's git
+        # calls work.
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git
+          git config --system --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Get source code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Print QGIS version
+        run: qgis --version
+
+      - name: Install pwsh
+        run: |
+          # Microsoft's apt feeds (packages.microsoft.com/config/ubuntu/<ver>) lag new
+          # Ubuntu releases and don't always carry the powershell package, so install the
+          # self-contained tarball from GitHub releases instead: it bundles the .NET
+          # runtime and is independent of the container's Ubuntu version.
+          # apt-get update  # already run above
+          apt-get install -y --no-install-recommends curl ca-certificates
+          # Resolve the latest stable release via the GitHub "latest" redirect (no API
+          # token, no rate limit).
+          version="$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+            https://github.com/PowerShell/PowerShell/releases/latest | sed 's@.*/tag/v@@')"
+          : "${version:?could not resolve the latest PowerShell version}"
+          arch="$(dpkg --print-architecture)"
+          case "$arch" in
+            amd64) pwsh_arch=x64 ;;
+            arm64) pwsh_arch=arm64 ;;
+            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+          esac
+          curl -fsSL -o /tmp/powershell.tar.gz \
+            "https://github.com/PowerShell/PowerShell/releases/download/v${version}/powershell-${version}-linux-${pwsh_arch}.tar.gz"
+          mkdir -p /opt/microsoft/powershell/7
+          tar -xzf /tmp/powershell.tar.gz -C /opt/microsoft/powershell/7
+          chmod +x /opt/microsoft/powershell/7/pwsh
+          ln -sf /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
+          rm /tmp/powershell.tar.gz
+          pwsh --version
+
+      - name: Set up virtual environment
+        id: setup-venv
+        run: |
+          pwsh -File scripts/venv_setup.ps1
+          # venv_setup installs uv and just into ~/.local/bin; persist it so the later steps
+          # (Run tests, Run prek) find them — the script's own PATH edits do not outlive it.
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run tests
+        run: >-
+          uv run --only-group test --exact pytest
+          --junitxml=junit/test-results-qgis.xml
+          --cov-report=xml:coverage-reports/coverage-qgis.xml
+
+      # Run prek in the same job so it reuses this job's QGIS-aware environment.
+      # The guard runs prek whenever the environment is ready (even if the tests above failed,
+      # so both signals surface together) but skips it if setup failed or the run was cancelled.
+      - name: Run prek
+        if: ${{ !cancelled() && steps.setup-venv.outcome == 'success' }}
+        env:
+          # ty/mypy target Qt6, so skip them on the Qt5 (QGIS 3.x) builds
+          # (qgis.PyQt is PyQt5, with no stubs).
+          PREK_SKIP: ${{ startsWith(matrix.qgis_tag, '3') && 'ty-check,mypy' }}
+        run: just prek-qgis
+
+      - name: Upload QA reports
+        if: ${{ !cancelled() && steps.setup-venv.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qa-reports-linux-qgis-${{ matrix.qgis_tag }}
+          path: |
+            junit/test-results-qgis.xml
+            coverage-reports/coverage-qgis.xml
+          if-no-files-found: warn
+
+  qa-qgis-windows:
+    name: "🪟 QGIS QA · ${{ matrix.qgis_variant }} ${{ matrix.qgis_version }}"
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - qgis_variant: qgis-ltr
+            qgis_version: "3.40.15"
+          - qgis_variant: qgis-ltr
+            qgis_version: "3.44.12"
+          - qgis_variant: qgis
+            qgis_version: "4.2.0"
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # Cache the downloaded QGIS installer (large), but ALWAYS run the install below so QGIS
+      # is actually extracted to Program Files. Caching chocolatey\lib instead made choco
+      # report "already installed" on a cache hit and skip the real install, leaving
+      # Program Files\QGIS empty (the 4.0.3 job then failed to find qgis_process).
+      - name: Cache Chocolatey download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\choco-cache
+          key: choco-dl-${{ matrix.qgis_variant }}-${{ matrix.qgis_version }}
+
+      - name: Install QGIS
+        run: >-
+          choco install ${{ matrix.qgis_variant }}
+          --version ${{ matrix.qgis_version }}
+          -y
+          --no-progress
+          --cache-location ${{ runner.temp }}\choco-cache
+
+      - name: Print QGIS version
+        run: >-
+          & "${env:ProgramFiles}\QGIS ${{ matrix.qgis_version }}\bin\qgis_process-${{ matrix.qgis_variant }}.bat"
+          --version
+
+      - name: Set up virtual environment
+        id: setup-venv
+        run: |
+          scripts/venv_setup.ps1 "${env:ProgramFiles}\QGIS ${{ matrix.qgis_version }}\apps\${{ matrix.qgis_variant }}"
+          # Persist PATH so the "Run prek" step can find `just`.
+          $env:PATH -split ';' | ForEach-Object {
+              $_ | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+
+      - name: Run tests
+        run: >-
+          uv run --only-group test --exact pytest
+          --junitxml=junit/test-results-qgis.xml
+          --cov-report=xml:coverage-reports/coverage-qgis.xml
+
+      # Run prek in the same job so it reuses this job's QGIS-aware environment.
+      # The guard runs prek whenever the environment is ready (even if the tests above failed,
+      # so both signals surface together) but skips it if setup failed or the run was cancelled.
+      - name: Run prek
+        if: ${{ !cancelled() && steps.setup-venv.outcome == 'success' }}
+        env:
+          # ty/mypy target Qt6, so skip them on the Qt5 (QGIS 3.x) builds
+          # (qgis.PyQt is PyQt5, with no stubs).
+          PREK_SKIP: ${{ startsWith(matrix.qgis_version, '3') && 'ty-check,mypy' }}
+        run: just prek-qgis
+
+      - name: Upload QA reports
+        if: ${{ !cancelled() && steps.setup-venv.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qa-reports-windows-${{ matrix.qgis_variant }}-${{ matrix.qgis_version }}
+          path: |
+            junit/test-results-qgis.xml
+            coverage-reports/coverage-qgis.xml
+          if-no-files-found: warn

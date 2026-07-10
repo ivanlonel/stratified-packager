@@ -1,0 +1,144 @@
+name: "📚 Documentation"
+
+# Global environment variables
+env:
+  CONDITION_IS_PUSH: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') }}
+  CONDITION_IS_WORKFLOW_RUN: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+  PROJECT_FOLDER: stratified_packager
+
+# The workflow_run trigger below is safe here: it only fires on completion of
+# "📦 Package & 🚀 Release", which itself runs solely on trusted refs (push to main and
+# tags) — never on fork PRs. This workflow also checks out with persist-credentials: false
+# and downloads artifacts with allow_forks: false, so the workflow_run context can't be
+# abused. Hence the dangerous-triggers ignore.
+on: # zizmor: ignore[dangerous-triggers]
+  push:
+    branches:
+      - main
+    paths: &doc_paths
+      - .github/workflows/documentation.yml
+      - docs/**/*
+      # Source feeds __about__ substitutions (version, author, …) and the API autodoc pages.
+      - stratified_packager/**/*.py
+      - stratified_packager/metadata.txt
+      - stratified_packager/resources/images/icon.svg # html_logo / html_favicon
+      # Root files surfaced in the rendered docs: conf.py reads CHANGELOG.md (keepachangelog),
+      # and history/contribute pages {include} these two.
+      - CHANGELOG.md
+      - CONTRIBUTING.md
+      - uv.lock
+    tags:
+      - "*"
+
+  pull_request:
+    branches:
+      - main
+    paths: *doc_paths # identical to the push trigger's doc inputs anchored above
+
+  workflow_dispatch:
+
+  workflow_run:
+    workflows:
+      - "📦 Package & 🚀 Release"
+    types:
+      - completed
+
+# Least-privilege default; the deploy job elevates to the Pages-specific scopes.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: "🏗 Build docs"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # action-download-artifact lists/downloads the publishing run's artifact on
+      # push/workflow_run (skipped on PRs); listing workflow runs needs actions: read.
+      actions: read
+
+    # Supersede superseded builds, but never cancel an in-flight Pages deploy
+    # (that is guarded by the deploy job's own `pages` concurrency group).
+    concurrency:
+      group: ${{ github.workflow }}-build-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          # Pages-deploying workflow: don't restore a cross-run uv cache (cache-poisoning).
+          enable-cache: false
+
+      # No Sphinx doctree cache here: like the uv cache above it would be a cache-poisoning
+      # vector in this Pages-deploying workflow (zizmor cache-poisoning). The strict -W build
+      # of this small doc set is fast enough from scratch.
+      - name: Build doc using Sphinx
+        run: >-
+          uv run --only-group doc --exact sphinx-build
+          -M html docs docs/_build -j auto -W --keep-going
+
+      - name: Download artifact from build workflow
+        if: ${{ env.CONDITION_IS_PUSH == 'true' || env.CONDITION_IS_WORKFLOW_RUN == 'true' }}
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        with:
+          allow_forks: false
+          branch: main
+          event: push
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          if_no_artifact_found: warn
+          name: ${{ env.PROJECT_FOLDER }}-latest
+          path: docs/_build/html/
+          # run_id: ${{ github.event.workflow_run.id }}
+          workflow: publishing.yml
+
+      - name: Save build doc as artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          if-no-files-found: error
+          name: documentation
+          path: docs/_build/html/*
+          retention-days: 30
+
+      - name: Upload Pages artifact
+        if: ${{ env.CONDITION_IS_PUSH == 'true' || env.CONDITION_IS_WORKFLOW_RUN == 'true' }}
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/_build/html/
+
+  deploy:
+    name: "🚀 Deploy to GitHub Pages"
+    needs: build
+    # Mirror the build job's Pages-artifact upload condition: deploy only on a push
+    # to main/tags or after a successful "Package & Release" run.
+    if: ${{ (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')) || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Pages deployments must not cancel each other mid-flight; queue them instead.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    # Only the deploy job needs the Pages OIDC scopes.
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

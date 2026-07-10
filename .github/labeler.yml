@@ -1,0 +1,53 @@
+ci-cd:
+  - changed-files:
+    - any-glob-to-any-file: .github/**
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - uv.lock
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - docs/**
+
+enhancement:
+  - head-branch:
+    - ^feature
+    - feature
+    - ^improve
+    - improve
+
+packaging:
+  - head-branch:
+    - ^packaging
+    - packaging
+  - changed-files:
+    - any-glob-to-any-file:
+      - setup.py
+
+quality:
+  - changed-files:
+    - any-glob-to-any-file:
+      - tests/**/*
+
+tooling:
+  - head-branch:
+    - ^tooling
+    - tooling
+  - changed-files:
+    - any-glob-to-any-file:
+      - .editorconfig
+      - .flake8
+      - .pre-commit-config.yaml
+      - justfile
+
+UI:
+  - head-branch:
+    - ^ui
+    - ui
+  - changed-files:
+    - any-glob-to-any-file:
+      - stratified_packager/**/*.ui
+      - stratified_packager/gui/**

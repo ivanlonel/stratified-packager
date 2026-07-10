@@ -1,0 +1,24 @@
+{
+  "recommendations": [
+    "astral-sh.ty",
+    "charliermarsh.ruff",
+    "DavidAnson.vscode-markdownlint",
+    "dotenv.dotenv-vscode",
+    "eamodio.gitlens",
+    "EditorConfig.EditorConfig",
+    "GitHub.vscode-pull-request-github",
+    "mhutchie.git-graph",
+    "ms-python.debugpy",
+    "ms-python.flake8",
+    "ms-python.mypy-type-checker",
+    "ms-python.pylint",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "nefrob.vscode-just-syntax",
+    "njpwerner.autodocstring",
+    "redhat.vscode-yaml",
+    "swyddfa.esbonio",
+    "tamasfe.even-better-toml",
+    "TheQtCompany.qt-python-pack"
+  ]
+}

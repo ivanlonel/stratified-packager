@@ -1,0 +1,14 @@
+# zizmor configuration — https://docs.zizmor.sh/configuration/
+#
+# Findings that can be addressed in the workflow itself use inline `# zizmor: ignore[...]`
+# comments. The entries below are reserved for findings anchored on a SHA-pinned
+# `uses: ...@<sha> # vX` line, where an inline comment would collide with Renovate's
+# github-actions version parsing (and risk being dropped on its next digest bump).
+rules:
+  cache-poisoning:
+    ignore:
+      # documentation.yml caches Sphinx doctrees (intermediate build state) for the Pages
+      # deploy. The avoidable cross-run uv cache is already off (setup-uv enable-cache: false);
+      # this doctrees cache is deliberate, and GitHub scopes fork-PR caches separately, so a
+      # poisoned cache from a PR is never restored into a main/tag deploy.
+      - documentation.yml:77

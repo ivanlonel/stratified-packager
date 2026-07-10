@@ -1,0 +1,82 @@
+name: "⬆️ Post-Renovate Hooks"
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  post-renovate-hooks:
+    # Only run on PRs opened by the Renovate GitHub App. Check the PR author from the event
+    # payload rather than github.actor, which reflects whoever triggered the latest run
+    # (e.g. a re-run or a pushed commit) and is spoofable (zizmor bot-conditions).
+    if: github.event.pull_request.user.login == 'renovate[bot]' &&
+      (contains(github.event.pull_request.labels.*.name, 'pep621') ||
+      contains(github.event.pull_request.labels.*.name, 'pre-commit'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # artipacked is ignored on the checkout below: this job intentionally persists the
+      # checkout credentials so git-auto-commit-action (last step) can push the hook results
+      # back to the Renovate PR branch — persist-credentials: false would break that push.
+      - name: Checkout PR branch # zizmor: ignore[artipacked]
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # Check out the actual PR branch so we can push changes back to it.
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.RENOVATE_TOKEN }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          # Persist uv's download cache across runs (rolling restore-keys) so the upgrade
+          # resolution below isn't cold on every fresh runner.
+          enable-cache: true
+
+      # ── Step 1: apply the dependency-update hooks, in the required order ───
+      #   uv lock --upgrade → sync-with-uv (reads uv.lock) → pyproject-fmt.
+      #
+      # uv-lock runs directly (not via prek): `uv lock` exits 0 even when it rewrites
+      # uv.lock, and non-zero only on a genuine resolution failure, so its own exit code
+      # is the correctness check — no prek double-run needed.
+      #
+      # sync-with-uv and pyproject-fmt run through prek twice: the first pass does the work
+      # and is allowed to fail (prek exits 1 merely when it modifies files); the verify pass
+      # confirms the result is stable — exit 0 means the first pass succeeded legitimately,
+      # exit 1 again means a real error and the workflow fails.
+      - name: uv lock (upgrade)
+        run: uv lock --upgrade
+
+      - name: prek – sync-with-uv (first pass)
+        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        with:
+          extra-args: --all-files --verbose --hook-stage manual sync-with-uv
+        continue-on-error: true
+
+      - name: prek – sync-with-uv (verify)
+        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        with:
+          extra-args: --all-files --verbose --hook-stage manual sync-with-uv
+
+      # Make sure Renovate didn't upset pyproject-fmt by, e.g., misaligning comments.
+      - name: prek – pyproject-fmt (first pass)
+        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        with:
+          extra-args: --all-files --verbose --hook-stage manual pyproject-fmt
+        continue-on-error: true
+
+      - name: prek – pyproject-fmt (verify)
+        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        with:
+          extra-args: --all-files --verbose --hook-stage manual pyproject-fmt
+
+      # ── Step 2: Commit any hook-generated changes back to the PR branch ───
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
+        with:
+          commit_message: "chore(deps): apply post-Renovate hooks"

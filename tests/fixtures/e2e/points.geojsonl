@@ -1,0 +1,5 @@
+{"type": "Feature", "geometry": {"type": "Point", "coordinates": [1, 1]}, "properties": {"label": "a1"}}
+{"type": "Feature", "geometry": {"type": "Point", "coordinates": [2, 3]}, "properties": {"label": "a2"}}
+{"type": "Feature", "geometry": {"type": "Point", "coordinates": [11, 2]}, "properties": {"label": "b1"}}
+{"type": "Feature", "geometry": {"type": "Point", "coordinates": [21, 1]}, "properties": {"label": "c1"}}
+{"type": "Feature", "geometry": {"type": "Point", "coordinates": [50, 50]}, "properties": {"label": "orphan"}}
