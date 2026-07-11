@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
+## 0.1.1 - 2026-07-12
+
+### Fixed
+
+- plugins.qgis.org submission: the repository's Bandit scan flagged the identifier-quoted `COUNT(*)` query in `toolbelt/gpkg.py` (B608). The line now also carries a targeted `# nosec B608` — it already had ruff's equivalent `# noqa: S608`, but Bandit does not honor `noqa` comments. No behavior change.
+
 ## 0.1.0 - 2026-07-12
 
 First public release.

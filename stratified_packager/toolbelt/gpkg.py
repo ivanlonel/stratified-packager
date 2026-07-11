@@ -139,8 +139,9 @@ def feature_count(gpkg: Path, table: str, /) -> int:
     :return: The row count.
     """
     with contextlib.closing(_connect_readonly(gpkg)) as conn:
-        # S608: the table name is the only interpolation and it passes quote_identifier.
-        query = f"SELECT COUNT(*) FROM {quote_identifier(table)}"  # noqa: S608
+        # S608/B608 (ruff/bandit spellings of the same rule): the table name is the only
+        # interpolation and it passes quote_identifier; SQL has no identifier parameters.
+        query = f"SELECT COUNT(*) FROM {quote_identifier(table)}"  # noqa: S608 # nosec B608
         return int(conn.execute(query).fetchone()[0])
 
 
