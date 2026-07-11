@@ -2,7 +2,7 @@ name: "📚 Documentation"
 
 # Global environment variables
 env:
-  CONDITION_IS_PUSH: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') }}
+  CONDITION_IS_PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
   CONDITION_IS_WORKFLOW_RUN: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
   PROJECT_FOLDER: stratified_packager
 
@@ -27,8 +27,6 @@ on: # zizmor: ignore[dangerous-triggers]
       - CHANGELOG.md
       - CONTRIBUTING.md
       - uv.lock
-    tags:
-      - "*"
 
   pull_request:
     branches:
@@ -116,8 +114,9 @@ jobs:
     name: "🚀 Deploy to GitHub Pages"
     needs: build
     # Mirror the build job's Pages-artifact upload condition: deploy only on a push
-    # to main/tags or after a successful "Package & Release" run.
-    if: ${{ (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')) || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+    # to main or after a successful "Package & Release" run. (Tag releases get their docs
+    # deploy through the workflow_run path — the github-pages environment only allows main.)
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

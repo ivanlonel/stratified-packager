@@ -224,10 +224,16 @@ jobs:
         run: gh release upload "$GITHUB_REF_NAME" build/plugins.xml
 
       - name: Deploy plugin
+        # Secrets go through env, not inline ${{ }}: template interpolation splices the raw
+        # value into the shell script, so a quote in the password breaks the script's syntax.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OSGEO_USER: ${{ secrets.OSGEO_USER }}
+          OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
         run: >-
           uv run --only-group pack qgis-plugin-ci release
           "$GITHUB_REF_NAME"
           --allow-uncommitted-changes
-          --github-token ${{ secrets.GITHUB_TOKEN }}
-          --osgeo-username ${{ secrets.OSGEO_USER }}
-          --osgeo-password ${{ secrets.OSGEO_PASSWORD }}
+          --github-token "$GITHUB_TOKEN"
+          --osgeo-username "$OSGEO_USER"
+          --osgeo-password "$OSGEO_PASSWORD"
