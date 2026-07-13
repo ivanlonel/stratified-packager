@@ -37,7 +37,7 @@ dev = [
   "flake8-cognitive-complexity~=0.1.0",
   "flake8-qgis~=2.1.0",
   "flake8-rst-docstrings~=0.4.0",
-  "prek~=0.4.8",
+  "prek~=0.4.9",
   "pydoclint[flake8]~=0.9.1",
   "pylint~=4.0.6",
   "ruff~=0.15.21",
@@ -45,7 +45,7 @@ dev = [
   { include-group = "type" },
 ]
 test = [
-  "hypothesis~=6.156.5",
+  "hypothesis~=6.156.6",
   "pytest~=9.1.1",
   "pytest-cov~=7.1.0",
   "pytest-qgis~=4.0.1",
