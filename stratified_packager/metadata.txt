@@ -5,7 +5,7 @@ category=
 hasProcessingProvider=yes
 about=Partitions the open project’s layers against a stratification layer — by attribute (following project relations) or spatially — and publishes one zipped GeoPackage per stratum, optionally with an embedded per-stratum QGIS project, layer styles, metadata and referenced style assets. Runs from the Processing Toolbox and from qgis_process.
 icon=resources/images/icon.svg
-tags=export,geopackage,gpkg,stratify
+tags=export,geopackage,gpkg,stratification,stratify,partition,split,divide,project
 server=False
 
 # credits and contact
@@ -18,7 +18,7 @@ tracker=https://github.com/ivanlonel/stratified-packager/issues/
 # QGIS context
 deprecated=False
 experimental=True
-plugin_dependencies=
+# plugin_dependencies=
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 
