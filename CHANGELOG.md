@@ -10,15 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## 0.1.1 - 2026-07-12
 
-### Fixed
-
 - plugins.qgis.org submission: the repository's Bandit scan flagged the identifier-quoted `COUNT(*)` query in `toolbelt/gpkg.py` (B608). The line now also carries a targeted `# nosec B608` — it already had ruff's equivalent `# noqa: S608`, but Bandit does not honor `noqa` comments. No behavior change.
 
 ## 0.1.0 - 2026-07-12
 
 First public release.
-
-### Added
 
 - `stratified_packager:package` Processing algorithm: partitions the open project's layers against a stratification layer and publishes one zipped GeoPackage per stratum, with atomic `.part` renames and optional `.sha256` sidecars.
 - Per-layer matching by attribute (following chains of project relations, composite keys included) or spatially (named predicates and raw DE-9IM patterns, OR-combined), resolved automatically per layer or pinned via layer variables.

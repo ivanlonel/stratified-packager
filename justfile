@@ -27,7 +27,8 @@ clean:
     {{ title }} "Removing build, test and cache artifacts..."
     $targets = @(
         'build', 'dist', 'htmlcov', 'docs/_build', 'docs/api/generated', '.coverage',
-        '.hypothesis', '.pytest_cache', '.mypy_cache', '.ruff_cache'
+        '.hypothesis', '.pytest_cache', '.mypy_cache', '.ruff_cache',
+        '{{ project_folder }}.*.zip', '{{ project_folder }}/resources/i18n/*.qm'
     )
     foreach ($t in $targets) {
         if (Test-Path $t) { Remove-Item -Recurse -Force $t }
@@ -197,6 +198,12 @@ prek-qgis:
     {{ title }} "Running pre-commit hooks that require a QGIS-enabled venv..."
     uv run prek run --group qgis-venv --verbose
 
+[doc('Run the Bandit security scan that plugins.qgis.org applies to submitted plugins')]
+[group('Publishing')]
+bandit:
+    @{{ title }} "Running Bandit security scan (mirrors plugins.qgis.org moderation)..."
+    uvx bandit -r {{ project_folder }} -q
+
 [doc('Generate plugins.xml from metadata.txt and command-line options (`just build-xml --help` for details)')]
 [group('Publishing')]
 build-xml *args:
@@ -218,6 +225,33 @@ package *qgis-plugin-ci_args:
 [group('Publishing')]
 @version:
     uv run python -c "from stratified_packager.__about__ import __version__; print(__version__)"
+
+[confirm('This will tag the current commit and push main + tag to origin, triggering the release workflow (GitHub release + OSGeo deploy). Continue? [y/N]')]
+[doc('Verify branch/tree/version/Bandit, then tag the release and push it')]
+[group('Publishing')]
+[script]
+release version:
+    $ErrorActionPreference = 'Stop'
+    $PSNativeCommandUseErrorActionPreference = $true
+    if ((git branch --show-current) -ne 'main') {
+        {{ error }} "Releases are tagged on main; current branch is '$(git branch --show-current)'."
+        exit 1
+    }
+    if (git status --porcelain) {
+        {{ error }} "Working tree is not clean. Commit or stash changes first."
+        exit 1
+    }
+    $metadataVersion = uv run python -c "from stratified_packager.__about__ import __version__; print(__version__)"
+    if ($metadataVersion -ne '{{ version }}') {
+        {{ error }} "metadata.txt version ($metadataVersion) does not match tag '{{ version }}'."
+        {{ error }} "Add the version to CHANGELOG.md and commit (the update-metadata hook syncs metadata.txt)."
+        {{ error }} "Note: a version rejected by plugins.qgis.org gets a SemVer bump, never a re-tag."
+        exit 1
+    }
+    just bandit
+    {{ title }} "Tagging and pushing {{ version }}..."
+    git tag '{{ version }}'
+    git push origin main '{{ version }}'
 
 [doc('Format code automatically')]
 [group('QA')]
