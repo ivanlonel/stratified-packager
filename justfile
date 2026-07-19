@@ -331,7 +331,7 @@ qgis profile='':
     if ($p) { $params += "--profile", "$p" }
     & "$env:QGIS_EXECUTABLE_PATH" $params
 
-[doc('Run qgis_process against the development profile (deploy first with `just deploy`). Examples: `just qgis-process plugins`, `just qgis-process run stratified_packager:package -- --help`')]
+[doc('Run qgis_process against the development profile (deploy first with `just deploy`). Examples: `just qgis-process plugins`, `just qgis-process run stratified_packager:package -- --PROJECT_PATH=tests/fixtures/e2e/project.qgs --STRATIFICATION_LAYER=strata --OUTPUT_DIRECTORY=out`')]
 [group('QGIS')]
 [script]
 qgis-process *args:
@@ -356,7 +356,6 @@ qgis-process *args:
         {{ error }} "Could not find a qgis_process executable near $env:QGIS_EXECUTABLE_PATH"
         exit 1
     }
-    {{ title }} "Running $exe {{ args }}..."
     if ($env:QGIS_PROFILES_DIR) {
         # qgis_process resolves the profile itself (profiles.ini defaultProfile) under
         # <QGIS_CUSTOM_CONFIG_PATH>/profiles/, so pass the *parent* of the profiles dir —
@@ -365,7 +364,16 @@ qgis-process *args:
         $env:QGIS_CUSTOM_CONFIG_PATH = Split-Path "$env:QGIS_PROFILES_DIR" -Parent
         Write-Host "Using QGIS config root $env:QGIS_CUSTOM_CONFIG_PATH (profile comes from its profiles.ini)"
     }
-    & "$exe" {{ args }}
+    # just only accepts dashed tokens (e.g. --PROJECT_PATH) after a `--`, but qgis_process
+    # ignores dashed arguments placed after one. Calling through a function makes the
+    # PowerShell command parser consume that first `--` and hand every remaining token to
+    # $args verbatim (a second `--` passes through for qgis_process's bare KEY=VALUE form;
+    # pwsh -File / [positional-arguments] would split `-name:value` tokens at the colon).
+    function Invoke-QgisProcess {
+        {{ title }} "Running $exe $args..."
+        & "$exe" @args
+    }
+    Invoke-QgisProcess {{ args }}
 
 [doc('Shortcut to run deploy and qgis in sequence')]
 [group('QGIS')]
