@@ -460,9 +460,15 @@ result; the run aborts only at the end if any stratum or zip failed.
    DEFLATE stream that finishes within the next bundle's build time — measured, §3 note), and
    the second thread overlaps the §11 warm-cache prefetch with Phase A. Cancellation reaches
    in-flight jobs via a `threading.Event`.
-1. Progress: Phase A ≈ 0–25 %, Phases B+C 25–95 % weighted by per-(stratum, layer) writes
-   (including the §11 warm pass's on update runs) plus per-bundle zips, report + outputs
-   95–100 %. `setProgressText` announces stratum transitions.
+1. Progress: Phase A ≈ 0–25 % (analysis ≈ 0–5, staging ≈ 5–20, template ≈ 20–25), Phases B+C
+   25–95 % weighted by per-(stratum, layer) writes (including the §11 warm pass's on update
+   runs) plus per-bundle zips, report + outputs 95–100 %. The bar always reads **overall**
+   progress: each writer's internal 0–100 sweep is scaled into that write's slice of its
+   band — a `QgsProcessingMultiStepFeedback` stepping inside a band-mapping proxy feedback
+   (`setStepWeights` would do both at once but is QGIS 4.0-only, §1.1). `setProgressText`
+   names the step the bar is advancing through — the layer being prepared, staged or
+   templated, each stratum's per-layer writes, and the embedded-project builds — in step
+   with the matching log line.
 
 ## 9. Reporting
 

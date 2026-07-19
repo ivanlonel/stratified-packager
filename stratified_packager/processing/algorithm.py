@@ -44,12 +44,13 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingException,
     QgsProcessingFeedback,
+    QgsProcessingMultiStepFeedback,
     QgsProcessingUtils,
     QgsProject,
     QgsSldExportContext,
     QgsVectorLayer,
 )
-from qgis.PyQt.QtCore import QCoreApplication, QMetaType
+from qgis.PyQt.QtCore import QCoreApplication, QMetaType, Qt
 from qgis.PyQt.QtGui import QPalette
 from qgis.PyQt.QtWidgets import QApplication
 from qgis.PyQt.QtXml import QDomDocument
@@ -170,6 +171,126 @@ _STALE_WORKDIR_AGE: Final = 24 * 3600.0
 """Minimum age in seconds before a leftover ``.stratified_build_*`` directory from an
 earlier run is swept at run start (§10); younger siblings could belong to a live
 concurrent run against the same output directory."""
+
+
+class _BandFeedback(QgsProcessingFeedback):
+    """
+    Proxy feedback whose full 0-100 progress range maps into a band of a parent feedback.
+
+    Handed to a sub-operation (a :class:`~qgis.core.QgsVectorFileWriter` write, or a
+    :class:`~qgis.core.QgsProcessingMultiStepFeedback` stepping over several of them), it
+    scales the sub-operation's raw ``setProgress`` sweeps into the ``[start, end]`` slice of
+    the run's overall bar, so the bar always reads overall progress (SPEC §8.4). Messages
+    and progress text forward to the parent unchanged; cancellation propagates from the
+    parent the way :class:`~qgis.core.QgsProcessingMultiStepFeedback` propagates it (a
+    direct-connected ``canceled`` signal, so no spinning event loop is needed).
+
+    :meth:`~qgis.core.QgsFeedback.setProgress` is **not** virtual, so a C++ caller bypasses
+    any Python override — the scaling therefore rides this object's own ``progressChanged``
+    signal, the same mechanism :class:`~qgis.core.QgsProcessingMultiStepFeedback` uses.
+    """
+
+    def __init__(self, parent: QgsProcessingFeedback, start: float, end: float) -> None:
+        """
+        Wire the proxy onto *parent*.
+
+        :param parent: The feedback receiving the scaled progress and forwarded messages.
+        :param start: The parent progress this proxy's ``0`` maps to.
+        :param end: The parent progress this proxy's ``100`` maps to.
+        """
+        super().__init__(logFeedback=False)  # everything forwards to the parent, never log
+        self._parent = parent
+        """The wrapped feedback (also keeps the Python wrapper alive for C++ callees)."""
+        self._start = start
+        """Parent progress at this proxy's ``0``."""
+        self._span = end - start
+        """Parent progress distance covered by this proxy's ``0`` → ``100``."""
+        parent.canceled.connect(self.cancel, Qt.ConnectionType.DirectConnection)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]  # PyQt6-stubs omit connect()'s type argument; the runtime accepts it
+        if parent.isCanceled():  # the signal fired before the connection existed
+            self.cancel()
+        self.progressChanged.connect(self._scale_to_parent)
+
+    def _scale_to_parent(self, progress: float) -> None:
+        """
+        Relay an own-progress change into the parent band.
+
+        :param progress: This proxy's progress in ``[0, 100]``.
+        """
+        self._parent.setProgress(self._start + self._span * progress / 100)
+
+    @override
+    def setProgressText(self, text: str | None = None) -> None:
+        """
+        Forward the progress text to the parent.
+
+        :param text: The progress text.
+        """
+        self._parent.setProgressText(text or "")
+
+    @override
+    def pushInfo(self, info: str | None = None) -> None:
+        """
+        Forward an info message to the parent.
+
+        :param info: The message.
+        """
+        self._parent.pushInfo(info or "")
+
+    @override
+    def pushWarning(self, warning: str | None = None) -> None:
+        """
+        Forward a warning message to the parent.
+
+        :param warning: The message.
+        """
+        self._parent.pushWarning(warning or "")
+
+    @override
+    def pushDebugInfo(self, info: str | None = None) -> None:
+        """
+        Forward a debug message to the parent.
+
+        :param info: The message.
+        """
+        self._parent.pushDebugInfo(info or "")
+
+    @override
+    def pushCommandInfo(self, info: str | None = None) -> None:
+        """
+        Forward a command message to the parent.
+
+        :param info: The message.
+        """
+        self._parent.pushCommandInfo(info or "")
+
+    @override
+    def pushConsoleInfo(self, info: str | None = None) -> None:
+        """
+        Forward a console-output message to the parent.
+
+        :param info: The message.
+        """
+        self._parent.pushConsoleInfo(info or "")
+
+    @override
+    def pushFormattedMessage(self, html: str | None = None, text: str | None = None) -> None:
+        """
+        Forward a formatted message to the parent.
+
+        :param html: The HTML form of the message.
+        :param text: The plain-text form of the message.
+        """
+        self._parent.pushFormattedMessage(html or "", text or "")
+
+    @override
+    def reportError(self, error: str | None = None, fatalError: bool = False) -> None:
+        """
+        Forward an error to the parent.
+
+        :param error: The error message.
+        :param fatalError: Whether the error prevents the algorithm from completing.
+        """
+        self._parent.reportError(error or "", fatalError)
 
 
 class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
@@ -941,7 +1062,10 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             return
         template = workdir / "template.gpkg"
         write_template(
-            template, [self._layer_write(prep, material) for prep in covered], feedback=feedback
+            template,
+            [self._layer_write(prep, material) for prep in covered],
+            # The template build occupies the ≈ 20-25 % slice of Phase A (SPEC §8.4).
+            feedback=_BandFeedback(feedback, 20, 25),
         )
         if feedback.isCanceled():  # write_template returns early then; the template is partial
             return
@@ -1164,13 +1288,22 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     n=skipped_warm,
                 )
             )
+        if not to_stage:
+            return
+        # Staging occupies the ≈ 5-20 % slice of Phase A (SPEC §8.4): one equal step per
+        # group, each write's own 0-100 sweep scaled into its step via the band proxy.
+        band = _BandFeedback(feedback, 5, 20)
+        steps = QgsProcessingMultiStepFeedback(len(to_stage), band)
         for index, (prep, group) in enumerate(to_stage, start=1):
             if feedback.isCanceled():
                 raise QgsProcessingException(self.tr("Operation was canceled."))
-            feedback.pushInfo(
-                self.tr("Staging layer {}/{}: {}").format(index, len(to_stage), prep.layer.name())
+            steps.setCurrentStep(index - 1)
+            line = self.tr("Staging layer {}/{}: {}").format(
+                index, len(to_stage), prep.layer.name()
             )
-            self._stage_prep(prep, group, material, real_features, staging_dir, feedback)
+            feedback.setProgressText(line)
+            feedback.pushInfo(line)
+            self._stage_prep(prep, group, material, real_features, staging_dir, steps)
 
     def _stage_prep(
         self,
@@ -1621,7 +1754,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                 label=line,
                 project=material.project,
                 strat_layer=inputs.strat_layer,
-                feedback=feedback,
+                feedback=self._stratum_band(state, warm_build, feedback),
             )
             self._fold_warm_result(state, result, feedback)
             if result.ok:
@@ -1663,7 +1796,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     label=line,
                     project=material.project,
                     strat_layer=inputs.strat_layer,
-                    feedback=feedback,
+                    feedback=self._stratum_band(state, build, feedback),
                 )
                 self._fold_result(state, result, feedback)
             self._maybe_submit_zip(
@@ -1672,6 +1805,25 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         for future in state.zip_futures:
             self._fold_zip(state, future.result(), feedback)
         return state
+
+    def _stratum_band(
+        self, state: _BuildState, build: StratumBuild, feedback: QgsProcessingFeedback
+    ) -> _BandFeedback:
+        """
+        Return the feedback band covering *build*'s slice of the 25-95 % B/C range (SPEC §8.4).
+
+        The slice spans the build's per-layer units from the current unit count, so the
+        writer sweeps inside it and the following ``_fold_*`` progress report lands exactly
+        on the slice's upper bound.
+
+        :param state: The build state (unit counters).
+        :param build: The stratum build about to be written.
+        :param feedback: The run feedback.
+        :return: The band proxy to hand to :func:`~.building.write_stratum`.
+        """
+        low = 25 + 70 * state.done_units / state.total_units
+        high = 25 + 70 * (state.done_units + len(build.layers)) / state.total_units
+        return _BandFeedback(feedback, low, high)
 
     def _fold_result(
         self, state: _BuildState, result: StratumWriteResult, feedback: QgsProcessingFeedback

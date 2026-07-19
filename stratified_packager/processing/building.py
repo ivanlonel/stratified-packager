@@ -29,6 +29,7 @@ from qgis.core import (
     Qgis,
     QgsCoordinateTransformContext,
     QgsProcessingException,
+    QgsProcessingMultiStepFeedback,
     QgsVectorFileWriter,
 )
 from qgis.PyQt.QtCore import QCoreApplication
@@ -231,14 +232,16 @@ def write_template(
     :raise QgsProcessingException: If a writer reports an error.
     """
     template_path.parent.mkdir(parents=True, exist_ok=True)
+    steps = QgsProcessingMultiStepFeedback(len(layers), feedback)
     for index, layer_write in enumerate(layers, start=1):
         if feedback.isCanceled():
             return
-        feedback.pushInfo(
-            QCoreApplication.translate("Building", "Writing template layer {}/{}: {}").format(
-                index, len(layers), layer_write.table
-            )
+        steps.setCurrentStep(index - 1)
+        line = QCoreApplication.translate("Building", "Writing template layer {}/{}: {}").format(
+            index, len(layers), layer_write.table
         )
+        feedback.setProgressText(line)
+        feedback.pushInfo(line)
         layer_write.read_layer.removeSelection()
         write_vector_table(
             template_path,
@@ -246,7 +249,7 @@ def write_template(
             layer_write.table,
             kept_field_indexes=layer_write.kept_field_indexes,
             only_selected=False,
-            feedback=feedback,
+            feedback=steps,
         )
     feedback.pushDebugInfo(
         QCoreApplication.translate(
@@ -308,10 +311,12 @@ def write_stratum(
         build.gpkg_path.parent.mkdir(parents=True, exist_ok=True)
         warm_used, template_used = _seed(build, result, feedback)
         warm_boundary = _warm_count(build) if build.snapshot_to is not None else -1
+        steps = QgsProcessingMultiStepFeedback(len(build.layers), feedback)
         for index, layer_write in enumerate(build.layers):
             if feedback.isCanceled():
                 result.ok, result.error = False, "canceled"
                 return result
+            steps.setCurrentStep(index)
             feedback.setProgressText(
                 QCoreApplication.translate("Building", "{} — layer {}/{}: {}").format(
                     label or build.name, index + 1, len(build.layers), layer_write.table
@@ -325,7 +330,7 @@ def write_stratum(
                     template_used=template_used,
                     project=project,
                     strat_layer=strat_layer,
-                    feedback=feedback,
+                    feedback=steps,
                 )
             )
             if index + 1 == warm_boundary and build.snapshot_to is not None:
