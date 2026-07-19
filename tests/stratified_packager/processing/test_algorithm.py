@@ -39,6 +39,7 @@ from qgis.core import (
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingFeedback,
+    QgsProcessingMultiStepFeedback,
     QgsProject,
     QgsRasterLayer,
     QgsRectangle,
@@ -258,13 +259,15 @@ def _extract(zip_path: Path, member: str, target_dir: Path) -> Path:
 
 
 class _RecordingFeedback(QgsProcessingFeedback):
-    """A feedback double collecting the pushed info/warning lines for assertions."""
+    """A feedback double collecting pushed info/warning/error and progress-text lines."""
 
     @override
     def __init__(self) -> None:
         super().__init__()
         self.infos: list[str] = []
         self.warnings: list[str] = []
+        self.errors: list[str] = []
+        self.texts: list[str] = []
 
     @override
     def pushInfo(self, info: str | None = None) -> None:
@@ -277,6 +280,80 @@ class _RecordingFeedback(QgsProcessingFeedback):
         """Record *warning* and forward it."""
         self.warnings.append(warning or "")
         super().pushWarning(warning or "")
+
+    @override
+    def reportError(self, error: str | None = None, fatalError: bool = False) -> None:
+        """Record *error* and forward it."""
+        self.errors.append(error or "")
+        super().reportError(error or "", fatalError)
+
+    @override
+    def setProgressText(self, text: str | None = None) -> None:
+        """Record the progress *text* and forward it."""
+        self.texts.append(text or "")
+        super().setProgressText(text or "")
+
+
+class TestBandFeedback:
+    """The §8.4 band proxy: scaling, forwarding, cancellation and multistep composition."""
+
+    def test_scales_progress_into_the_band(self) -> None:
+        """
+        The proxy's 0-100 range lands on the parent as the [start, end] band.
+
+        ``setProgress(0)`` is not asserted: :meth:`~qgis.core.QgsFeedback.setProgress`
+        deduplicates same-value updates, and a fresh feedback already sits at 0.
+        """
+        parent = QgsProcessingFeedback()
+        band = algorithm_module._BandFeedback(parent, 20, 25)
+        band.setProgress(50)
+        assert parent.progress() == pytest.approx(22.5)
+        band.setProgress(100)
+        assert parent.progress() == pytest.approx(25)
+
+    def test_forwards_messages_and_text_to_the_parent(self) -> None:
+        """Progress text and every message level reach the parent unchanged."""
+        parent = _RecordingFeedback()
+        band = algorithm_module._BandFeedback(parent, 0, 50)
+        band.setProgressText("step text")
+        band.pushInfo("info line")
+        band.pushWarning("warn line")
+        band.reportError("bad")
+        assert parent.texts == ["step text"]
+        assert "info line" in parent.infos
+        assert "warn line" in parent.warnings
+        assert parent.errors == ["bad"]
+
+    def test_cancel_propagates_from_the_parent(self) -> None:
+        """Canceling the parent cancels the proxy (the writer polls the proxy)."""
+        parent = QgsProcessingFeedback()
+        band = algorithm_module._BandFeedback(parent, 0, 100)
+        assert not band.isCanceled()
+        parent.cancel()
+        assert band.isCanceled()
+
+    def test_parent_already_canceled_at_construction(self) -> None:
+        """A proxy built after the parent was canceled starts canceled."""
+        parent = QgsProcessingFeedback()
+        parent.cancel()
+        band = algorithm_module._BandFeedback(parent, 0, 100)
+        assert band.isCanceled()
+
+    def test_multistep_composes_through_the_band(self) -> None:
+        """
+        A sweep inside step k of a multistep lands in that step's slice of the band.
+
+        ``setProgress`` on the multistep exercises the non-virtual base implementation —
+        the same path a C++ :class:`~qgis.core.QgsVectorFileWriter` takes — so this
+        verifies the signal-relay chain end to end.
+        """
+        parent = QgsProcessingFeedback()
+        band = algorithm_module._BandFeedback(parent, 5, 20)
+        steps = QgsProcessingMultiStepFeedback(3, band)
+        steps.setCurrentStep(1)
+        assert parent.progress() == pytest.approx(5 + 15 * (1 / 3))
+        steps.setProgress(50)  # halfway through the middle step
+        assert parent.progress() == pytest.approx(5 + 15 * (1.5 / 3))
 
 
 class TestWorkerCount:
@@ -747,6 +824,7 @@ class TestWarmStart:
             feedback=feedback,
         )
         assert any(line.startswith("Staging layer") for line in feedback.infos)
+        assert any(text.startswith("Staging layer") for text in feedback.texts)
         assert not any("Skipping staging" in line for line in feedback.infos)
 
     def test_use_run_prefetches_every_cache_and_seeds_in_place(

@@ -9,7 +9,7 @@ handling, the field-subset writer, the whole-export template, and per-layer stag
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, override
 
 import pytest
 
@@ -210,6 +210,37 @@ def test_write_vector_table_drops_excluded_fields(
     names = [field.name() for field in reopened.fields().toList()]
     assert "pid" in names
     assert "note" not in names
+
+
+class _TextRecordingFeedback(QgsProcessingFeedback):
+    """A feedback double collecting the progress-text lines for assertions."""
+
+    @override
+    def __init__(self) -> None:
+        super().__init__()
+        self.texts: list[str] = []
+
+    @override
+    def setProgressText(self, text: str | None = None) -> None:
+        """Record the progress *text* and forward it."""
+        self.texts.append(text or "")
+        super().setProgressText(text or "")
+
+
+def test_write_template_reports_progress_text(tmp_path: Path) -> None:
+    """Each template layer announces itself in the progress text, not only in the log."""
+    points = _points("base", [(10, 1, 1)])
+    layer_write = LayerWrite(
+        layer_id=points.id(),
+        table="base",
+        read_layer=_clone(points),
+        members=(LayerMatchPlan(layer_id=points.id(), method=MatchingMethod.WHOLE_EXPORT),),
+        kept_field_indexes=(),
+        whole_export=True,
+    )
+    recorder = _TextRecordingFeedback()
+    write_template(tmp_path / "template.gpkg", [layer_write], feedback=recorder)
+    assert any(text.startswith("Writing template layer 1/1: base") for text in recorder.texts)
 
 
 def test_write_template_then_seed(
