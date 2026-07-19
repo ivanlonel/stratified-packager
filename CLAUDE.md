@@ -65,6 +65,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. **Runnable scripts.** Module-level executable code is guarded with `if __name__ == "__main__":`.
 1. **English only** in the repository (identifiers, literals, docstrings, comments, file names) — `.ts` translation files excepted.
 1. **Verify, don't trust**: When producing an analysis or summarization of something gleaned from a resource (web page, MCP call, user-provided document), do not trust a memory or retained summary of that resource. Always retrieve the resource afresh and compare it to the summary or analysis you are preparing. When comparing, do so in an adversarial way: you are fact-checking work that you suspect at the start contains errors and hallucinations.
+1. **Commit messages** follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/): `<type>[optional scope][!]: <description>`, then an optional blank-line-separated body, then optional footers (`Token: value`, `-` in place of spaces in tokens). `feat` = new feature (SemVer MINOR); `fix` = bug fix (PATCH); other types as fitting — `build`, `chore`, `ci`, `docs`, `perf`, `refactor`, `style`, `test`. Scope = the touched area in parentheses (e.g. `processing`, `toolbelt`, `gui`, `i18n`, `just`). A breaking change MUST carry `!` immediately before the `:` and/or an uppercase `BREAKING CHANGE: <description>` footer. Description: imperative, ≤ 72 chars, no trailing period.
 
 ## Style (SHOULD)
 
