@@ -14,7 +14,7 @@ repos:
       - id: check-useless-excludes
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.28
+    rev: 0.11.29
     hooks:
       - id: uv-lock
         name: uv-lock (frozen)
@@ -24,7 +24,7 @@ repos:
           - --locked
 
   - repo: https://github.com/tsvikas/sync-with-uv
-    rev: v0.5.0
+    rev: v0.6.0
     hooks:
       - id: sync-with-uv
 
@@ -65,7 +65,7 @@ repos:
       - id: text-unicode-replacement-char
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 43.260.0
+    rev: 43.270.0
     hooks:
       - id: renovate-config-validator
         args:
@@ -97,12 +97,12 @@ repos:
           - mdformat-toc~=0.5.0
 
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.25.2
+    rev: v2.25.3
     hooks:
       - id: pyproject-fmt
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.21
+    rev: v0.15.22
     hooks:
       - id: ruff-check
         args:
