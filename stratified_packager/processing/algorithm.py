@@ -128,6 +128,7 @@ from .strata import (
     StrataResolution,
     StratumSpec,
     bundle_strata,
+    evaluate_full_package_gpkg_path,
     evaluate_layer_display_name,
     resolve_strata,
 )
@@ -766,13 +767,18 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         """
         Append the ``<full>`` pseudo-stratum when ``EXPORT_FULL_PACKAGE`` is on (§3).
 
+        ``FULL_PACKAGE_PATH`` is the full package's (extensionless) zip path; its in-zip gpkg
+        path follows ``GPKG_PATH_EXPRESSION`` (empty ⇒ the zip basename), evaluated feature-less
+        for ``<full>`` — never derived from ``FULL_PACKAGE_PATH`` itself.
+
         :param inputs: The resolved inputs.
         :param project: The run's project (supplies the default basename).
         :param resolution: The strata resolution.
         :return: The resolution, possibly extended by the full package.
-        :raise QgsProcessingException: On an invalid full-package path, or on any
-            §6.5/§6.6 collision the re-bundling detects (case-variant zip paths,
-            gpkg paths colliding inside a bundle the full package joins).
+        :raise QgsProcessingException: On an invalid full-package path, on a
+            ``GPKG_PATH_EXPRESSION`` parse/evaluation/NULL error, or on any §6.5/§6.6
+            collision the re-bundling detects (case-variant zip paths, gpkg paths colliding
+            inside a bundle the full package joins).
         """
         if not inputs.export_full:
             return resolution
@@ -789,8 +795,12 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             feature_id=-1,
             raw_name=FULL_PACKAGE_KEY,
             name=FULL_PACKAGE_KEY,
-            gpkg_rel="/".join(components),
-            zip_rel=components[-1],
+            # FULL_PACKAGE_PATH is the zip path; the in-zip gpkg path follows
+            # GPKG_PATH_EXPRESSION (empty => the zip basename), like every real stratum (SPEC 3).
+            gpkg_rel=evaluate_full_package_gpkg_path(
+                inputs.strat_layer, project, inputs.gpkg_expression, default=components[-1]
+            ),
+            zip_rel="/".join(components),
         )
         # Re-bundle instead of hand-merging: bundling with an identical zip path is
         # legitimate, but the merged bundle must pass the same §6.6 gpkg-uniqueness

@@ -1385,12 +1385,64 @@ class TestAuditRegressionFixes:
         assert not list(scenario.out_dir.glob("*.zip"))  # rejected at run start, nothing built
 
     def test_full_package_bundles_into_a_stratum_zip(self, scenario: Scenario) -> None:
-        """Identical zip paths still bundle; distinct gpkg paths inside the bundle are fine."""
-        results = _run(scenario, {p.EXPORT_FULL_PACKAGE: True, p.FULL_PACKAGE_PATH: "full/A"})
+        """Sharing a stratum's zip path still bundles; a distinct in-zip gpkg path is fine."""
+        results = _run(
+            scenario,
+            {
+                p.EXPORT_FULL_PACKAGE: True,
+                p.FULL_PACKAGE_PATH: "A",  # bundle <full> into stratum A's zip
+                # gpkg path per stratum: A->A, B->B, <full>->full — distinct, no collision.
+                p.GPKG_PATH_EXPRESSION: "@stratum_name_sanitized",
+            },
+        )
         assert results[p.ZIP_COUNT] == 2  # <full> bundled into A.zip; B.zip separate
         with zipfile.ZipFile(scenario.out_dir / "A.zip") as archive:
             names = set(archive.namelist())
-        assert {"A.gpkg", "full/A.gpkg"} <= names
+        assert {"A.gpkg", "full.gpkg"} <= names
+
+    def test_full_package_path_is_the_extensionless_zip_path(self, scenario: Scenario) -> None:
+        """A multi-part FULL_PACKAGE_PATH is the zip's path, not the in-zip gpkg path."""
+        results = _run(scenario, {p.EXPORT_FULL_PACKAGE: True, p.FULL_PACKAGE_PATH: "sub/dir/pkg"})
+        assert results[p.ZIP_COUNT] == 3  # A, B, and the nested full-package zip
+        full_zip = scenario.out_dir / "sub" / "dir" / "pkg.zip"
+        assert full_zip.is_file()  # nested under OUTPUT_DIRECTORY, not flattened to the root
+        with zipfile.ZipFile(full_zip) as archive:
+            names = set(archive.namelist())
+        assert "pkg.gpkg" in names  # gpkg default = the zip basename
+        assert "sub/dir/pkg.gpkg" not in names  # ...never the whole FULL_PACKAGE_PATH
+
+    def test_full_package_gpkg_path_follows_gpkg_path_expression(self, scenario: Scenario) -> None:
+        """The full package's gpkg path follows GPKG_PATH_EXPRESSION, not the zip path."""
+        results = _run(
+            scenario,
+            {
+                p.STRATIFICATION_LAYER: None,  # full-only, so no per-stratum path collisions
+                p.EXPORT_FULL_PACKAGE: True,
+                p.FULL_PACKAGE_PATH: "bundle",
+                p.GPKG_PATH_EXPRESSION: "'data/all'",
+            },
+        )
+        assert results[p.ZIP_COUNT] == 1
+        full_zip = scenario.out_dir / "bundle.zip"  # zip path from FULL_PACKAGE_PATH
+        assert full_zip.is_file()
+        with zipfile.ZipFile(full_zip) as archive:
+            names = set(archive.namelist())
+        assert "data/all.gpkg" in names  # in-zip gpkg path from GPKG_PATH_EXPRESSION
+
+    def test_full_package_gpkg_expression_referencing_a_field_aborts(
+        self, scenario: Scenario
+    ) -> None:
+        """The full package has no feature, so a field-referencing gpkg expression aborts."""
+        with pytest.raises(QgsProcessingException, match="<full>"):
+            _run(
+                scenario,
+                {
+                    p.STRATIFICATION_LAYER: None,
+                    p.EXPORT_FULL_PACKAGE: True,
+                    p.FULL_PACKAGE_PATH: "bundle",
+                    p.GPKG_PATH_EXPRESSION: '"code"',  # a field ref; no feature => NULL => abort
+                },
+            )
 
     def test_warm_marked_t_token_is_warm_and_garbage_aborts(self, scenario: Scenario) -> None:
         """warm_marked follows coerce_bool: "t" is true; an uncoercible value aborts (SPEC 4/6)."""
