@@ -249,16 +249,6 @@ LAYER_VARIABLE_DEFAULTS: Final[dict[str, str]] = {
 """Builtin defaults of the §4 layer variables, keyed by full variable name (a derived view
 of :data:`LAYER_VAR_SPECS`)."""
 
-LAYER_VARIABLE_PROPERTY_KEYS: Final[frozenset[str]] = frozenset(
-    {"variableNames", "variableValues"}
-)
-"""Custom-property keys that backing-store layer variables write.
-
-``QgsExpressionContextUtils.setLayerVariable(s)`` mutates the layer's
-``variableNames`` / ``variableValues`` custom properties, firing
-``QgsMapLayer.customPropertyChanged`` with these keys — the precise trigger for the
-GUI's ``LAYERS``-prefill refresh (SPEC §5)."""
-
 
 class OverwriteMode(Enum):
     """``OVERWRITE_MODE`` tokens (SPEC §3/§10)."""
@@ -1041,24 +1031,20 @@ class InputReader:
         return self._algorithm.parameterAsEnumStrings(self._parameters, name, self._context)
 
 
-def eligible_layer_ids(project: QgsProject, /, *, strict: bool = False) -> list[str]:
+def eligible_layer_ids(project: QgsProject, /) -> list[str]:
     """
     Return the layers an empty ``LAYERS`` input resolves to (SPEC §4/§5).
 
     Eligible = every project layer except plugin layers, minus layers whose
     ``stratified_packager_exclude`` variable is true. An unset value counts as included
-    (the default: participate). A value that cannot be coerced to bool is treated like
-    every other run-start config in the strict regime (cf. :func:`resolve_default`) via
-    ``strict``: with ``strict=True`` (runtime resolution) it raises so the run aborts
-    loudly instead of guessing inclusion; with ``strict=False`` (declaration-time
-    ``LAYERS`` prefill) it falls back to included, because the runtime path re-checks
-    strictly.
+    (the default: participate). A value that cannot be coerced to bool raises, like every
+    other run-start config in the strict regime (cf. :func:`resolve_default`), so the run
+    aborts loudly instead of guessing inclusion.
 
     :param project: The project to scan.
-    :param strict: Whether an uncoercible ``exclude`` value raises instead of including.
     :return: Layer ids in layer-tree iteration order.
-    :raise ValueError: If ``strict`` and a layer's ``exclude`` value cannot be coerced to
-        bool; the message names the layer and the offending value.
+    :raise ValueError: If a layer's ``exclude`` value cannot be coerced to bool; the
+        message names the layer and the offending value.
     """
     ids: list[str] = []
     for layer in project.mapLayers().values():
@@ -1068,10 +1054,8 @@ def eligible_layer_ids(project: QgsProject, /, *, strict: bool = False) -> list[
         try:
             exclude = bool(_coerce(_Kind.BOOL, raw)) if raw is not None else False
         except ValueError as err:
-            if strict:
-                msg = f"layer {layer.name()!r}: exclude variable {raw!r}: {err}"
-                raise ValueError(msg) from err
-            exclude = False
+            msg = f"layer {layer.name()!r}: exclude variable {raw!r}: {err}"
+            raise ValueError(msg) from err
         if not exclude:
             ids.append(layer.id())
     return ids
@@ -1106,14 +1090,18 @@ def declare_parameters(
             msg = f"QGIS rejected the declaration of parameter {parameter.name()!r}."
             raise ValueError(msg)
 
-    layers_default = eligible_layer_ids(project) if project is not None else None
     add(
+        # No defaultValue on purpose (SPEC §5): the multiple-layers widget wrapper rewrites
+        # whatever it is given into one layer *source* string per layer, and source-keyed
+        # resolution answers every string of a shared source with the same layer — so an
+        # id-list default cannot survive the round-trip and would collapse the §12
+        # shared-source groups. Left unset, the widget hands back layer ids (or nothing,
+        # which the runtime fallback resolves to every eligible layer).
         QgsProcessingParameterMultipleLayers(
             LAYERS,
             translated_label(LAYERS),
             # Scoped-enum access verified on QGIS 4.0.3; the bundled stubs lag it.
             QgsProcessing.SourceType.TypeMapLayer,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-            defaultValue=layers_default,
             optional=True,
         )
     )

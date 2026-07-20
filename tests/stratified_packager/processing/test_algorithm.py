@@ -1022,6 +1022,42 @@ class TestDedupAndFullPackage:
         assert zip_report.count(",cities,") >= 1
         assert "cities_twin,cities," in zip_report  # member row points at shared table
 
+    def test_source_valued_layers_reports_the_collapse(
+        self, scenario: Scenario, tmp_path: Path
+    ) -> None:
+        """
+        Selecting shared-source layers *by source* warns instead of silently losing them.
+
+        Two layers over one source are indistinguishable once identified by source, so the
+        siblings cannot be recovered from the value. The run must say so and package the
+        survivor once, rather than writing it twice under two names.
+        """
+        twin = QgsVectorLayer(scenario.cities.source(), "cities_twin", "ogr")
+        assert twin.isValid()
+        assert scenario.project.addMapLayer(twin, addToLegend=False)
+
+        feedback = _RecordingFeedback()
+        _run(
+            scenario,
+            {
+                p.LAYERS: [
+                    scenario.cities.source(),
+                    twin.source(),  # identical string: collapses onto cities
+                    scenario.plots.source(),
+                    scenario.roads.source(),
+                ]
+            },
+            feedback,
+        )
+        assert any("already selected" in warning for warning in feedback.warnings)
+        gpkg_a = _extract(scenario.out_dir / "A.zip", "A.gpkg", tmp_path / "xcol")
+        assert layer_names(gpkg_a) == ["cities", "plots", "roads"]
+        with sqlite3.connect(gpkg_a) as connection:
+            styles = connection.execute(
+                "SELECT styleName FROM layer_styles WHERE f_table_name = 'cities'"
+            ).fetchall()
+        assert styles == [("cities",)]  # written once, not once per collapsed entry
+
     def test_staged_dedup_group_stages_once_and_stays_deduplicated(
         self, scenario: Scenario, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
