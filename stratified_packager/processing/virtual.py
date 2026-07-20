@@ -9,7 +9,7 @@ Phase A layer classification.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from qgis.core import QgsProcessingException, QgsVirtualLayerDefinition
 from qgis.PyQt.QtCore import QCoreApplication, QUrl
@@ -21,9 +21,17 @@ from . import params
 from .dedup import normalized_source_key, source_group_key
 
 if TYPE_CHECKING:
-    from qgis.core import QgsMapLayer, QgsProcessingFeedback, QgsVectorLayer
+    from qgis.core import QgsMapLayer, QgsProcessingFeedback, QgsProject, QgsVectorLayer
 
 __all__: list[str] = ["route_virtual_layers"]
+
+_LOCAL_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {"ogr", "gdal", "gpkg", "spatialite", "memory", "delimitedtext", "gpx", "mdal"}
+)
+"""Provider keys a virtual layer can query without leaving the machine.
+
+Anything else — a database provider, a web service, or a nested ``virtual`` layer that may
+itself reach one — makes the virtual query a remote round-trip generator when materialized."""
 
 
 def route_virtual_layers(
@@ -31,18 +39,21 @@ def route_virtual_layers(
     vectors: list[QgsVectorLayer],
     payloads: list[QgsMapLayer],
     embedded: list[QgsMapLayer],
+    project: QgsProject,
     feedback: QgsProcessingFeedback,
 ) -> None:
     """
     Route virtual layers to packaged vectors (materialize) or embedded-only (live) (§4/§13).
 
     Mutates *vectors* / *embedded* in place; the coverage set is the already-classified
-    packaged layers.
+    packaged layers. A layer routed to materialize is additionally checked for remote sources,
+    which cost a warning but never change the routing.
 
     :param virtuals: The collected ``virtual`` provider layers.
     :param vectors: Packaged vector layers (materialized virtuals are appended).
     :param payloads: Packaged payload layers (part of the coverage set).
     :param embedded: Embedded-only layers (live virtuals are appended).
+    :param project: The run's project (resolves referenced sources to their provider).
     :param feedback: Execution feedback channel.
     """
     if not virtuals:
@@ -52,12 +63,55 @@ def route_virtual_layers(
         key for layer in vectors if (key := source_group_key(layer, feedback)) is not None
     )
     for layer in virtuals:
-        target = (
-            vectors
-            if _virtual_should_materialize(layer, packaged_ids, packaged_keys, feedback)
-            else embedded
-        )
-        target.append(layer)
+        if _virtual_should_materialize(layer, packaged_ids, packaged_keys, feedback):
+            _warn_remote_sources(layer, project, feedback)
+            vectors.append(layer)
+        else:
+            embedded.append(layer)
+
+
+def _warn_remote_sources(
+    layer: QgsVectorLayer, project: QgsProject, feedback: QgsProcessingFeedback
+) -> None:
+    """
+    Warn when a materialized virtual layer queries sources off the local machine (§4/§8.2).
+
+    A materialized virtual layer is packaged like any vector, so its SQLite query is
+    re-executed for every stratum — once to select the stratum's features and once more while
+    the writer reads them. When a source is a database or service provider, each execution is a
+    round-trip generator: SQLite cannot push a correlated subquery down, so it pulls the source
+    through QGIS row by row, and concurrent scans can exhaust the provider's connection pool and
+    wedge the run. Pushing the join into the source (a subset filter, view, or materialized
+    view) turns the whole thing into one set-based query.
+
+    Detection only — the layer is materialized exactly as it would have been.
+
+    :param layer: The virtual layer being materialized.
+    :param project: The run's project (resolves referenced sources to their provider).
+    :param feedback: Execution feedback channel.
+    """
+    definition = QgsVirtualLayerDefinition.fromUrl(QUrl(layer.source()))
+    remote: list[str] = []
+    for source in definition.sourceLayers():
+        if source.isReferenced():
+            referenced = project.mapLayer(source.reference())
+            provider = "" if referenced is None else referenced.providerType()
+        else:
+            provider = source.provider()
+        if provider and provider not in _LOCAL_PROVIDERS:
+            remote.append(f"{source.name()} ({provider})")
+    if not remote:
+        return
+    feedback.pushWarning(
+        QCoreApplication.translate(
+            "StratifiedPackagerAlgorithm",
+            "Virtual layer {} is materialized but queries non-local source(s) ({}). Its query"
+            " re-runs against them for every stratum, which on a database provider means many"
+            " round-trips and may exhaust the provider's connection pool. Consider pushing the"
+            " join into the source — a subset filter, a view, or a materialized view — and"
+            " packaging that layer instead.",
+        ).format(layer.name(), ", ".join(remote))
+    )
 
 
 def _virtual_should_materialize(

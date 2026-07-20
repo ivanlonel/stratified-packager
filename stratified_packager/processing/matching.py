@@ -14,7 +14,8 @@ passed by the caller; fatal conditions raise :exc:`~qgis.core.QgsProcessingExcep
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from collections import OrderedDict
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final, cast
 
 from qgis.core import (
@@ -61,6 +62,7 @@ if TYPE_CHECKING:
 __all__: list[str] = [
     "DE9IM_PATTERN",
     "INTERIORS_INTERSECT",
+    "ChainContext",
     "LayerMatchPlan",
     "MatchCondition",
     "attribute_keys_for_stratum",
@@ -136,6 +138,87 @@ class MatchCondition:
 
     by_fid: bool = False
     """Whether :attr:`fids` (rather than the key columns) define membership."""
+
+
+_CHAIN_MEMO_CAPACITY: Final = 64
+"""Chain resolutions :class:`ChainContext` keeps (SPEC §7.1). The access pattern is one stratum
+resolved repeatedly — by every layer sharing its chain, and again by Phase B after Phase A's
+staging pass — then never revisited, so a small memo captures nearly every hit while holding far
+less than every stratum's key sets."""
+
+
+@dataclass
+class ChainContext:
+    """
+    Per-run relation-chain resolution context: staged hop layers plus a bounded key memo (§7.1).
+
+    Resolving a chain is a pure function of the chain and the stratum's starting key values —
+    the run never reads a project layer for anything else and never mutates one (§8.1) — so the
+    same ``(chain, start keys)`` pair always yields the same condition. Two call patterns repeat
+    it: every packaged layer sharing a relation chain re-derives the identical key set per
+    stratum, and :func:`~.building.stage_union` (Phase A) derives what Phase B derives again.
+
+    Held per run and passed explicitly down the build call chain, never module-side, so nothing
+    shares mutable state between runs.
+    """
+
+    hop_layers: dict[str, QgsVectorLayer] = field(default_factory=dict)
+    """Intermediate hop layer id -> its staged local copy (§8.2); ids absent from the map
+    resolve against the project, as they always did."""
+
+    capacity: int = _CHAIN_MEMO_CAPACITY
+    """Memo entries kept before the least-recently-used one is evicted; ``0`` disables
+    memoization (every resolution queries the hops)."""
+
+    hits: int = field(default=0, init=False)
+    """Chain resolutions served from the memo."""
+
+    misses: int = field(default=0, init=False)
+    """Chain resolutions that had to query the hops."""
+
+    _memo: OrderedDict[tuple[RelationPath, tuple[object, ...]], MatchCondition] = field(
+        default_factory=OrderedDict, init=False, repr=False
+    )
+
+    def hop_layer(self, layer_id: str, project: QgsProject) -> QgsVectorLayer | None:
+        """
+        Resolve one hop's target layer, preferring its staged local copy (§8.2).
+
+        :param layer_id: The hop's arrival layer id.
+        :param project: The run's project (the fallback lookup).
+        :return: The staged copy, the project layer, or :data:`None` when neither exists.
+        """
+        staged = self.hop_layers.get(layer_id)
+        if staged is not None:
+            return staged
+        return cast("QgsVectorLayer | None", project.mapLayer(layer_id))
+
+    def get(self, key: tuple[RelationPath, tuple[object, ...]]) -> MatchCondition | None:
+        """
+        Look one chain resolution up, refreshing its recency on a hit.
+
+        :param key: The ``(chain, starting key tuple)`` pair.
+        :return: The memoized condition, or :data:`None` when not memoized.
+        """
+        condition = self._memo.get(key)
+        if condition is None:
+            self.misses += 1
+            return None
+        self._memo.move_to_end(key)
+        self.hits += 1
+        return condition
+
+    def put(self, key: tuple[RelationPath, tuple[object, ...]], condition: MatchCondition) -> None:
+        """
+        Memoize one chain resolution, evicting the least recently used entries past capacity.
+
+        :param key: The ``(chain, starting key tuple)`` pair.
+        :param condition: The resolved membership condition.
+        """
+        self._memo[key] = condition
+        self._memo.move_to_end(key)
+        while len(self._memo) > self.capacity:
+            self._memo.popitem(last=False)
 
 
 # ---------------------------------------------------------------------------
@@ -407,6 +490,8 @@ def attribute_keys_for_stratum(
     stratum_name: str,
     project: QgsProject,
     feedback: QgsProcessingFeedback,
+    *,
+    chain_context: ChainContext | None = None,
 ) -> MatchCondition:
     """
     Propagate the stratum's keys along the chain to the target layer (SPEC §7.1).
@@ -416,11 +501,16 @@ def attribute_keys_for_stratum(
     by construction — the request reads the layer, not its selection). NULL keys never
     match. The final hop's far-side key set becomes the membership condition.
 
+    With a *chain_context*, an identical ``(chain, starting keys)`` pair is answered from its
+    memo instead of re-querying the hops, and hops whose layer was staged read the local copy.
+
     :param plan: The layer's attribute plan (chain in strat → layer order).
     :param stratum_feature: The stratum feature.
     :param stratum_name: The resolved stratum name (for feedback only).
     :param project: The project (resolves intermediate layers by id).
     :param feedback: Execution feedback channel.
+    :param chain_context: The run's chain context (staged hop layers + memo); :data:`None`
+        resolves every chain from the project, unmemoized.
     :return: The membership condition; for an empty chain (the layer *is* the
         stratification layer) a single-fid condition.
     :raise QgsProcessingException: If an intermediate layer of the chain is missing,
@@ -429,9 +519,42 @@ def attribute_keys_for_stratum(
     if not plan.chain:
         return MatchCondition(fids=(stratum_feature.id(),), by_fid=True)
 
-    first = plan.chain[0]
+    start = tuple(stratum_feature.attribute(name) for name in plan.chain[0].from_fields)
+    if chain_context is not None:
+        memoized = chain_context.get((plan.chain, start))
+        if memoized is not None:
+            return memoized
+    condition = _propagate_chain(plan, start, stratum_name, project, feedback, chain_context)
+    if chain_context is not None:
+        chain_context.put((plan.chain, start), condition)
+    return condition
+
+
+def _propagate_chain(
+    plan: LayerMatchPlan,
+    start: tuple[object, ...],
+    stratum_name: str,
+    project: QgsProject,
+    feedback: QgsProcessingFeedback,
+    chain_context: ChainContext | None,
+) -> MatchCondition:
+    """
+    Walk the chain's hops, propagating *start* to the target layer's key set (SPEC §7.1).
+
+    The uncached body of :func:`attribute_keys_for_stratum`, split out so the memo has a
+    single value to store.
+
+    :param plan: The layer's attribute plan (non-empty chain).
+    :param start: The stratum's starting key tuple.
+    :param stratum_name: The resolved stratum name (for feedback only).
+    :param project: The project (resolves intermediate layers by id).
+    :param feedback: Execution feedback channel.
+    :param chain_context: The run's chain context, or :data:`None`.
+    :return: The membership condition.
+    :raise QgsProcessingException: If an intermediate layer of the chain is missing,
+        or on cancellation during a hop query.
+    """
     keys: set[tuple[object, ...]] = set()
-    start = tuple(stratum_feature.attribute(name) for name in first.from_fields)
     # NULL keys never match (SPEC §7). feature.attribute() returns Python None on PyQt6 but a
     # QVariant null on PyQt5, so detect both via QgsVariantUtils.isNull rather than `is None`.
     if all(not QgsVariantUtils.isNull(value) for value in start):
@@ -440,7 +563,11 @@ def attribute_keys_for_stratum(
     for hop_index, hop in enumerate(plan.chain):
         if not keys:
             return MatchCondition(key_fields=tuple(plan.chain[-1].to_fields))
-        target = project.mapLayer(hop.to_layer_id)
+        target = (
+            chain_context.hop_layer(hop.to_layer_id, project)
+            if chain_context is not None
+            else project.mapLayer(hop.to_layer_id)
+        )
         if target is None:
             raise QgsProcessingException(
                 QCoreApplication.translate(

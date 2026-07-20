@@ -21,6 +21,7 @@ from stratified_packager.toolbelt.settings import LayerVariables
 from stratified_packager.toolbelt.utils import coerce_bool
 
 from . import params
+from .matching import ChainContext
 from .strata import FULL_PACKAGE_KEY
 
 if TYPE_CHECKING:
@@ -173,6 +174,11 @@ class _Material:
 
     template_path: Path | None = None
     """The §8.1.5 template gpkg (non-warm-marked whole-export layers), if built."""
+
+    chain_context: ChainContext = field(default_factory=ChainContext)
+    """The run's relation-chain resolution context (§7.1): staged intermediate hop layers plus
+    the bounded memo that stops every layer sharing a chain — and Phase B after Phase A — from
+    re-querying the same hops for the same stratum."""
 
 
 @dataclass

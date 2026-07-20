@@ -56,7 +56,7 @@ if TYPE_CHECKING:
         QgsVectorLayer,
     )
 
-    from .matching import LayerMatchPlan
+    from .matching import ChainContext, LayerMatchPlan
 
 __all__: list[str] = [
     "LayerWrite",
@@ -288,6 +288,7 @@ def write_stratum(
     project: QgsProject,
     strat_layer: QgsVectorLayer | None,
     feedback: QgsProcessingFeedback,
+    chain_context: ChainContext | None = None,
 ) -> StratumWriteResult:
     """
     Assemble one stratum gpkg on the algorithm thread (SPEC §8.3); never raises.
@@ -304,6 +305,7 @@ def write_stratum(
     :param strat_layer: The stratification layer (spatial transforms); :data:`None` only
         for the ``<full>`` package, whose layers are all ``whole_export``.
     :param feedback: Execution feedback channel.
+    :param chain_context: The run's relation-chain context (staged hops + memo, §7.1).
     :return: The stratum outcome, with per-layer results.
     """
     result = StratumWriteResult(name=build.name, ok=True)
@@ -331,6 +333,7 @@ def write_stratum(
                     project=project,
                     strat_layer=strat_layer,
                     feedback=steps,
+                    chain_context=chain_context,
                 )
             )
             if index + 1 == warm_boundary and build.snapshot_to is not None:
@@ -453,6 +456,7 @@ def _build_layer(
     project: QgsProject,
     strat_layer: QgsVectorLayer | None,
     feedback: QgsProcessingFeedback,
+    chain_context: ChainContext | None = None,
 ) -> LayerWriteResult:
     """
     Append (or recognize) one layer's slice and apply its epilogue (SPEC §8.3).
@@ -470,6 +474,7 @@ def _build_layer(
     :param project: The run's project.
     :param strat_layer: The stratification layer.
     :param feedback: Execution feedback channel.
+    :param chain_context: The run's relation-chain context (staged hops + memo, §7.1).
     :return: The layer outcome.
     :raise QgsProcessingException: On a writer or transform failure (contained upstream).
     """
@@ -481,7 +486,13 @@ def _build_layer(
         return _finalize_layer(build.gpkg_path, layer_write, drop_empty=False, write_styles=True)
 
     only_selected, matched_fids = _apply_membership(
-        layer_write, build.stratum_feature, project, strat_layer, build.name, feedback
+        layer_write,
+        build.stratum_feature,
+        project,
+        strat_layer,
+        build.name,
+        feedback,
+        chain_context=chain_context,
     )
     write_vector_table(
         build.gpkg_path,
@@ -507,6 +518,7 @@ def _apply_membership(
     strat_layer: QgsVectorLayer | None,
     stratum_name: str,
     feedback: QgsProcessingFeedback,
+    chain_context: ChainContext | None = None,
 ) -> tuple[bool, frozenset[int]]:
     """
     Select the union of the members' matching features on the read layer (SPEC §7/§12).
@@ -521,6 +533,7 @@ def _apply_membership(
     :param strat_layer: The stratification layer (spatial transforms).
     :param stratum_name: The stratum name (feedback only).
     :param feedback: Execution feedback channel.
+    :param chain_context: The run's relation-chain context (staged hops + memo, §7.1).
     :return: ``(only the selection is written, the selected fids)`` — the second element
         feeds the §9.1 orphan accounting and is empty for an unconditional write.
     :raise QgsProcessingException: On a coordinate-transform failure.
@@ -544,6 +557,7 @@ def _apply_membership(
             strat_layer=strat_layer,
             stratum_name=stratum_name,
             feedback=feedback,
+            chain_context=chain_context,
         )
     return True, frozenset(read.selectedFeatureIds())
 
@@ -557,6 +571,7 @@ def _select_member(
     strat_layer: QgsVectorLayer | None,
     stratum_name: str,
     feedback: QgsProcessingFeedback,
+    chain_context: ChainContext | None = None,
 ) -> None:
     """
     Add one member's matching features to *read_layer*'s selection (SPEC §7).
@@ -573,11 +588,12 @@ def _select_member(
     :param strat_layer: The stratification layer (spatial transforms).
     :param stratum_name: The stratum name (feedback only).
     :param feedback: Execution feedback channel.
+    :param chain_context: The run's relation-chain context (staged hops + memo, §7.1).
     :raise QgsProcessingException: On a missing stratification layer or transform failure.
     """
     if member.method is MatchingMethod.ATTRIBUTE:
         condition = attribute_keys_for_stratum(
-            member, stratum_feature, stratum_name, project, feedback
+            member, stratum_feature, stratum_name, project, feedback, chain_context=chain_context
         )
         if condition.by_fid:
             read_layer.selectByIds(list(condition.fids), Qgis.SelectBehavior.AddToSelection)
@@ -609,6 +625,7 @@ def stage_union(
     project: QgsProject,
     strat_layer: QgsVectorLayer | None,
     feedback: QgsProcessingFeedback,
+    chain_context: ChainContext | None = None,
 ) -> None:
     """
     Stage the union of every stratum's matches into a per-layer GeoPackage (SPEC §8.2).
@@ -627,6 +644,8 @@ def stage_union(
     :param project: The run's project.
     :param strat_layer: The stratification layer.
     :param feedback: Execution feedback channel.
+    :param chain_context: The run's relation-chain context (§7.1) — sharing it with Phase B is
+        what stops each stratum's chain from being resolved once here and again there.
     :raise QgsProcessingException: On a writer or transform failure.
     """
     read_layer.removeSelection()
@@ -647,6 +666,7 @@ def stage_union(
                 strat_layer=strat_layer,
                 stratum_name="",
                 feedback=feedback,
+                chain_context=chain_context,
             )
     feedback.setProgressText(
         QCoreApplication.translate("Building", "Staging {}: writing the staged copy").format(table)

@@ -93,7 +93,7 @@ from .bundling import (
     style_asset_mapping,
 )
 from .dedup import apply_dedup, promote_warm_groups
-from .matching import LayerMatchPlan, resolve_layer_methods
+from .matching import ChainContext, LayerMatchPlan, resolve_layer_methods
 from .material import (
     _BuildState,
     _field_indexes,
@@ -158,6 +158,27 @@ _LAYER_TYPE_TOKENS: dict[Qgis.LayerType, str] = {
 
 _SQLITE_SIDECAR_SUFFIXES: tuple[str, ...] = ("-wal", "-shm", "-journal")
 """SQLite sidecar suffixes excluded from zips (checkpointed away beforehand, SPEC §10)."""
+
+_HOP_TABLE: Final = "hop"
+"""Table name inside a staged relation-chain intermediate's GeoPackage (SPEC §7.1/§8.2); each
+hop layer gets its own file, so one fixed name never collides."""
+
+
+def _report_chain_memo(chain_context: ChainContext, feedback: QgsProcessingFeedback) -> None:
+    """
+    Report how much re-querying the §7.1 chain memo saved, once per run.
+
+    Debug-level: the memo is an optimization whose effect never changes an output, so it
+    belongs with the other diagnostics rather than in the run's info stream.
+
+    :param chain_context: The run's relation-chain context.
+    :param feedback: Execution feedback channel.
+    """
+    if chain_context.hits or chain_context.misses:
+        feedback.pushDebugInfo(
+            f"relation-chain memo: {chain_context.hits} hit(s), {chain_context.misses} miss(es)"
+        )
+
 
 _POOL_WIDTH: Final = 2
 """Background pool width (SPEC §8.4).
@@ -565,7 +586,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                 payloads.append(layer)
             else:
                 embedded.append(layer)
-        route_virtual_layers(virtuals, vectors, payloads, embedded, feedback)
+        route_virtual_layers(virtuals, vectors, payloads, embedded, project, feedback)
         if excluded:
             feedback.pushWarning(
                 self.tr("Plugin layers cannot be packaged; excluded: {}").format(
@@ -963,6 +984,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         if not inputs.dry_run:
             # A dry run stops at analysis (§8.2): staging copies and the template are
             # build-side I/O that no dry-run output reads.
+            self._stage_chain_hops(material, workdir / "staging", feedback)
             self._stage_preps(
                 material,
                 real_features,
@@ -1369,6 +1391,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                 project=material.project,
                 strat_layer=material.inputs.strat_layer,
                 feedback=feedback,
+                chain_context=material.chain_context,
             )
         # Index the key columns the N per-stratum IN filters scan (§8.2) — one index per
         # distinct member key set; the spatial path already rides the writer's r-tree.
@@ -1388,6 +1411,139 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         prep.read_layer = self._open_local(staging_gpkg, prep.table, prep.layer.name())
         prep.kept_field_indexes = _field_indexes(prep.read_layer, prep.kept_fields)
         prep.staged = True
+
+    def _chain_hop_fields(
+        self, material: _Material
+    ) -> dict[str, tuple[set[str], set[tuple[str, ...]]]]:
+        """
+        Collect the fields every relation chain queries on each **intermediate** hop layer (§7.1).
+
+        The last hop of a chain is never queried — its far-side keys *are* the membership
+        condition — so only the layers a chain passes *through* are collected. Each hop reads
+        its own ``to_fields`` (matched against the incoming keys) and the next hop's
+        ``from_fields`` (collected as the outgoing keys).
+
+        :param material: The run material (its preps carry the resolved plans).
+        :return: Hop layer id -> ``(queried field names, distinct match field sets)``.
+        """
+        collected: dict[str, tuple[set[str], set[tuple[str, ...]]]] = {}
+        for prep in material.preps:
+            chain = prep.plan.chain
+            for index, hop in enumerate(chain[:-1]):
+                names, match_sets = collected.setdefault(hop.to_layer_id, (set(), set()))
+                names.update(hop.to_fields)
+                names.update(chain[index + 1].from_fields)
+                match_sets.add(tuple(hop.to_fields))
+        return collected
+
+    def _stage_chain_hops(
+        self, material: _Material, staging_dir: Path, feedback: QgsProcessingFeedback
+    ) -> None:
+        """
+        Stage the intermediate hop layers of a ``STAGE_PROVIDERS`` provider (SPEC §7.1/§8.2).
+
+        Relation-chain intermediates are read straight from the project, once per ``IN`` chunk
+        per member per stratum — the one read path per-layer staging never covered, because
+        staging only replaces a *packaged* layer's read source. When such a hop sits on a
+        provider the user declared slow, copy it once into a local GeoPackage holding just the
+        fields the chain queries, index those, and resolve the chain against that copy instead.
+
+        The copy holds **every** feature: a chain propagates keys through the whole
+        intermediate, so the matched-union slice a packaged layer stages would silently drop
+        rows. A layer that is both a packaged layer and a hop is therefore staged twice, once
+        per role, which is redundant but correct.
+
+        A failure here is contained: hop staging is a read-amortization optimization, so the
+        run falls back to reading the project layer rather than aborting.
+
+        :param material: The run material (its chain context receives the staged layers).
+        :param staging_dir: The directory holding the staging GeoPackages.
+        :param feedback: Execution feedback channel.
+        :raise QgsProcessingException: On cancellation.
+        """
+        stage_providers = material.inputs.stage_providers
+        if not stage_providers:
+            return
+        for index, (layer_id, (names, match_sets)) in enumerate(
+            self._chain_hop_fields(material).items()
+        ):
+            if feedback.isCanceled():
+                raise QgsProcessingException(self.tr("Operation was canceled."))
+            layer = cast("QgsVectorLayer | None", material.project.mapLayer(layer_id))
+            if layer is None or layer.providerType() not in stage_providers:
+                continue
+            feedback.setProgressText(
+                self.tr("Staging relation-chain layer: {}").format(layer.name())
+            )
+            try:
+                self._stage_chain_hop(
+                    layer,
+                    names,
+                    match_sets,
+                    staging_dir,
+                    index,
+                    material.chain_context,
+                    feedback,
+                )
+            except QgsProcessingException as err:
+                feedback.pushWarning(
+                    self.tr(
+                        "Could not stage relation-chain layer {} ({}); its hops will be"
+                        " queried from the project instead."
+                    ).format(layer.name(), err)
+                )
+
+    def _stage_chain_hop(
+        self,
+        layer: QgsVectorLayer,
+        names: Collection[str],
+        match_sets: Collection[tuple[str, ...]],
+        staging_dir: Path,
+        index: int,
+        chain_context: ChainContext,
+        feedback: QgsProcessingFeedback,
+    ) -> None:
+        """
+        Copy one intermediate hop layer locally and register it on the chain context (§8.2).
+
+        :param layer: The project's hop layer (cloned, never read for data nor mutated).
+        :param names: The field names the chain queries on this layer.
+        :param match_sets: Distinct key field sets to index (the ``IN`` filters scan them).
+        :param staging_dir: The directory holding the staging GeoPackages.
+        :param index: A per-run counter making the staging file name unique.
+        :param chain_context: The run's chain context, which receives the staged layer.
+        :param feedback: Execution feedback channel.
+        :raise QgsProcessingException: If the copy cannot be written or re-opened.
+        """
+        staging_gpkg = staging_dir / f"__hop_{index}.gpkg"
+        staging_gpkg.parent.mkdir(parents=True, exist_ok=True)
+        clone = self._clone(layer)
+        clone.removeSelection()
+        write_vector_table(
+            staging_gpkg,
+            clone,
+            _HOP_TABLE,
+            kept_field_indexes=_field_indexes(clone, names),
+            only_selected=False,
+            feedback=feedback,
+        )
+        for key_fields in match_sets:
+            try:
+                gpkg.create_attribute_index(staging_gpkg, _HOP_TABLE, key_fields)
+            except sqlite3.Error as err:  # an index is an optimization, never block the run
+                feedback.pushWarning(
+                    self.tr("could not index staged key fields for {}: {}").format(
+                        layer.name(), err
+                    )
+                )
+        staged = self._open_local(staging_gpkg, _HOP_TABLE, layer.name())
+        chain_context.hop_layers[layer.id()] = staged
+        count = staged.featureCount()
+        feedback.pushInfo(
+            self.tr("Staged relation-chain layer {}: %n feature(s) copied.", n=count).format(
+                layer.name()
+            )
+        )
 
     def _clone(self, layer: QgsVectorLayer) -> QgsVectorLayer:
         """
@@ -1755,6 +1911,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                 project=material.project,
                 strat_layer=inputs.strat_layer,
                 feedback=self._stratum_band(state, warm_build, feedback),
+                chain_context=material.chain_context,
             )
             self._fold_warm_result(state, result, feedback)
             if result.ok:
@@ -1797,6 +1954,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     project=material.project,
                     strat_layer=inputs.strat_layer,
                     feedback=self._stratum_band(state, build, feedback),
+                    chain_context=material.chain_context,
                 )
                 self._fold_result(state, result, feedback)
             self._maybe_submit_zip(
@@ -1804,6 +1962,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             )
         for future in state.zip_futures:
             self._fold_zip(state, future.result(), feedback)
+        _report_chain_memo(material.chain_context, feedback)
         return state
 
     def _stratum_band(

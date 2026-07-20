@@ -61,6 +61,7 @@ from stratified_packager.processing.building import write_stratum as real_write_
 from stratified_packager.processing.params import ProjectInclusion
 from stratified_packager.processing.workers import run_prefetch as real_run_prefetch
 from stratified_packager.toolbelt.gpkg import feature_count, layer_names
+from stratified_packager.toolbelt.relations import RelationEdge, RelationHop
 from tests.stratified_packager._qgis_helpers import add_relation, build_alpha_gpkg
 from tests.stratified_packager.processing.test_bundling import _write_tif
 
@@ -1405,3 +1406,59 @@ class TestAuditRegressionFixes:
         assert (scenario.out_dir / "B.zip").is_file()  # best-effort: B still shipped
         report = (scenario.out_dir / "report.csv").read_text(encoding="utf-8")
         assert "A,roads,,failed" in report
+
+
+class TestChainHopFields:
+    """Which relation-chain layers qualify for the §7.1/§8.2 hop staging."""
+
+    def _hop(
+        self, to_layer_id: str, referencing: tuple[str, ...], referenced: tuple[str, ...]
+    ) -> RelationHop:
+        """Build a hop arriving at *to_layer_id* whose arrival-side fields are *referenced*."""
+        edge = RelationEdge(
+            relation_id=f"r_{to_layer_id}",
+            name=f"r_{to_layer_id}",
+            referencing_layer_id="from",
+            referenced_layer_id=to_layer_id,
+            referencing_fields=referencing,
+            referenced_fields=referenced,
+        )
+        return RelationHop(edge, "from", to_layer_id)
+
+    def _material(self, chain: tuple[RelationHop, ...]) -> SimpleNamespace:
+        """Wrap *chain* in the minimal material shape ``_chain_hop_fields`` reads."""
+        return SimpleNamespace(preps=[SimpleNamespace(plan=SimpleNamespace(chain=chain))])
+
+    def test_last_hop_is_never_collected(self) -> None:
+        """The final hop's far keys *are* the condition — it is never queried, so never staged."""
+        chain = (self._hop("mid", ("a",), ("b",)), self._hop("target", ("c",), ("d",)))
+        collected = StratifiedPackagerAlgorithm()._chain_hop_fields(
+            cast("Any", self._material(chain))
+        )
+        assert set(collected) == {"mid"}  # "target" is the packaged layer, staged by its own path
+        names, match_sets = collected["mid"]
+        assert names == {"b", "c"}  # matched on its own keys, collects the next hop's from-fields
+        assert match_sets == {("b",)}
+
+    def test_single_hop_chain_collects_nothing(self) -> None:
+        """A one-hop chain queries no intermediate at all."""
+        chain = (self._hop("target", ("c",), ("d",)),)
+        assert not StratifiedPackagerAlgorithm()._chain_hop_fields(
+            cast("Any", self._material(chain))
+        )
+
+    def test_shared_intermediate_unions_the_fields(self) -> None:
+        """Two layers passing through the same intermediate union their queried fields."""
+        first = (self._hop("mid", ("a",), ("b",)), self._hop("t1", ("c",), ("d",)))
+        second = (self._hop("mid", ("a",), ("b2",)), self._hop("t2", ("e",), ("f",)))
+        material = SimpleNamespace(
+            preps=[
+                SimpleNamespace(plan=SimpleNamespace(chain=first)),
+                SimpleNamespace(plan=SimpleNamespace(chain=second)),
+            ]
+        )
+        names, match_sets = StratifiedPackagerAlgorithm()._chain_hop_fields(cast("Any", material))[
+            "mid"
+        ]
+        assert names == {"b", "c", "b2", "e"}
+        assert match_sets == {("b",), ("b2",)}  # one index per distinct key set
