@@ -511,7 +511,10 @@ result; the run aborts only at the end if any stratum or zip failed.
 Always produced — independent of `GENERATE_REPORT` (which gates only §9.2) — and on
 `DRY_RUN` too. Emitted through the `REPORT` feature sink: with no destination it is a
 **memory table layer** the GUI loads into the project; given a path it is written as that
-format (CSV, GeoPackage, …). A geometryless table whose columns are:
+format (CSV, GeoPackage, …). A text destination (e.g. CSV) is written **UTF-8 without a
+BOM** — the sink's file encoding is pinned, not left to the Processing framework's
+locale-derived default (the OS codepage, e.g. cp1252) — matching the per-zip report's data
+contract (§9.2, §20). A geometryless table whose columns are:
 
 ```text
 stratum, layer, feature_count, status, detail

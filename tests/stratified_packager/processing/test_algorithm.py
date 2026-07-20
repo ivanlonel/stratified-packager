@@ -7,6 +7,7 @@ algorithm end to end: zips, gpkg contents, per-zip and run reports, outputs map,
 overwrite modes, dry run, bundling, extra-dir handling, and best-effort failure.
 """
 # pylint: disable=redefined-outer-name
+# pylint: disable=too-many-lines  # exhaustive end-to-end coverage of the SPEC §18 orchestrator
 
 from __future__ import annotations
 
@@ -59,6 +60,7 @@ from stratified_packager.processing.building import StratumWriteResult, write_ve
 from stratified_packager.processing.building import stage_union as real_stage_union_import
 from stratified_packager.processing.building import write_stratum as real_write_stratum
 from stratified_packager.processing.params import ProjectInclusion
+from stratified_packager.processing.report import RunReportRow
 from stratified_packager.processing.workers import run_prefetch as real_run_prefetch
 from stratified_packager.toolbelt.gpkg import feature_count, layer_names
 from stratified_packager.toolbelt.relations import RelationEdge, RelationHop
@@ -293,6 +295,24 @@ class _RecordingFeedback(QgsProcessingFeedback):
         """Record the progress *text* and forward it."""
         self.texts.append(text or "")
         super().setProgressText(text or "")
+
+
+def test_run_report_is_utf8_regardless_of_context_encoding(tmp_path: Path) -> None:
+    """§9.1: the run report is UTF-8 even when the context default encoding is not."""
+    algorithm = StratifiedPackagerAlgorithm()
+    algorithm.initAlgorithm()
+    context = QgsProcessingContext()
+    context.setDefaultEncoding("ISO-8859-1")  # simulate the pt-BR locale seeding
+    report_path = tmp_path / "report.csv"
+    rows = [RunReportRow("São Paulo", "Região", 1, detail="acentuação — ção")]
+    algorithm._emit_run_report(
+        {p.REPORT: str(report_path)}, context, rows, QgsProcessingFeedback()
+    )
+    raw = report_path.read_bytes()
+    assert not raw.startswith(b"\xef\xbb\xbf")  # no BOM (§9.2)
+    assert "São Paulo".encode() in raw  # UTF-8 bytes present
+    assert "São Paulo".encode("cp1252") not in raw  # not locale-encoded
+    raw.decode("utf-8")  # decodes cleanly
 
 
 class TestBandFeedback:
