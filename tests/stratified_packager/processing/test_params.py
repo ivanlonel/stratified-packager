@@ -261,6 +261,18 @@ class TestStyleCategories:
         assert len(set(tokens)) == len(tokens) == 18
         assert list(params.STYLE_CATEGORY_TOKENS) == params.DEFAULT_STYLE_CATEGORIES
 
+    def test_label_is_translated_on_access(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The label resolves at access, not at import: the translator installs afterwards."""
+        option = params.STYLE_CATEGORY_OPTIONS[1]
+        assert option.source_label == "Symbology"
+        monkeypatch.setattr(
+            params,
+            "QCoreApplication",
+            SimpleNamespace(translate=lambda ctx, text: f"{ctx}|{text}"),
+        )
+        # The runtime context must equal the QT_TRANSLATE_NOOP one, or the lookup misses.
+        assert option.label == "StratifiedPackagerAlgorithm|Symbology"
+
     def test_empty_selection_means_all(self) -> None:
         """No (or all-unknown) tokens resolve to AllStyleCategories (select-none = select-all)."""
         every = QgsMapLayer.StyleCategory.AllStyleCategories

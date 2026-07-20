@@ -294,10 +294,12 @@ alias ci := check
 [group('QA')]
 check: qa test
 
-[doc('Deploy the local code into the QGIS plugins directory')]
+# Depends on lrelease: .qm files are git-ignored and removed by `just clean`, so a deploy
+# without them mirrors a plugin whose translator never installs (main.py skips a missing .qm).
+[doc('Deploy the local code into the QGIS plugins directory (compiles translations first)')]
 [group('QGIS')]
 [script]
-deploy profile='':
+deploy profile='': lrelease
     $ErrorActionPreference = 'Stop'
     if (-not $env:QGIS_PROFILES_DIR) {
         {{ error }} "Error: environment variable QGIS_PROFILES_DIR is not set."
