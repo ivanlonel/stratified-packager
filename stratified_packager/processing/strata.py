@@ -35,6 +35,7 @@ __all__: list[str] = [
     "StrataResolution",
     "StratumSpec",
     "bundle_strata",
+    "evaluate_full_package_gpkg_path",
     "evaluate_layer_display_name",
     "resolve_strata",
 ]
@@ -197,18 +198,20 @@ def _snapshot(layer: QgsVectorLayer, *, strata_from_selection: bool) -> list[Qgs
     return features
 
 
-def _base_context(layer: QgsMapLayer, project: QgsProject) -> QgsExpressionContext:
+def _base_context(layer: QgsMapLayer | None, project: QgsProject) -> QgsExpressionContext:
     """
     Build the full project + layer expression context (SPEC §6.2).
 
-    :param layer: The layer supplying the layer scope (any map layer).
+    :param layer: The layer supplying the layer scope (any map layer), or :data:`None`
+        to omit the layer scope (the full package may have no stratification layer).
     :param project: The project.
     :return: A fresh expression context.
     """
     context = QgsExpressionContext()
     context.appendScope(QgsExpressionContextUtils.globalScope())
     context.appendScope(QgsExpressionContextUtils.projectScope(project))
-    context.appendScope(QgsExpressionContextUtils.layerScope(layer))
+    if layer is not None:
+        context.appendScope(QgsExpressionContextUtils.layerScope(layer))
     return context
 
 
@@ -367,10 +370,10 @@ class _PathKind(Enum):
 
 
 def _evaluate_path(
-    layer: QgsVectorLayer,
+    layer: QgsVectorLayer | None,
     project: QgsProject,
     expression_text: str,
-    feature: QgsFeature,
+    feature: QgsFeature | None,
     *,
     default: str,
     kind: _PathKind,
@@ -379,10 +382,12 @@ def _evaluate_path(
     """
     Evaluate and validate one gpkg/zip path for one stratum (SPEC §6.4/§6.5).
 
-    :param layer: The stratification layer.
+    :param layer: The stratification layer, or :data:`None` for the feature-less full
+        package (no layer scope).
     :param project: The project.
     :param expression_text: The path expression; empty selects *default*.
-    :param feature: The stratum feature.
+    :param feature: The stratum feature, or :data:`None` for the full package (a
+        field-referencing expression then evaluates NULL and fails fast).
     :param default: The default path when the expression is empty.
     :param kind: Which path is being evaluated (error wording).
     :param stratum_vars: The §6.4 naming variables injected into the context.
@@ -406,7 +411,8 @@ def _evaluate_path(
             scope.setVariable(variable, value)
         context.appendScope(scope)
         expression.prepare(context)
-        context.setFeature(feature)
+        if feature is not None:
+            context.setFeature(feature)
         value = expression.evaluate(context)
         if expression.hasEvalError():
             raise QgsProcessingException(
@@ -430,6 +436,46 @@ def _evaluate_path(
             ).format(kind.value, stratum_vars["stratum_name"], err)
         ) from err
     return "/".join(components)
+
+
+def evaluate_full_package_gpkg_path(
+    layer: QgsVectorLayer | None,
+    project: QgsProject,
+    gpkg_path_expression: str,
+    *,
+    default: str,
+) -> str:
+    """
+    Evaluate ``GPKG_PATH_EXPRESSION`` for the ``<full>`` pseudo-stratum (SPEC §3).
+
+    The full package has no stratum feature — and may have no stratification layer at all
+    (``EXPORT_FULL_PACKAGE`` without ``STRATIFICATION_LAYER``) — so the expression is
+    evaluated feature-less, seeing ``@stratum_name`` (``<full>``) and
+    ``@stratum_name_sanitized`` plus the project (and layer, when present) scopes. An empty
+    expression falls back to *default* (the full package's zip basename). A field-referencing
+    expression resolves NULL without a feature and thus fails fast, which is correct: the full
+    package cannot honor a per-feature path.
+
+    :param layer: The stratification layer, or :data:`None` when only the full package is built.
+    :param project: The project supplying the global/project/layer scopes.
+    :param gpkg_path_expression: ``GPKG_PATH_EXPRESSION``; empty selects *default*.
+    :param default: The gpkg path when the expression is empty (the zip basename).
+    :return: The validated, slash-joined in-zip gpkg path (no extension).
+    :raise QgsProcessingException: On a parse/evaluation error, a NULL result or a §6.5
+        path-rule violation.
+    """
+    return _evaluate_path(
+        layer,
+        project,
+        gpkg_path_expression,
+        None,
+        default=default,
+        kind=_PathKind.GPKG,
+        stratum_vars={
+            "stratum_name": FULL_PACKAGE_KEY,
+            "stratum_name_sanitized": sanitize_filename(FULL_PACKAGE_KEY),
+        },
+    )
 
 
 def bundle_strata(strata: Sequence[StratumSpec]) -> dict[str, tuple[StratumSpec, ...]]:

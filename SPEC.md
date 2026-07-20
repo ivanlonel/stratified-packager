@@ -134,8 +134,13 @@ background pool never holds more than one active zip — packaging is a single D
 finishes within the next bundle's build time — so the pool is a fixed two threads (§8.4): one
 effectively for packaging, one overlapping the §11 warm prefetch with Phase A.
 
-Relative paths (`FULL_PACKAGE_PATH`, `EXTRA_DIR`, `WARM_START_DIR`) resolve
-against `OUTPUT_DIRECTORY`; absolute paths are honored as-is.
+`FULL_PACKAGE_PATH` is the full package's zip path (extensionless), bound by the §6.5 zip
+rules: relative, resolving inside `OUTPUT_DIRECTORY` (absolutes rejected). Its in-zip
+GeoPackage path is **not** derived from `FULL_PACKAGE_PATH` — it follows `GPKG_PATH_EXPRESSION`
+(evaluated feature-less for the `<full>` pseudo-stratum, seeing `@stratum_name` /
+`@stratum_name_sanitized` but no feature fields), defaulting to the zip basename when the
+expression is empty. The `EXTRA_DIR` and `WARM_START_DIR` folders resolve relative to
+`OUTPUT_DIRECTORY`; absolute paths are honored as-is.
 
 Enum values are persisted in settings/variables as the canonical string tokens (not indices,
 and not the translated labels the §19 defaults combos display), so stored config survives enum
