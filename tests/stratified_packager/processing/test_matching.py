@@ -33,6 +33,7 @@ from qgis.core import (
 
 from stratified_packager.processing.matching import (
     INTERIORS_INTERSECT,
+    ChainContext,
     LayerMatchPlan,
     attribute_keys_for_stratum,
     in_filter_expressions,
@@ -431,6 +432,105 @@ class TestAttributeKeys:
         composite = in_filter_expressions(["a", "b"], [(1, "x")])
         assert composite == ['(("a" = 1 AND "b" = \'x\'))']
         assert not in_filter_expressions(["a"], [])
+
+
+class TestChainContext:
+    """SPEC §7.1 chain memo + staged-hop resolution."""
+
+    def _plan(self, network: Network, layer: QgsVectorLayer) -> LayerMatchPlan:
+        """Resolve the attribute plan of one layer."""
+        plans = resolve_layer_methods(
+            [layer], network.states, network.graph(), QgsProcessingFeedback()
+        )
+        return plans[layer.id()]
+
+    def _resolve(
+        self,
+        network: Network,
+        plan: LayerMatchPlan,
+        code: str,
+        feedback: QgsProcessingFeedback,
+        context: ChainContext | None,
+    ) -> object:
+        """Resolve one stratum's condition through *context*."""
+        return attribute_keys_for_stratum(
+            plan,
+            network.state_feature(code),
+            code,
+            network.project,
+            feedback,
+            chain_context=context,
+        )
+
+    def test_repeated_resolution_is_memoized(
+        self, network: Network, feedback: QgsProcessingFeedback
+    ) -> None:
+        """The second resolution of the same (chain, keys) pair is served from the memo."""
+        plan = self._plan(network, network.districts)  # two hops: queries the cities intermediate
+        context = ChainContext()
+        first = self._resolve(network, plan, "A", feedback, context)
+        assert (context.hits, context.misses) == (0, 1)
+        second = self._resolve(network, plan, "A", feedback, context)
+        assert (context.hits, context.misses) == (1, 1)
+        assert first == second
+
+    def test_memo_never_changes_the_result(
+        self, network: Network, feedback: QgsProcessingFeedback
+    ) -> None:
+        """Memoized and unmemoized resolutions agree — the memo is invisible to outputs."""
+        plan = self._plan(network, network.districts)
+        context = ChainContext()
+        for code in ("A", "B", "A", "B"):
+            assert self._resolve(network, plan, code, feedback, context) == self._resolve(
+                network, plan, code, feedback, None
+            )
+
+    def test_capacity_zero_disables_memoization(
+        self, network: Network, feedback: QgsProcessingFeedback
+    ) -> None:
+        """A zero capacity keeps every resolution a miss, still returning the same answer."""
+        plan = self._plan(network, network.districts)
+        context = ChainContext(capacity=0)
+        first = self._resolve(network, plan, "A", feedback, context)
+        second = self._resolve(network, plan, "A", feedback, context)
+        assert (context.hits, context.misses) == (0, 2)
+        assert first == second
+
+    def test_evicts_least_recently_used(
+        self, network: Network, feedback: QgsProcessingFeedback
+    ) -> None:
+        """Past capacity the oldest entry goes, so the memo cannot grow without bound."""
+        plan = self._plan(network, network.districts)
+        context = ChainContext(capacity=1)
+        self._resolve(network, plan, "A", feedback, context)
+        self._resolve(network, plan, "B", feedback, context)  # evicts A
+        self._resolve(network, plan, "A", feedback, context)
+        assert (context.hits, context.misses) == (0, 3)
+
+    def test_empty_chain_is_never_memoized(
+        self, network: Network, feedback: QgsProcessingFeedback
+    ) -> None:
+        """A layer that *is* the stratification layer resolves by fid without touching the memo."""
+        context = ChainContext()
+        condition = attribute_keys_for_stratum(
+            LayerMatchPlan(layer_id=network.states.id(), method=MatchingMethod.ATTRIBUTE),
+            network.state_feature("A"),
+            "A",
+            network.project,
+            feedback,
+            chain_context=context,
+        )
+        assert condition.by_fid
+        assert (context.hits, context.misses) == (0, 0)
+
+    def test_hop_layer_prefers_the_staged_copy(self, network: Network) -> None:
+        """A registered hop layer wins over the project lookup; others still resolve normally."""
+        staged = QgsVectorLayer("Point?crs=EPSG:4326", "staged cities", "memory")
+        assert staged.isValid()
+        context = ChainContext(hop_layers={network.cities.id(): staged})
+        assert context.hop_layer(network.cities.id(), network.project) is staged
+        assert context.hop_layer(network.districts.id(), network.project) is network.districts
+        assert context.hop_layer("no-such-layer", network.project) is None
 
 
 class TestSpatialFids:
