@@ -82,7 +82,7 @@
 </context><context>
   <name>InputReader</name>
   <message>
-    <location filename="../../processing/params.py" line="995" />
+    <location filename="../../processing/params.py" line="985" />
     <source>Cannot resolve {}: {}</source>
     <translation>Não foi possível resolver {}: {}</translation>
   </message>
@@ -442,10 +442,10 @@
     <translation>Este algoritmo requer um projeto aberto (use --project_path).</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1830" />
-    <location filename="../../processing/algorithm.py" line="1471" />
-    <location filename="../../processing/algorithm.py" line="1321" />
-    <location filename="../../processing/algorithm.py" line="973" />
+    <location filename="../../processing/algorithm.py" line="1869" />
+    <location filename="../../processing/algorithm.py" line="1510" />
+    <location filename="../../processing/algorithm.py" line="1360" />
+    <location filename="../../processing/algorithm.py" line="1012" />
     <location filename="../../processing/algorithm.py" line="394" />
     <source>Operation was canceled.</source>
     <translation>A operação foi cancelada.</translation>
@@ -456,37 +456,45 @@
     <translation>OUTPUT_DIRECTORY é obrigatório.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="568" />
+    <location filename="../../processing/algorithm.py" line="570" />
     <source>Cannot determine eligible layers: {}</source>
     <translation>Não foi possível determinar as camadas elegíveis: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="592" />
+    <location filename="../../processing/algorithm.py" line="594" />
     <source>Plugin layers cannot be packaged; excluded: {}</source>
     <translation>Camadas de complemento não podem ser empacotadas; excluídas: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="598" />
+    <location filename="../../processing/algorithm.py" line="600" />
     <source>Layers riding only in the embedded project (remote/annotation/live virtual): {}</source>
     <translation>Camadas presentes apenas no projeto incorporado (remota/anotação/virtual ativa): {}</translation>
   </message>
+  <message numerus="yes">
+    <location filename="../../processing/algorithm.py" line="635" />
+    <source>LAYERS resolved %n entry(s) onto a layer already selected: {}. Layers sharing a data source are indistinguishable when selected by source; select them by layer id (or leave LAYERS empty) to package each one.</source>
+    <translation>
+      <numerusform>LAYERS resolveu %n entrada para uma camada já selecionada: {}. Camadas que compartilham uma origem de dados são indistinguíveis quando selecionadas pela origem; selecione-as pelo id da camada (ou deixe LAYERS vazio) para empacotar cada uma.</numerusform>
+      <numerusform>LAYERS resolveu %n entradas para uma camada já selecionada: {}. Camadas que compartilham uma origem de dados são indistinguíveis quando selecionadas pela origem; selecione-as pelo id da camada (ou deixe LAYERS vazio) para empacotar cada uma.</numerusform>
+    </translation>
+  </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="651" />
+    <location filename="../../processing/algorithm.py" line="690" />
     <source>STRATIFICATION_LAYER is required unless EXPORT_FULL_PACKAGE is enabled (then only the full package is built).</source>
     <translation>STRATIFICATION_LAYER é obrigatório, a menos que EXPORT_FULL_PACKAGE esteja ativado (nesse caso, apenas o pacote completo é gerado).</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="665" />
+    <location filename="../../processing/algorithm.py" line="704" />
     <source>The stratification layer yielded no strata.</source>
     <translation>A camada de estratificação não produziu nenhum estrato.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="668" />
+    <location filename="../../processing/algorithm.py" line="707" />
     <source>No strata to package (the stratification layer is empty).</source>
     <translation>Nenhum estrato para empacotar (a camada de estratificação está vazia).</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="671" />
+    <location filename="../../processing/algorithm.py" line="710" />
     <source>Resolved %n strata </source>
     <translation>
       <numerusform>%n estrato resolvido </numerusform>
@@ -494,7 +502,7 @@
     </translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="672" />
+    <location filename="../../processing/algorithm.py" line="711" />
     <source>into %n zip(s).</source>
     <translation>
       <numerusform>em %n zip.</numerusform>
@@ -502,77 +510,77 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="688" />
+    <location filename="../../processing/algorithm.py" line="727" />
     <source>WARM_START_DIR is required when warm start is enabled.</source>
     <translation>WARM_START_DIR é obrigatório quando o início a quente está ativado.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="692" />
+    <location filename="../../processing/algorithm.py" line="731" />
     <source>Warm start is enabled but no packaged layer is warm_marked — a warm run with nothing warm is always a misconfiguration.</source>
     <translation>O início a quente está ativado, mas nenhuma camada empacotada está marcada como warm_marked — uma execução a quente sem nada quente é sempre um erro de configuração.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="717" />
+    <location filename="../../processing/algorithm.py" line="756" />
     <source>Custom layer name expression for layer {} does not parse: {}</source>
     <translation>A expressão de nome de camada personalizado para a camada {} não pôde ser analisada: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="747" />
+    <location filename="../../processing/algorithm.py" line="786" />
     <source>Invalid FULL_PACKAGE_PATH: {}</source>
     <translation>FULL_PACKAGE_PATH inválido: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="792" />
+    <location filename="../../processing/algorithm.py" line="831" />
     <source>Existing outputs (OVERWRITE_MODE = error): {}</source>
     <translation>Saídas existentes (OVERWRITE_MODE = error): {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="813" />
+    <location filename="../../processing/algorithm.py" line="852" />
     <source>Skipping existing output {}.zip</source>
     <translation>Ignorando saída existente {}.zip</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="834" />
+    <location filename="../../processing/algorithm.py" line="873" />
     <source>EXTRA_DIR does not exist or is not a directory: {}</source>
     <translation>EXTRA_DIR não existe ou não é um diretório: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="851" />
+    <location filename="../../processing/algorithm.py" line="890" />
     <source>EXTRA_DIR entries collide with reserved zip content: {}</source>
     <translation>As entradas de EXTRA_DIR colidem com conteúdo reservado do zip: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="894" />
+    <location filename="../../processing/algorithm.py" line="933" />
     <source>Removed stale build directory: {}</source>
     <translation>Diretório de construção obsoleto removido: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="919" />
+    <location filename="../../processing/algorithm.py" line="958" />
     <source>Could not fully remove the build directory: {}</source>
     <translation>Não foi possível remover completamente o diretório de construção: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="963" />
+    <location filename="../../processing/algorithm.py" line="1002" />
     <source>Duplicate layer name; table renamed to {} for layer {}</source>
     <translation>Nome de camada duplicado; tabela renomeada para {} para a camada {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="975" />
+    <location filename="../../processing/algorithm.py" line="1014" />
     <source>Preparing layer {}/{}: {}</source>
     <translation>Preparando a camada {}/{}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1002" />
+    <location filename="../../processing/algorithm.py" line="1041" />
     <source>Layer {}: its copied source file also backs other layers ({}) — the copy drags the whole container.</source>
     <translation>Camada {}: seu arquivo de origem copiado também serve a outras camadas ({}) — a cópia arrasta o contêiner inteiro.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1054" />
+    <location filename="../../processing/algorithm.py" line="1093" />
     <source>The project has no relation manager.</source>
     <translation>O projeto não tem gerenciador de relações.</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1230" />
+    <location filename="../../processing/algorithm.py" line="1269" />
     <source>Warm cache unusable for %n stratum(s) ({}) — staging proceeds so cold fallbacks read local copies.</source>
     <translation>
       <numerusform>Cache quente inutilizável para %n estrato ({}) — as cópias preparadas seguem sendo geradas para que os retornos a frio leiam cópias locais.</numerusform>
@@ -580,12 +588,12 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1254" />
+    <location filename="../../processing/algorithm.py" line="1293" />
     <source>layer {}: stage variable {}</source>
     <translation>camada {}: variável de preparação {}</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1307" />
+    <location filename="../../processing/algorithm.py" line="1346" />
     <source>Skipping staging for %n warm-seeded group(s) — the warm cache covers every stratum.</source>
     <translation>
       <numerusform>Pulando a cópia preparada de %n grupo semeado a quente — o cache quente cobre todos os estratos.</numerusform>
@@ -593,28 +601,28 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1323" />
+    <location filename="../../processing/algorithm.py" line="1362" />
     <source>Staging layer {}/{}: {}</source>
     <translation>Gerando a cópia preparada da camada {}/{}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1535" />
-    <location filename="../../processing/algorithm.py" line="1407" />
+    <location filename="../../processing/algorithm.py" line="1574" />
+    <location filename="../../processing/algorithm.py" line="1446" />
     <source>could not index staged key fields for {}: {}</source>
     <translation>não foi possível indexar os campos-chave preparados de {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1476" />
+    <location filename="../../processing/algorithm.py" line="1515" />
     <source>Staging relation-chain layer: {}</source>
     <translation>Gerando a cópia preparada da camada da cadeia de relações: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1490" />
+    <location filename="../../processing/algorithm.py" line="1529" />
     <source>Could not stage relation-chain layer {} ({}); its hops will be queried from the project instead.</source>
     <translation>Não foi possível gerar a cópia preparada da camada {} da cadeia de relações ({}); seus saltos serão consultados no projeto.</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1543" />
+    <location filename="../../processing/algorithm.py" line="1582" />
     <source>Staged relation-chain layer {}: %n feature(s) copied.</source>
     <translation>
       <numerusform>Camada {} da cadeia de relações preparada: %n feição copiada.</numerusform>
@@ -622,27 +630,27 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1559" />
+    <location filename="../../processing/algorithm.py" line="1598" />
     <source>Layer {} could not be cloned.</source>
     <translation>Não foi possível clonar a camada {}.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1576" />
+    <location filename="../../processing/algorithm.py" line="1615" />
     <source>Staged copy of layer {} cannot be re-opened.</source>
     <translation>A cópia preparada da camada {} não pode ser reaberta.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1689" />
+    <location filename="../../processing/algorithm.py" line="1728" />
     <source>layer {}: excluded_fields is not a JSON list: {}</source>
     <translation>camada {}: excluded_fields não é uma lista JSON: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1695" />
+    <location filename="../../processing/algorithm.py" line="1734" />
     <source>layer {}: excluded_fields must be a JSON list of names</source>
     <translation>camada {}: excluded_fields deve ser uma lista JSON de nomes</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1827" />
+    <location filename="../../processing/algorithm.py" line="1866" />
     <source>Building %n strata.</source>
     <translation>
       <numerusform>Construindo %n estrato.</numerusform>
@@ -650,12 +658,12 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1847" />
+    <location filename="../../processing/algorithm.py" line="1886" />
     <source>Run finished with failures — strata: [{}]; zips: [{}]; warm caches: [{}]</source>
     <translation>Execução concluída com falhas — estratos: [{}]; zips: [{}]; caches quentes: [{}]</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1901" />
+    <location filename="../../processing/algorithm.py" line="1940" />
     <source>Updating %n warm cache(s) before the deliverables.</source>
     <translation>
       <numerusform>Atualizando %n cache quente antes dos entregáveis.</numerusform>
@@ -663,118 +671,118 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1906" />
+    <location filename="../../processing/algorithm.py" line="1945" />
     <source>Warm cache {}/{}: {}</source>
     <translation>Cache quente {}/{}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1924" />
+    <location filename="../../processing/algorithm.py" line="1963" />
     <source>Failed to remove workdir copy of warm geopackage {}</source>
     <translation>Falha ao remover a cópia de trabalho do geopackage quente {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1935" />
+    <location filename="../../processing/algorithm.py" line="1974" />
     <source>Stratum {}/{}: {}</source>
     <translation>Estrato {}/{}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2000" />
+    <location filename="../../processing/algorithm.py" line="2039" />
     <source>Stratum {}: cold fallback ({}).</source>
     <translation>Estrato {}: retorno a frio ({}).</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2171" />
-    <location filename="../../processing/algorithm.py" line="2007" />
+    <location filename="../../processing/algorithm.py" line="2210" />
+    <location filename="../../processing/algorithm.py" line="2046" />
     <source>Stratum {} failed: {}</source>
     <translation>Falha no estrato {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2039" />
+    <location filename="../../processing/algorithm.py" line="2078" />
     <source>warm cache not written: {}</source>
     <translation>cache quente não gravado: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2043" />
+    <location filename="../../processing/algorithm.py" line="2082" />
     <source>Stratum {}: warm cache not written ({}).</source>
     <translation>Estrato {}: cache quente não gravado ({}).</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2068" />
+    <location filename="../../processing/algorithm.py" line="2107" />
     <source>Published {}</source>
     <translation>Publicado {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2072" />
+    <location filename="../../processing/algorithm.py" line="2111" />
     <source>Zip {} failed: {}</source>
     <translation>Falha no zip {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2111" />
+    <location filename="../../processing/algorithm.py" line="2150" />
     <source>Zip {} skipped: every member stratum failed.</source>
     <translation>Zip {} ignorado: todos os estratos membros falharam.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2120" />
+    <location filename="../../processing/algorithm.py" line="2159" />
     <source>Stratum {}: WAL checkpoint incomplete before zipping.</source>
     <translation>Estrato {}: checkpoint do WAL incompleto antes da compactação.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2130" />
+    <location filename="../../processing/algorithm.py" line="2169" />
     <source>Zipping {}.zip in the background.</source>
     <translation>Compactando {}.zip em segundo plano.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2159" />
+    <location filename="../../processing/algorithm.py" line="2198" />
     <source>Stratum {}: writing embedded project.</source>
     <translation>Estrato {}: gravando o projeto incorporado.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2169" />
+    <location filename="../../processing/algorithm.py" line="2208" />
     <source>Failed to remove gpkg of failed stratum {}.</source>
     <translation>Falha ao remover o gpkg do estrato com falha {}.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2181" />
+    <location filename="../../processing/algorithm.py" line="2220" />
     <source>Stratum {}: could not pre-enable WAL journaling.</source>
     <translation>Estrato {}: não foi possível pré-ativar o modo WAL.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2193" />
+    <location filename="../../processing/algorithm.py" line="2232" />
     <source>Stratum {}: embedded project not written; shipping data without it ({}).</source>
     <translation>Estrato {}: projeto incorporado não gravado; enviando os dados sem ele ({}).</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2466" />
+    <location filename="../../processing/algorithm.py" line="2505" />
     <source>Could not create the run report output.</source>
     <translation>Não foi possível criar a saída do relatório da execução.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2471" />
+    <location filename="../../processing/algorithm.py" line="2510" />
     <source>Could not write a run report row.</source>
     <translation>Não foi possível gravar uma linha do relatório da execução.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2472" />
+    <location filename="../../processing/algorithm.py" line="2511" />
     <source>Run report written to {}</source>
     <translation>Relatório da execução gravado em {}</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2487" />
+    <location filename="../../processing/algorithm.py" line="2526" />
     <source>Package project</source>
     <translation>Empacotar projeto</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2492" />
+    <location filename="../../processing/algorithm.py" line="2531" />
     <source>Partitions the project's layers against a stratification layer and emits one zipped GeoPackage per stratum.</source>
     <translation>Particiona as camadas do projeto de acordo com uma camada de estratificação e emite um GeoPackage compactado em zip por estrato.</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2505" />
+    <location filename="../../processing/algorithm.py" line="2544" />
     <source>&lt;p&gt;Partitions the open project's layers against a &lt;b&gt;stratification layer&lt;/b&gt; (one stratum per feature) and writes &lt;b&gt;one zipped GeoPackage per stratum&lt;/b&gt; into the output directory. Each layer's features are matched to strata either by &lt;b&gt;attribute&lt;/b&gt; (following chains of project relations) or &lt;b&gt;spatially&lt;/b&gt; (one or more predicates, including raw DE-9IM patterns, combined with OR), chosen per layer.&lt;/p&gt;&lt;h3&gt;Key parameters&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;b&gt;Layers to package&lt;/b&gt; — leave empty to package every eligible layer not marked with the &lt;code&gt;stratified_packager_exclude&lt;/code&gt; variable.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Stratification layer&lt;/b&gt; and &lt;b&gt;Stratum name expression&lt;/b&gt; — the partition source and how each stratum is named (empty = feature id). Naming and path expressions can use &lt;code&gt;@stratum_name&lt;/code&gt;, &lt;code&gt;@stratum_name_sanitized&lt;/code&gt;, &lt;code&gt;@gpkg_path&lt;/code&gt; and &lt;code&gt;@gpkg_name&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Output directory&lt;/b&gt; — where zips are published (atomic .part rename).&lt;/li&gt;&lt;li&gt;&lt;b&gt;Existing outputs&lt;/b&gt; — overwrite, error, or skip-existing.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Embed a project per stratum&lt;/b&gt; — none, gpkg (stored inside the package), or qgz (beside it); styles, metadata, relations and auxiliary files are bundled.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Also export the full package&lt;/b&gt; — additionally emit the unpartitioned dataset as a pseudo-stratum.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Dry run&lt;/b&gt; — validate and report without writing any packages.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Per-layer variables&lt;/h3&gt;&lt;p&gt;Edit under &lt;i&gt;Layer Properties &amp;gt; Variables&lt;/i&gt;, the per-layer plugin page, or the plugin's &lt;i&gt;Configure layers for packaging&lt;/i&gt; dialog:&lt;/p&gt;</source>
     <translation>&lt;p&gt;Particiona as camadas do projeto aberto contra uma &lt;b&gt;camada de estratificação&lt;/b&gt; (um estrato por feição) e grava &lt;b&gt;um GeoPackage zipado por estrato&lt;/b&gt; no diretório de saída. As feições de cada camada são associadas aos estratos por &lt;b&gt;atributo&lt;/b&gt; (seguindo cadeias de relações do projeto) ou &lt;b&gt;espacialmente&lt;/b&gt; (um ou mais predicados, incluindo padrões DE-9IM brutos, combinados com OR), à escolha por camada.&lt;/p&gt;&lt;h3&gt;Parâmetros principais&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;b&gt;Camadas a empacotar&lt;/b&gt; — deixe vazio para empacotar todas as camadas elegíveis sem a variável &lt;code&gt;stratified_packager_exclude&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Camada de estratificação&lt;/b&gt; e &lt;b&gt;Expressão do nome do estrato&lt;/b&gt; — a origem da partição e como cada estrato é nomeado (vazio = id da feição). As expressões de nomes e caminhos podem usar &lt;code&gt;@stratum_name&lt;/code&gt;, &lt;code&gt;@stratum_name_sanitized&lt;/code&gt;, &lt;code&gt;@gpkg_path&lt;/code&gt; e &lt;code&gt;@gpkg_name&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Diretório de saída&lt;/b&gt; — onde os zips são publicados (renomeação .part atômica).&lt;/li&gt;&lt;li&gt;&lt;b&gt;Saídas existentes&lt;/b&gt; — overwrite, error ou skip-existing.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Incorporar um projeto por estrato&lt;/b&gt; — none, gpkg (armazenado dentro do pacote) ou qgz (ao lado dele); estilos, metadados, relações e arquivos auxiliares são incluídos.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Exportar também o pacote completo&lt;/b&gt; — emite adicionalmente o conjunto de dados não particionado como pseudoestrato.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Simulação&lt;/b&gt; — validar e relatar sem gravar nenhum pacote.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Variáveis por camada&lt;/h3&gt;&lt;p&gt;Edite-as em &lt;i&gt;Propriedades da camada &amp;gt; Variáveis&lt;/i&gt;, na página por camada do plugin ou no diálogo &lt;i&gt;Configurar camadas para empacotamento&lt;/i&gt;:&lt;/p&gt;</translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2536" />
+    <location filename="../../processing/algorithm.py" line="2575" />
     <source>&lt;h3&gt;Defaults and precedence&lt;/h3&gt;&lt;p&gt;Every omitted parameter resolves through &lt;b&gt;explicit input &amp;gt; project variable (&lt;code&gt;stratified_packager_&amp;lt;param&amp;gt;&lt;/code&gt;) &amp;gt; plugin setting &amp;gt; builtin default&lt;/b&gt;. Project- and layer-scope values are editable from the plugin's Options page, the Project Properties page and the per-layer page.&lt;/p&gt;&lt;h3&gt;Warm cache&lt;/h3&gt;&lt;p&gt;With a warm-cache directory, &lt;b&gt;Use warm start&lt;/b&gt; begins each stratum GeoPackage from a cached copy and appends only non-warm-marked layers; &lt;b&gt;Update warm cache&lt;/b&gt; first writes every stratum's cache file, then builds the deliverables seeded from that fresh cache — an interrupted run still leaves a complete, reusable cache. A cached file that no longer matches its warm-marked tables falls back to a cold build for that stratum (reported as cold-fallback).&lt;/p&gt;&lt;h3&gt;Running headless (qgis_process)&lt;/h3&gt;&lt;p&gt;Pass &lt;code&gt;--project_path&lt;/code&gt;: the algorithm requires a project. The Processing framework re-instantiates the algorithm after the project loads, so project-variable and plugin-setting defaults resolve correctly without a GUI. &lt;code&gt;QgsSettings&lt;/code&gt; is per-profile, so qgis_process uses the default profile unless overridden.&lt;/p&gt;</source>
     <translation>&lt;h3&gt;Padrões e precedência&lt;/h3&gt;&lt;p&gt;Cada parâmetro omitido é resolvido por &lt;b&gt;entrada explícita &amp;gt; variável de projeto (&lt;code&gt;stratified_packager_&amp;lt;param&amp;gt;&lt;/code&gt;) &amp;gt; configuração do plugin &amp;gt; padrão embutido&lt;/b&gt;. Os valores de escopo de projeto e de camada são editáveis na página de Opções do plugin, na página de Propriedades do projeto e na página por camada.&lt;/p&gt;&lt;h3&gt;Cache quente&lt;/h3&gt;&lt;p&gt;Com um diretório de cache quente, &lt;b&gt;Usar partida a quente&lt;/b&gt; inicia cada GeoPackage de estrato a partir de uma cópia em cache e acrescenta apenas as camadas não marcadas; &lt;b&gt;Atualizar o cache quente&lt;/b&gt; primeiro grava o arquivo de cache de cada estrato e só então constrói os entregáveis semeados a partir desse cache fresco — uma execução interrompida ainda deixa um cache completo e reutilizável. Um arquivo em cache que não corresponda mais às suas tabelas marcadas retorna a uma construção a frio para aquele estrato (relatado como cold-fallback).&lt;/p&gt;&lt;h3&gt;Execução sem interface (qgis_process)&lt;/h3&gt;&lt;p&gt;Passe &lt;code&gt;--project_path&lt;/code&gt;: o algoritmo requer um projeto. O framework de Processing reinstancia o algoritmo depois que o projeto é carregado, de modo que os padrões de variáveis de projeto e configurações do plugin são resolvidos corretamente sem GUI. &lt;code&gt;QgsSettings&lt;/code&gt; é por perfil, então o qgis_process usa o perfil padrão a menos que outro seja indicado.&lt;/p&gt;</translation>
   </message>
@@ -844,242 +852,242 @@
     <translation>— lista JSON de ids de relações que fixa uma cadeia de atributos que de outro modo seria ambígua.</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="332" />
+    <location filename="../../processing/params.py" line="322" />
     <source>Layer Configuration</source>
     <translation>Configuração da camada</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="337" />
+    <location filename="../../processing/params.py" line="327" />
     <source>Symbology</source>
     <translation>Simbologia</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="342" />
+    <location filename="../../processing/params.py" line="332" />
     <source>3D Symbology</source>
     <translation>Simbologia 3D</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="347" />
+    <location filename="../../processing/params.py" line="337" />
     <source>Labels</source>
     <translation>Rótulos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="352" />
+    <location filename="../../processing/params.py" line="342" />
     <source>Fields</source>
     <translation>Campos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="357" />
+    <location filename="../../processing/params.py" line="347" />
     <source>Attribute Form</source>
     <translation>Formulário de atributos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="362" />
+    <location filename="../../processing/params.py" line="352" />
     <source>Actions</source>
     <translation>Ações</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="367" />
+    <location filename="../../processing/params.py" line="357" />
     <source>Map Tips</source>
     <translation>Dicas de mapa</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="372" />
+    <location filename="../../processing/params.py" line="362" />
     <source>Diagrams</source>
     <translation>Diagramas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="377" />
+    <location filename="../../processing/params.py" line="367" />
     <source>Attribute Table Configuration</source>
     <translation>Configuração da tabela de atributos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="382" />
+    <location filename="../../processing/params.py" line="372" />
     <source>Rendering</source>
     <translation>Renderização</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="387" />
+    <location filename="../../processing/params.py" line="377" />
     <source>Custom Properties</source>
     <translation>Propriedades personalizadas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="392" />
+    <location filename="../../processing/params.py" line="382" />
     <source>Geometry Options</source>
     <translation>Opções de geometria</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="397" />
+    <location filename="../../processing/params.py" line="387" />
     <source>Relations</source>
     <translation>Relações</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="402" />
+    <location filename="../../processing/params.py" line="392" />
     <source>Temporal Properties</source>
     <translation>Propriedades temporais</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="407" />
+    <location filename="../../processing/params.py" line="397" />
     <source>Legend Settings</source>
     <translation>Configurações da legenda</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="412" />
+    <location filename="../../processing/params.py" line="402" />
     <source>Elevation Properties</source>
     <translation>Propriedades de elevação</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="417" />
+    <location filename="../../processing/params.py" line="407" />
     <source>Notes</source>
     <translation>Notas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="598" />
+    <location filename="../../processing/params.py" line="588" />
     <source>Layers to package (empty = all eligible layers)</source>
     <translation>Camadas a empacotar (vazio = todas as camadas elegíveis)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="607" />
+    <location filename="../../processing/params.py" line="597" />
     <source>Stratification layer (one stratum per feature)</source>
     <translation>Camada de estratificação (um estrato por feição)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="615" />
+    <location filename="../../processing/params.py" line="605" />
     <source>Stratum name expression (empty = feature id)</source>
     <translation>Expressão de nome do estrato (vazio = id da feição)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="623" />
+    <location filename="../../processing/params.py" line="613" />
     <source>Only selected stratification features become strata</source>
     <translation>Apenas feições de estratificação selecionadas tornam-se estratos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="632" />
+    <location filename="../../processing/params.py" line="622" />
     <source>GeoPackage path expression (empty = sanitized stratum name)</source>
     <translation>Expressão de caminho do GeoPackage (vazio = nome do estrato higienizado)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="642" />
+    <location filename="../../processing/params.py" line="632" />
     <source>Zip path expression (empty = GeoPackage name)</source>
     <translation>Expressão de caminho do zip (vazio = nome do GeoPackage)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="651" />
+    <location filename="../../processing/params.py" line="641" />
     <source>Output directory</source>
     <translation>Diretório de saída</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="657" />
+    <location filename="../../processing/params.py" line="647" />
     <source>Zip compression level (0 = store uncompressed)</source>
     <translation>Nível de compressão do zip (0 = armazenar sem compressão)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="666" />
+    <location filename="../../processing/params.py" line="656" />
     <source>Existing outputs</source>
     <translation>Saídas existentes</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="673" />
+    <location filename="../../processing/params.py" line="663" />
     <source>Embed a QGIS project per stratum</source>
     <translation>Incorporar um projeto QGIS por estrato</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="682" />
+    <location filename="../../processing/params.py" line="672" />
     <source>Build in a temporary folder, publish zips atomically</source>
     <translation>Construir em uma pasta temporária, publicar os zips atomicamente</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="692" />
+    <location filename="../../processing/params.py" line="682" />
     <source>Include layer styles</source>
     <translation>Incluir estilos das camadas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="699" />
+    <location filename="../../processing/params.py" line="689" />
     <source>Style categories to copy (none checked = all)</source>
     <translation>Categorias de estilo a copiar (nenhuma marcada = todas)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="708" />
+    <location filename="../../processing/params.py" line="698" />
     <source>Include layer metadata</source>
     <translation>Incluir metadados das camadas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="715" />
+    <location filename="../../processing/params.py" line="705" />
     <source>Keep layers with no matching features as empty tables</source>
     <translation>Manter camadas sem feições correspondentes como tabelas vazias</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="725" />
+    <location filename="../../processing/params.py" line="715" />
     <source>Write layers sharing a data source as one table</source>
     <translation>Gravar camadas que compartilham uma fonte de dados como uma única tabela</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="734" />
+    <location filename="../../processing/params.py" line="724" />
     <source>Stage every layer of these data providers (see the stage layer variable)</source>
     <translation>Gerar cópia preparada de todas as camadas destes provedores de dados (ver a variável de camada stage)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="744" />
+    <location filename="../../processing/params.py" line="734" />
     <source>Also export the full (unpartitioned) package</source>
     <translation>Exportar também o pacote completo (não particionado)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="753" />
+    <location filename="../../processing/params.py" line="743" />
     <source>Full package path (empty = &lt;project name&gt;_full)</source>
     <translation>Caminho do pacote completo (vazio = &lt;nome do projeto&gt;_full)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="761" />
+    <location filename="../../processing/params.py" line="751" />
     <source>Write a report.csv into each published zip</source>
     <translation>Gravar um report.csv em cada zip publicado</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="770" />
+    <location filename="../../processing/params.py" line="760" />
     <source>Extra files directory (copied into every zip root)</source>
     <translation>Diretório de arquivos extras (copiado para a raiz de cada zip)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="778" />
+    <location filename="../../processing/params.py" line="768" />
     <source>Warm cache directory</source>
     <translation>Diretório do cache quente</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="784" />
+    <location filename="../../processing/params.py" line="774" />
     <source>Warm cache mode</source>
     <translation>Modo do cache quente</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="791" />
+    <location filename="../../processing/params.py" line="781" />
     <source>Write a .sha256 file next to each zip</source>
     <translation>Gravar um arquivo .sha256 ao lado de cada zip</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="800" />
+    <location filename="../../processing/params.py" line="790" />
     <source>Dry run (validate and report only, write no packages)</source>
     <translation>Simulação (apenas validar e relatar, sem gravar pacotes)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1280" />
+    <location filename="../../processing/params.py" line="1268" />
     <source>Run report (loaded as a memory layer when no path is given)</source>
     <translation>Relatório da execução (carregado como camada em memória quando nenhum caminho é fornecido)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1399" />
+    <location filename="../../processing/params.py" line="1387" />
     <source>Published zip paths (JSON array)</source>
     <translation>Caminhos dos zips publicados (array JSON)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1405" />
+    <location filename="../../processing/params.py" line="1393" />
     <source>Strata resolved</source>
     <translation>Estratos resolvidos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1408" />
+    <location filename="../../processing/params.py" line="1396" />
     <source>Zips published</source>
     <translation>Zips publicados</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1412" />
+    <location filename="../../processing/params.py" line="1400" />
     <source>Failed strata (JSON array)</source>
     <translation>Estratos com falha (array JSON)</translation>
   </message>
@@ -1109,12 +1117,12 @@
 </context><context>
   <name>StratifiedPackagerProvider</name>
   <message>
-    <location filename="../../processing/provider.py" line="63" />
+    <location filename="../../processing/provider.py" line="57" />
     <source>Failed to register the %s algorithm.</source>
     <translation>Falha ao registrar o algoritmo %s.</translation>
   </message>
   <message>
-    <location filename="../../processing/provider.py" line="84" />
+    <location filename="../../processing/provider.py" line="76" />
     <source>No project available; default-refresh signals not connected.</source>
     <translation>Nenhum projeto disponível; sinais de atualização de padrões não conectados.</translation>
   </message>

@@ -388,20 +388,13 @@ class TestEligibleLayers:
         )
         assert set(eligible_layer_ids(project)) == {kept.id(), also_kept.id()}
 
-    def test_strict_raises_on_uncoercible_exclude(self, project: QgsProject) -> None:
-        """Strict mode (runtime) aborts on a non-bool ``exclude`` instead of guessing."""
+    def test_raises_on_uncoercible_exclude(self, project: QgsProject) -> None:
+        """A non-bool ``exclude`` aborts the run instead of guessing inclusion."""
         layer = QgsVectorLayer("Point?crs=EPSG:4326", "bad", "memory")
         assert project.addMapLayers([layer], addToLegend=False)
         QgsExpressionContextUtils.setLayerVariable(layer, "stratified_packager_exclude", "maybe")
         with pytest.raises(ValueError, match="exclude variable"):
-            eligible_layer_ids(project, strict=True)
-
-    def test_prefill_includes_uncoercible_exclude(self, project: QgsProject) -> None:
-        """Lenient mode (the default, used by the GUI prefill) treats it as included."""
-        layer = QgsVectorLayer("Point?crs=EPSG:4326", "bad", "memory")
-        assert project.addMapLayers([layer], addToLegend=False)
-        QgsExpressionContextUtils.setLayerVariable(layer, "stratified_packager_exclude", "maybe")
-        assert layer.id() in eligible_layer_ids(project)
+            eligible_layer_ids(project)
 
 
 class TestDeclaration:
@@ -412,7 +405,7 @@ class TestDeclaration:
         self, project: QgsProject, fake_settings: StratifiedPackagerSettings
     ) -> _DummyAlgorithm:
         """Return a dummy algorithm with everything declared against the live project."""
-        layer = QgsVectorLayer("Point?crs=EPSG:4326", "prefill", "memory")
+        layer = QgsVectorLayer("Point?crs=EPSG:4326", "eligible", "memory")
         assert project.addMapLayer(layer, addToLegend=False)
         algorithm = _DummyAlgorithm()
         declare_parameters(
@@ -429,15 +422,27 @@ class TestDeclaration:
         assert params.REPORT in names
         assert [name for name in names if name != params.REPORT] == list(params.PARAM_SPECS)
 
-    def test_defaults_flow_through_the_chain(
-        self, algorithm: _DummyAlgorithm, project: QgsProject
-    ) -> None:
-        """Declared defaults reflect the setting tier and the LAYERS prefill."""
+    def test_defaults_flow_through_the_chain(self, algorithm: _DummyAlgorithm) -> None:
+        """Declared defaults reflect the setting tier; ``LAYERS`` carries none."""
         definitions = {d.name(): d for d in algorithm.parameterDefinitions()}
         assert definitions[params.COMPRESSION_LEVEL].defaultValue() == 3
         assert definitions[params.OVERWRITE_MODE].defaultValue() == "error"
         assert definitions[params.PROJECT_INCLUSION].defaultValue() == "qgz"
-        assert definitions[params.LAYERS].defaultValue() == eligible_layer_ids(project)
+
+    def test_layers_declares_no_default(
+        self, algorithm: _DummyAlgorithm, project: QgsProject
+    ) -> None:
+        """
+        ``LAYERS`` must stay defaultless even with a project (SPEC §5).
+
+        Regression: an id-list default was rewritten by the multiple-layers widget wrapper
+        into one *source* string per layer, and source-keyed resolution answered every
+        string of a shared source with the same layer — silently dropping every §12
+        shared-source sibling from a GUI run.
+        """
+        assert eligible_layer_ids(project)  # the project would have prefilled something
+        definitions = {d.name(): d for d in algorithm.parameterDefinitions()}
+        assert definitions[params.LAYERS].defaultValue() in ([], None)
 
     def test_enum_parameters_use_static_tokens(self, algorithm: _DummyAlgorithm) -> None:
         """Enum parameters run in static-strings mode with the SPEC tokens."""

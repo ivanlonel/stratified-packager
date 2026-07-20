@@ -15,7 +15,6 @@ Usage from the repo root folder:
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Never
-from unittest.mock import Mock
 
 import pytest
 
@@ -26,7 +25,6 @@ from qgis.core import (
     QgsApplication,
     QgsExpressionContextUtils,
     QgsProject,
-    QgsVectorLayer,
 )
 
 from stratified_packager.processing.params import COMPRESSION_LEVEL, variable_name
@@ -97,42 +95,8 @@ def test_disconnect_project_signals_clears_state(
     connected_provider.disconnect_project_signals()
     assert connected_provider._refresh_timer is None
     assert connected_provider._project_connections == []
-    assert connected_provider._layer_connections == {}
     # A second disconnect is harmless (reload safety).
     connected_provider.disconnect_project_signals()
-
-
-def test_layer_property_change_filters_to_variable_keys(
-    connected_provider: StratifiedPackagerProvider,
-) -> None:
-    """Only the variable-backing custom-property keys trigger a refresh (SPEC §5)."""
-    schedule = Mock()
-    connected_provider._schedule_refresh = schedule  # type: ignore[method-assign]  # spy
-    connected_provider._on_layer_property_changed("variableNames")
-    connected_provider._on_layer_property_changed("variableValues")
-    connected_provider._on_layer_property_changed("opacity")  # unrelated → ignored
-    assert schedule.call_count == 2
-
-
-def test_layer_add_remove_updates_tracking(
-    connected_provider: StratifiedPackagerProvider,
-) -> None:
-    """Adding/removing a layer connects/disconnects its property signal and refreshes."""
-    schedule = Mock()
-    connected_provider._schedule_refresh = schedule  # type: ignore[method-assign]  # spy
-    project = QgsProject.instance()
-    assert project is not None
-    layer = QgsVectorLayer("Point?crs=EPSG:4326&field=id:integer", "tmp", "memory")
-    assert layer.isValid()
-
-    assert project.addMapLayer(layer) is not None
-    layer_id = layer.id()
-    assert layer_id in connected_provider._layer_connections
-
-    project.removeMapLayer(layer_id)
-    assert layer_id not in connected_provider._layer_connections
-    # One refresh scheduled on add, one on remove.
-    assert schedule.call_count == 2
 
 
 def test_schedule_refresh_starts_the_coalescing_timer(

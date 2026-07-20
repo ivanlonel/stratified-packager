@@ -556,13 +556,15 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             to bool while resolving an empty ``LAYERS`` (§5 strict regime).
         """
         raw_layers = (
-            self.parameterAsLayerList(parameters, params.LAYERS, context)
+            self._distinct_layers(
+                self.parameterAsLayerList(parameters, params.LAYERS, context), feedback
+            )
             if not params.is_omitted(parameters, params.LAYERS)
             else None
         )
         if not raw_layers:
             try:
-                eligible = params.eligible_layer_ids(project, strict=True)
+                eligible = params.eligible_layer_ids(project)
             except ValueError as err:
                 raise QgsProcessingException(
                     self.tr("Cannot determine eligible layers: {}").format(err)
@@ -601,6 +603,43 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                 ).format(", ".join(layer.name() for layer in embedded))
             )
         return vectors, payloads, embedded
+
+    def _distinct_layers(
+        self, layers: Sequence[QgsMapLayer], feedback: QgsProcessingFeedback
+    ) -> list[QgsMapLayer]:
+        """
+        Drop repeated identities from a resolved ``LAYERS`` value, reporting the loss (§5).
+
+        A caller that identifies layers by data source rather than by id — a saved model, a
+        script, ``qgis_process --LAYERS=<source>`` — cannot distinguish layers sharing one
+        source (§12): :meth:`~qgis.core.QgsProcessingUtils.mapLayerFromString` answers every
+        such string with the same first match. The siblings are unrecoverable from the value
+        alone, so name what collapsed instead of failing or guessing, and keep one entry per
+        layer so the run does not write the survivor once per lost sibling.
+
+        :param layers: The layers ``LAYERS`` resolved to, repeats included.
+        :param feedback: Execution feedback channel.
+        :return: The layers in input order, first occurrence of each id only.
+        """
+        seen: set[str] = set()
+        distinct: list[QgsMapLayer] = []
+        collapsed: list[str] = []
+        for layer in layers:
+            if layer.id() in seen:
+                collapsed.append(layer.name())
+                continue
+            seen.add(layer.id())
+            distinct.append(layer)
+        if collapsed:
+            feedback.pushWarning(
+                self.tr(
+                    "LAYERS resolved %n entry(s) onto a layer already selected: {}. Layers"
+                    " sharing a data source are indistinguishable when selected by source;"
+                    " select them by layer id (or leave LAYERS empty) to package each one.",
+                    n=len(collapsed),
+                ).format(", ".join(collapsed))
+            )
+        return distinct
 
     def _resolve_strat_layer(
         self,

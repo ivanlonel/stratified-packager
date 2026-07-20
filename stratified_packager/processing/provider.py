@@ -12,12 +12,8 @@ from stratified_packager.identity import PLUGIN_SLUG, plugin_icon
 from stratified_packager.toolbelt.logging import QgisLoggerWrapper
 
 from .algorithm import StratifiedPackagerAlgorithm
-from .params import LAYER_VARIABLE_PROPERTY_KEYS
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from qgis.core import QgsMapLayer
     from qgis.PyQt.QtGui import QIcon
 
 log = QgisLoggerWrapper.get_logger(__name__)
@@ -29,8 +25,9 @@ class StratifiedPackagerProvider(QgsProcessingProvider):
 
     The default values shown in the Processing dialog are computed in
     :meth:`.algorithm.StratifiedPackagerAlgorithm.initAlgorithm`
-    from the active project's variables, the plugin settings and the layer ``exclude``
-    flags (SPEC §5). To keep that prefill in step with edits to the project,
+    from the active project's variables and the plugin settings (SPEC §5; ``LAYERS`` alone
+    carries no default — see :func:`.params.declare_parameters`). To keep those defaults
+    in step with edits to the project,
     :meth:`connect_project_signals` wires the relevant :class:`~qgis.core.QgsProject` signals
     to :meth:`~qgis.core.QgsProcessingProvider.refreshAlgorithms` (which rebuilds every
     algorithm instance). Those hookups are made **only from a GUI session**: connecting
@@ -50,9 +47,6 @@ class StratifiedPackagerProvider(QgsProcessingProvider):
         self._project_connections: list[QMetaObject.Connection] = []
         """Tokens of the project-level signal connections, for tidy disconnection."""
 
-        self._layer_connections: dict[str, QMetaObject.Connection] = {}
-        """Per-layer ``customPropertyChanged`` connection tokens, keyed by layer id."""
-
     @override
     def loadAlgorithms(self) -> None:
         """Load algorithms belonging to this provider."""
@@ -70,12 +64,10 @@ class StratifiedPackagerProvider(QgsProcessingProvider):
         """
         Wire project edits to a coalesced algorithm refresh (SPEC §5).
 
-        Idempotent. Call from ``initGui`` only — never headless (SPEC §5). Connects
-        the project's ``readProject`` / ``cleared`` / ``customVariablesChanged`` and
-        ``layersAdded`` / ``layersWillBeRemoved`` signals, plus every current layer's
-        ``customPropertyChanged``, each routed through a single-shot 0 ms timer so the
-        burst of signals QGIS emits while loading a project collapses into one refresh
-        (SPEC §5).
+        Idempotent. Call from ``initGui`` only — never headless (SPEC §5). Connects the
+        project's ``readProject`` / ``cleared`` / ``customVariablesChanged`` signals, each
+        routed through a single-shot 0 ms timer so the burst of signals QGIS emits while
+        loading a project collapses into one refresh (SPEC §5).
         """
         if self._refresh_timer is not None:
             return
@@ -94,81 +86,23 @@ class StratifiedPackagerProvider(QgsProcessingProvider):
             project.readProject.connect(self._schedule_refresh),
             project.cleared.connect(self._schedule_refresh),
             project.customVariablesChanged.connect(self._schedule_refresh),
-            project.layersAdded.connect(self._on_layers_added),
-            project.layersWillBeRemoved.connect(self._on_layers_will_be_removed),
         ]
-        self._connect_layers(project.mapLayers().values())
 
     def disconnect_project_signals(self) -> None:
         """
         Reverse :meth:`connect_project_signals` (called from ``unload``).
 
-        Disconnects the project-level and per-layer connections, then stops and
-        disposes the coalescing timer, leaving the provider safe to re-register.
+        Disconnects the project-level connections, then stops and disposes the coalescing
+        timer, leaving the provider safe to re-register.
         """
         for connection in self._project_connections:
             QObject.disconnect(connection)
         self._project_connections.clear()
 
-        for connection in self._layer_connections.values():
-            QObject.disconnect(connection)
-        self._layer_connections.clear()
-
         if self._refresh_timer is not None:
             self._refresh_timer.stop()
             self._refresh_timer.deleteLater()
             self._refresh_timer = None
-
-    def _connect_layers(self, layers: Iterable[QgsMapLayer]) -> None:
-        """
-        Connect each layer's ``customPropertyChanged`` to the refresh scheduler.
-
-        :param layers: Layers to start tracking (already-tracked ids are skipped).
-        """
-        for layer in layers:
-            layer_id = layer.id()
-            if layer_id in self._layer_connections:
-                continue
-            self._layer_connections[layer_id] = layer.customPropertyChanged.connect(
-                self._on_layer_property_changed
-            )
-
-    def _on_layers_added(self, layers: Iterable[QgsMapLayer]) -> None:
-        """
-        Track newly added layers and schedule a refresh (SPEC §5).
-
-        :param layers: The layers QGIS just added to the project.
-        """
-        self._connect_layers(layers)
-        self._schedule_refresh()
-
-    def _on_layers_will_be_removed(self, layers: Iterable[QgsMapLayer | str]) -> None:
-        """
-        Stop tracking layers about to be removed and schedule a refresh (SPEC §5).
-
-        Tolerates both overloads of ``layersWillBeRemoved`` (layer ids or layer objects).
-
-        :param layers: The layers (or their ids) QGIS is about to remove.
-        """
-        for item in layers:
-            layer_id = item if isinstance(item, str) else item.id()
-            connection = self._layer_connections.pop(layer_id, None)
-            if connection is not None:
-                QObject.disconnect(connection)
-        self._schedule_refresh()
-
-    def _on_layer_property_changed(self, key: str) -> None:
-        """
-        Schedule a refresh when a *layer-variable* custom property changes (SPEC §5).
-
-        ``setLayerVariable`` fires ``customPropertyChanged`` twice (keys ``variableNames``
-        and ``variableValues``); the 0 ms timer debounces them, and filtering on those
-        keys avoids spurious refreshes from unrelated custom-property writes (e.g. styles).
-
-        :param key: The custom-property key that changed.
-        """
-        if key in LAYER_VARIABLE_PROPERTY_KEYS:
-            self._schedule_refresh()
 
     def _schedule_refresh(self) -> None:
         """

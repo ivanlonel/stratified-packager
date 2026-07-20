@@ -202,8 +202,9 @@ only in the embedded project, plugin layers are excluded with a warning.
 
 Resolution chain per input: **input > project variable > plugin setting > builtin**.
 
-- **GUI pre-fill (dynamic defaults)**: `StratifiedPackagerProvider` connects
-  `QgsProject.instance()` signals — `readProject`, `cleared`, `customVariablesChanged` — to
+- **GUI pre-fill (dynamic defaults)**: `StratifiedPackagerProvider` connects the three
+  `QgsProject.instance()` signals that can change a resolved default — `readProject`, `cleared`,
+  `customVariablesChanged` — to
   `self.refreshAlgorithms()`, coalesced through a single-shot 0 ms timer
   (`customVariablesChanged` fires mid-load, before `readProject`). The hookups are made **only in
   GUI sessions** (wired from `initGui`, which `qgis_process` never calls): connecting them
@@ -211,20 +212,23 @@ Resolution chain per input: **input > project variable > plugin setting > builti
   `defaultValue` through the chain at refresh time, so the Processing dialog always shows the
   resolved value (booleans included — a checkbox cannot express "unset", which is why
   runtime-only resolution is insufficient).
-- **`LAYERS` prefill from layer variables**: `LAYERS`' `defaultValue` is the current eligible
-  non-`exclude=true` set (layer ids), recomputed at every refresh, so the dialog shows the
-  effective selection pre-checked and per-run tweaks never touch the persisted variables
-  (the standard `ParameterMultipleLayers` widget renders an id-list `defaultValue` as the checked
-  set). Because layer variables live in layer custom properties, the refresh triggers extend to
-  `layersAdded` / `layersWillBeRemoved` and each layer's `customPropertyChanged` (which
-  `setLayerVariable` fires synchronously, twice — on the `variableNames` and `variableValues`
-  keys, so the handler debounces), with per-layer connections tracked, disconnected on layer
-  removal and in `unload()`. The prefill is GUI
-  transparency only — the runtime fallback below stays authoritative: an omitted or empty
-  `LAYERS` resolves to all non-`exclude=true` layers at run start (notably under `qgis_process`,
-  where defaults may have been computed before the project loaded). An `exclude` value that
-  cannot be coerced to bool aborts the run at this point (the strict regime of §6); only the
-  prefill tolerates it — resolving to included — since this runtime resolution is authoritative.
+- **`LAYERS` carries no `defaultValue`** — deliberately, and it MUST stay that way. The standard
+  `ParameterMultipleLayers` widget does not round-trip layer identity: its wrapper resolves
+  whatever `defaultValue` it is given to layers and stores each one's **data source** string
+  (`QgsProcessingMultipleLayerWidgetWrapper::setWidgetValue`), and `LAYERS` then arrives as one
+  source string per layer. Because `QgsProcessingUtils::mapLayerFromString` matches id, then name,
+  then source, every string of a shared source resolves to the same first-matching layer — so an
+  id-list prefill silently collapses each §12 shared-source group onto one member, repeated,
+  dropping the siblings from the package and staging/writing the survivor once per repeat. Left
+  unset, the widget never runs that rewrite: an untouched widget sends nothing, and an opened
+  picker stores `layer->id()` per row, so even a partial selection of a shared-source group
+  resolves exactly. The runtime fallback below is therefore the single authoritative resolution
+  for GUI and headless alike: an omitted or empty `LAYERS` resolves to all non-`exclude=true`
+  layers at run start. An `exclude` value that cannot be coerced to bool aborts the run (the
+  strict regime of §6). Which layers `exclude` removes stays visible on the §19 Options / Project
+  Properties / Layer Properties pages and the all-layers table.
+  `LAYERS` values that *are* source strings (a saved model, a script, `qgis_process --LAYERS=<source>`) cannot be disambiguated after the fact; the algorithm reports the collapsed
+  entries and keeps one per layer rather than failing or guessing.
 - **Runtime fallback**: `processAlgorithm` (via `_resolve_inputs`) re-resolves omitted / `None`
   parameters through the same chain, covering headless runs and stale instances. The resolver is
   a single shared helper (`params.InputReader` over `params.resolve_default`) — no per-call drift.
