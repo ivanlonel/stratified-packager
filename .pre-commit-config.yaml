@@ -162,15 +162,13 @@ repos:
 
       - id: update-metadata
         name: Sync metadata.txt version with the latest CHANGELOG.md entry
-        entry: uv run --group pack scripts/update_metadata.py
+        entry: uv run --isolated --group pack scripts/update_metadata.py
         language: system
         pass_filenames: false
         files: CHANGELOG.md
 
       - id: pylupdate
         name: Update translation files
-        # --isolated: the pack group's pip pyqt6 must never sync into the project venv,
-        # where it shadows QGIS's Qt DLLs (qgis.core stops importing until repaired).
         entry: uv run --isolated --group pack scripts/pylupdate.py
         args:
           - --no-obsolete
