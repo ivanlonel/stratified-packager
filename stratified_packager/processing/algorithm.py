@@ -2499,7 +2499,16 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             # ctor is runtime-valid on QGIS 4, so the checkers misread this call.
             report_fields.append(QgsField(name, kind))  # ty: ignore[invalid-argument-type, too-many-positional-arguments]
         sink, dest_id = self.parameterAsSink(
-            parameters, params.REPORT, context, report_fields, Qgis.WkbType.NoGeometry
+            parameters,
+            params.REPORT,
+            context,
+            report_fields,
+            Qgis.WkbType.NoGeometry,
+            # §9.1: pin text destinations (e.g. CSV) to UTF-8. Left to the framework, the
+            # sink's fileEncoding is the OS locale codepage (cp1252 on pt-BR Windows),
+            # diverging from the always-UTF-8 per-zip report (§9.2). GeoPackage and
+            # memory destinations ignore fileEncoding, so this is safe for every format.
+            createOptions={"fileEncoding": "UTF-8"},
         )
         if sink is None:
             raise QgsProcessingException(self.tr("Could not create the run report output."))
