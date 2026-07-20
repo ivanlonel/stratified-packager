@@ -53,25 +53,25 @@ jobs:
         run: uv lock --upgrade
 
       - name: prek – sync-with-uv (first pass)
-        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        uses: j178/prek-action@5337cb91e0fa35a7ff31b9ca345126d8bbbcdf16 # v2.0.6
         with:
           extra-args: --all-files --verbose --hook-stage manual sync-with-uv
         continue-on-error: true
 
       - name: prek – sync-with-uv (verify)
-        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        uses: j178/prek-action@5337cb91e0fa35a7ff31b9ca345126d8bbbcdf16 # v2.0.6
         with:
           extra-args: --all-files --verbose --hook-stage manual sync-with-uv
 
       # Make sure Renovate didn't upset pyproject-fmt by, e.g., misaligning comments.
       - name: prek – pyproject-fmt (first pass)
-        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        uses: j178/prek-action@5337cb91e0fa35a7ff31b9ca345126d8bbbcdf16 # v2.0.6
         with:
           extra-args: --all-files --verbose --hook-stage manual pyproject-fmt
         continue-on-error: true
 
       - name: prek – pyproject-fmt (verify)
-        uses: j178/prek-action@e98a699c41eb69ab013a45817a0406469a748f8d # v2.0.5
+        uses: j178/prek-action@5337cb91e0fa35a7ff31b9ca345126d8bbbcdf16 # v2.0.6
         with:
           extra-args: --all-files --verbose --hook-stage manual pyproject-fmt
 
