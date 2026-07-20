@@ -82,7 +82,7 @@
 </context><context>
   <name>InputReader</name>
   <message>
-    <location filename="../../processing/params.py" line="985" />
+    <location filename="../../processing/params.py" line="1000" />
     <source>Cannot resolve {}: {}</source>
     <translation>No se puede resolver {}: {}</translation>
   </message>
@@ -852,242 +852,242 @@
     <translation>— lista JSON de ids de relaciones que fija una cadena de atributos que de otro modo sería ambigua.</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="322" />
+    <location filename="../../processing/params.py" line="337" />
     <source>Layer Configuration</source>
     <translation>Configuración de la capa</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="327" />
+    <location filename="../../processing/params.py" line="342" />
     <source>Symbology</source>
     <translation>Simbología</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="332" />
+    <location filename="../../processing/params.py" line="347" />
     <source>3D Symbology</source>
     <translation>Simbología 3D</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="337" />
+    <location filename="../../processing/params.py" line="352" />
     <source>Labels</source>
     <translation>Etiquetas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="342" />
+    <location filename="../../processing/params.py" line="357" />
     <source>Fields</source>
     <translation>Campos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="347" />
+    <location filename="../../processing/params.py" line="362" />
     <source>Attribute Form</source>
     <translation>Formulario de atributos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="352" />
+    <location filename="../../processing/params.py" line="367" />
     <source>Actions</source>
     <translation>Acciones</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="357" />
+    <location filename="../../processing/params.py" line="372" />
     <source>Map Tips</source>
     <translation>Consejos del mapa</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="362" />
+    <location filename="../../processing/params.py" line="377" />
     <source>Diagrams</source>
     <translation>Diagramas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="367" />
+    <location filename="../../processing/params.py" line="382" />
     <source>Attribute Table Configuration</source>
     <translation>Configuración de la tabla de atributos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="372" />
+    <location filename="../../processing/params.py" line="387" />
     <source>Rendering</source>
     <translation>Renderizado</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="377" />
+    <location filename="../../processing/params.py" line="392" />
     <source>Custom Properties</source>
     <translation>Propiedades personalizadas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="382" />
+    <location filename="../../processing/params.py" line="397" />
     <source>Geometry Options</source>
     <translation>Opciones de geometría</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="387" />
+    <location filename="../../processing/params.py" line="402" />
     <source>Relations</source>
     <translation>Relaciones</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="392" />
+    <location filename="../../processing/params.py" line="407" />
     <source>Temporal Properties</source>
     <translation>Propiedades temporales</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="397" />
+    <location filename="../../processing/params.py" line="412" />
     <source>Legend Settings</source>
     <translation>Configuración de la leyenda</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="402" />
+    <location filename="../../processing/params.py" line="417" />
     <source>Elevation Properties</source>
     <translation>Propiedades de elevación</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="407" />
+    <location filename="../../processing/params.py" line="422" />
     <source>Notes</source>
     <translation>Notas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="588" />
+    <location filename="../../processing/params.py" line="603" />
     <source>Layers to package (empty = all eligible layers)</source>
     <translation>Capas a empaquetar (vacío = todas las capas aptas)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="597" />
+    <location filename="../../processing/params.py" line="612" />
     <source>Stratification layer (one stratum per feature)</source>
     <translation>Capa de estratificación (un estrato por entidad)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="605" />
+    <location filename="../../processing/params.py" line="620" />
     <source>Stratum name expression (empty = feature id)</source>
     <translation>Expresión de nombre del estrato (vacío = id de la entidad)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="613" />
+    <location filename="../../processing/params.py" line="628" />
     <source>Only selected stratification features become strata</source>
     <translation>Solo las entidades de estratificación seleccionadas se convierten en estratos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="622" />
+    <location filename="../../processing/params.py" line="637" />
     <source>GeoPackage path expression (empty = sanitized stratum name)</source>
     <translation>Expresión de ruta del GeoPackage (vacío = nombre del estrato saneado)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="632" />
+    <location filename="../../processing/params.py" line="647" />
     <source>Zip path expression (empty = GeoPackage name)</source>
     <translation>Expresión de ruta del zip (vacío = nombre del GeoPackage)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="641" />
+    <location filename="../../processing/params.py" line="656" />
     <source>Output directory</source>
     <translation>Directorio de salida</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="647" />
+    <location filename="../../processing/params.py" line="662" />
     <source>Zip compression level (0 = store uncompressed)</source>
     <translation>Nivel de compresión del zip (0 = almacenar sin comprimir)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="656" />
+    <location filename="../../processing/params.py" line="671" />
     <source>Existing outputs</source>
     <translation>Salidas existentes</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="663" />
+    <location filename="../../processing/params.py" line="678" />
     <source>Embed a QGIS project per stratum</source>
     <translation>Incrustar un proyecto QGIS por estrato</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="672" />
+    <location filename="../../processing/params.py" line="687" />
     <source>Build in a temporary folder, publish zips atomically</source>
     <translation>Construir en una carpeta temporal y publicar los zips de forma atómica</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="682" />
+    <location filename="../../processing/params.py" line="697" />
     <source>Include layer styles</source>
     <translation>Incluir los estilos de las capas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="689" />
+    <location filename="../../processing/params.py" line="704" />
     <source>Style categories to copy (none checked = all)</source>
     <translation>Categorías de estilo a copiar (ninguna marcada = todas)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="698" />
+    <location filename="../../processing/params.py" line="713" />
     <source>Include layer metadata</source>
     <translation>Incluir los metadatos de las capas</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="705" />
+    <location filename="../../processing/params.py" line="720" />
     <source>Keep layers with no matching features as empty tables</source>
     <translation>Mantener las capas sin entidades coincidentes como tablas vacías</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="715" />
+    <location filename="../../processing/params.py" line="730" />
     <source>Write layers sharing a data source as one table</source>
     <translation>Escribir las capas que comparten un origen de datos como una sola tabla</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="724" />
+    <location filename="../../processing/params.py" line="739" />
     <source>Stage every layer of these data providers (see the stage layer variable)</source>
     <translation>Generar copia preparada de todas las capas de estos proveedores de datos (ver la variable de capa stage)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="734" />
+    <location filename="../../processing/params.py" line="749" />
     <source>Also export the full (unpartitioned) package</source>
     <translation>Exportar también el paquete completo (sin particionar)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="743" />
+    <location filename="../../processing/params.py" line="758" />
     <source>Full package path (empty = &lt;project name&gt;_full)</source>
     <translation>Ruta del paquete completo (vacío = &lt;nombre del proyecto&gt;_full)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="751" />
+    <location filename="../../processing/params.py" line="766" />
     <source>Write a report.csv into each published zip</source>
     <translation>Escribir un report.csv en cada zip publicado</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="760" />
+    <location filename="../../processing/params.py" line="775" />
     <source>Extra files directory (copied into every zip root)</source>
     <translation>Directorio de archivos adicionales (copiado en la raíz de cada zip)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="768" />
+    <location filename="../../processing/params.py" line="783" />
     <source>Warm cache directory</source>
     <translation>Directorio de la caché en caliente</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="774" />
+    <location filename="../../processing/params.py" line="789" />
     <source>Warm cache mode</source>
     <translation>Modo de la caché en caliente</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="781" />
+    <location filename="../../processing/params.py" line="796" />
     <source>Write a .sha256 file next to each zip</source>
     <translation>Escribir un archivo .sha256 junto a cada zip</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="790" />
+    <location filename="../../processing/params.py" line="805" />
     <source>Dry run (validate and report only, write no packages)</source>
     <translation>Simulación (solo validar e informar, sin escribir paquetes)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1268" />
+    <location filename="../../processing/params.py" line="1283" />
     <source>Run report (loaded as a memory layer when no path is given)</source>
     <translation>Informe de la ejecución (cargado como capa en memoria cuando no se indica una ruta)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1387" />
+    <location filename="../../processing/params.py" line="1402" />
     <source>Published zip paths (JSON array)</source>
     <translation>Rutas de los zips publicados (arreglo JSON)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1393" />
+    <location filename="../../processing/params.py" line="1408" />
     <source>Strata resolved</source>
     <translation>Estratos resueltos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1396" />
+    <location filename="../../processing/params.py" line="1411" />
     <source>Zips published</source>
     <translation>Zips publicados</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1400" />
+    <location filename="../../processing/params.py" line="1415" />
     <source>Failed strata (JSON array)</source>
     <translation>Estratos con errores (arreglo JSON)</translation>
   </message>

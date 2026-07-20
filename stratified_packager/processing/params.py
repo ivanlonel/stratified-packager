@@ -311,100 +311,115 @@ class StyleCategoryOption:
     flag: QgsMapLayer.StyleCategory
     """The :class:`~qgis.core.QgsMapLayer.StyleCategory` flag this token maps to."""
 
-    label: str
-    """Translated, user-facing label (matches the layer-tree *Copy Style* menu)."""
+    source_label: str
+    """User-facing label in source English (matches the layer-tree *Copy Style* menu),
+    authored with :func:`~qgis.PyQt.QtCore.QT_TRANSLATE_NOOP`."""
+
+    @property
+    def label(self) -> str:
+        """
+        The user-facing label, translated on access.
+
+        Resolved lazily, not at table-construction time: this module is imported from
+        :mod:`~stratified_packager.settings` while ``classFactory`` runs, before
+        :class:`~stratified_packager.main.StratifiedPackager` installs the plugin
+        translator, so an eager translation would freeze every label to source English.
+
+        :return: :attr:`source_label` translated in the algorithm context.
+        """
+        return QCoreApplication.translate(_ALG, self.source_label)
 
 
 STYLE_CATEGORY_OPTIONS: Final[tuple[StyleCategoryOption, ...]] = (
     StyleCategoryOption(
         "layer_configuration",
         QgsMapLayer.StyleCategory.LayerConfiguration,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Layer Configuration"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Layer Configuration"),
     ),
     StyleCategoryOption(
         "symbology",
         QgsMapLayer.StyleCategory.Symbology,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Symbology"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Symbology"),
     ),
     StyleCategoryOption(
         "symbology_3d",
         QgsMapLayer.StyleCategory.Symbology3D,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "3D Symbology"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "3D Symbology"),
     ),
     StyleCategoryOption(
         "labeling",
         QgsMapLayer.StyleCategory.Labeling,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Labels"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Labels"),
     ),
     StyleCategoryOption(
         "fields",
         QgsMapLayer.StyleCategory.Fields,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Fields"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Fields"),
     ),
     StyleCategoryOption(
         "forms",
         QgsMapLayer.StyleCategory.Forms,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Attribute Form"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Attribute Form"),
     ),
     StyleCategoryOption(
         "actions",
         QgsMapLayer.StyleCategory.Actions,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Actions"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Actions"),
     ),
     StyleCategoryOption(
         "map_tips",
         QgsMapLayer.StyleCategory.MapTips,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Map Tips"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Map Tips"),
     ),
     StyleCategoryOption(
         "diagrams",
         QgsMapLayer.StyleCategory.Diagrams,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Diagrams"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Diagrams"),
     ),
     StyleCategoryOption(
         "attribute_table",
         QgsMapLayer.StyleCategory.AttributeTable,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Attribute Table Configuration"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Attribute Table Configuration"),
     ),
     StyleCategoryOption(
         "rendering",
         QgsMapLayer.StyleCategory.Rendering,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Rendering"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Rendering"),
     ),
     StyleCategoryOption(
         "custom_properties",
         QgsMapLayer.StyleCategory.CustomProperties,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Custom Properties"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Custom Properties"),
     ),
     StyleCategoryOption(
         "geometry_options",
         QgsMapLayer.StyleCategory.GeometryOptions,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Geometry Options"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Geometry Options"),
     ),
     StyleCategoryOption(
         "relations",
         QgsMapLayer.StyleCategory.Relations,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Relations"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Relations"),
     ),
     StyleCategoryOption(
         "temporal",
         QgsMapLayer.StyleCategory.Temporal,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Temporal Properties"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Temporal Properties"),
     ),
     StyleCategoryOption(
         "legend",
         QgsMapLayer.StyleCategory.Legend,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Legend Settings"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Legend Settings"),
     ),
     StyleCategoryOption(
         "elevation",
         QgsMapLayer.StyleCategory.Elevation,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Elevation Properties"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Elevation Properties"),
     ),
     StyleCategoryOption(
         "notes",
         QgsMapLayer.StyleCategory.Notes,
-        QCoreApplication.translate("StratifiedPackagerAlgorithm", "Notes"),
+        QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Notes"),
     ),
 )
 """The single-bit :class:`~qgis.core.QgsMapLayer.StyleCategory` flags, in QGIS bit order,
@@ -1390,7 +1405,7 @@ def declare_outputs(algorithm: QgsProcessingAlgorithm) -> None:
         ),
         QgsProcessingOutputNumber(
             STRATA_COUNT,
-            QCoreApplication.translate("StratifiedPackagerAlgorithm", "Strata resolved"),
+            QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Strata resolved"),
         ),
         QgsProcessingOutputNumber(
             ZIP_COUNT, QCoreApplication.translate("StratifiedPackagerAlgorithm", "Zips published")

@@ -82,7 +82,7 @@
 </context><context>
   <name>InputReader</name>
   <message>
-    <location filename="../../processing/params.py" line="985" />
+    <location filename="../../processing/params.py" line="1000" />
     <source>Cannot resolve {}: {}</source>
     <translation type="unfinished" />
   </message>
@@ -849,242 +849,242 @@
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="322" />
+    <location filename="../../processing/params.py" line="337" />
     <source>Layer Configuration</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="327" />
+    <location filename="../../processing/params.py" line="342" />
     <source>Symbology</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="332" />
+    <location filename="../../processing/params.py" line="347" />
     <source>3D Symbology</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="337" />
+    <location filename="../../processing/params.py" line="352" />
     <source>Labels</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="342" />
+    <location filename="../../processing/params.py" line="357" />
     <source>Fields</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="347" />
+    <location filename="../../processing/params.py" line="362" />
     <source>Attribute Form</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="352" />
+    <location filename="../../processing/params.py" line="367" />
     <source>Actions</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="357" />
+    <location filename="../../processing/params.py" line="372" />
     <source>Map Tips</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="362" />
+    <location filename="../../processing/params.py" line="377" />
     <source>Diagrams</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="367" />
+    <location filename="../../processing/params.py" line="382" />
     <source>Attribute Table Configuration</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="372" />
+    <location filename="../../processing/params.py" line="387" />
     <source>Rendering</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="377" />
+    <location filename="../../processing/params.py" line="392" />
     <source>Custom Properties</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="382" />
+    <location filename="../../processing/params.py" line="397" />
     <source>Geometry Options</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="387" />
+    <location filename="../../processing/params.py" line="402" />
     <source>Relations</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="392" />
+    <location filename="../../processing/params.py" line="407" />
     <source>Temporal Properties</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="397" />
+    <location filename="../../processing/params.py" line="412" />
     <source>Legend Settings</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="402" />
+    <location filename="../../processing/params.py" line="417" />
     <source>Elevation Properties</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="407" />
+    <location filename="../../processing/params.py" line="422" />
     <source>Notes</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="588" />
+    <location filename="../../processing/params.py" line="603" />
     <source>Layers to package (empty = all eligible layers)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="597" />
+    <location filename="../../processing/params.py" line="612" />
     <source>Stratification layer (one stratum per feature)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="605" />
+    <location filename="../../processing/params.py" line="620" />
     <source>Stratum name expression (empty = feature id)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="613" />
+    <location filename="../../processing/params.py" line="628" />
     <source>Only selected stratification features become strata</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="622" />
+    <location filename="../../processing/params.py" line="637" />
     <source>GeoPackage path expression (empty = sanitized stratum name)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="632" />
+    <location filename="../../processing/params.py" line="647" />
     <source>Zip path expression (empty = GeoPackage name)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="641" />
+    <location filename="../../processing/params.py" line="656" />
     <source>Output directory</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="647" />
+    <location filename="../../processing/params.py" line="662" />
     <source>Zip compression level (0 = store uncompressed)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="656" />
+    <location filename="../../processing/params.py" line="671" />
     <source>Existing outputs</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="663" />
+    <location filename="../../processing/params.py" line="678" />
     <source>Embed a QGIS project per stratum</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="672" />
+    <location filename="../../processing/params.py" line="687" />
     <source>Build in a temporary folder, publish zips atomically</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="682" />
+    <location filename="../../processing/params.py" line="697" />
     <source>Include layer styles</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="689" />
+    <location filename="../../processing/params.py" line="704" />
     <source>Style categories to copy (none checked = all)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="698" />
+    <location filename="../../processing/params.py" line="713" />
     <source>Include layer metadata</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="705" />
+    <location filename="../../processing/params.py" line="720" />
     <source>Keep layers with no matching features as empty tables</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="715" />
+    <location filename="../../processing/params.py" line="730" />
     <source>Write layers sharing a data source as one table</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="724" />
+    <location filename="../../processing/params.py" line="739" />
     <source>Stage every layer of these data providers (see the stage layer variable)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="734" />
+    <location filename="../../processing/params.py" line="749" />
     <source>Also export the full (unpartitioned) package</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="743" />
+    <location filename="../../processing/params.py" line="758" />
     <source>Full package path (empty = &lt;project name&gt;_full)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="751" />
+    <location filename="../../processing/params.py" line="766" />
     <source>Write a report.csv into each published zip</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="760" />
+    <location filename="../../processing/params.py" line="775" />
     <source>Extra files directory (copied into every zip root)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="768" />
+    <location filename="../../processing/params.py" line="783" />
     <source>Warm cache directory</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="774" />
+    <location filename="../../processing/params.py" line="789" />
     <source>Warm cache mode</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="781" />
+    <location filename="../../processing/params.py" line="796" />
     <source>Write a .sha256 file next to each zip</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="790" />
+    <location filename="../../processing/params.py" line="805" />
     <source>Dry run (validate and report only, write no packages)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1268" />
+    <location filename="../../processing/params.py" line="1283" />
     <source>Run report (loaded as a memory layer when no path is given)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1387" />
+    <location filename="../../processing/params.py" line="1402" />
     <source>Published zip paths (JSON array)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1393" />
+    <location filename="../../processing/params.py" line="1408" />
     <source>Strata resolved</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1396" />
+    <location filename="../../processing/params.py" line="1411" />
     <source>Zips published</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1400" />
+    <location filename="../../processing/params.py" line="1415" />
     <source>Failed strata (JSON array)</source>
     <translation type="unfinished" />
   </message>
