@@ -1369,11 +1369,9 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 raise QgsProcessingException(self.tr("Operation was canceled."))
             steps.setCurrentStep(index - 1)
-            line = self.tr("Staging layer {}/{}: {}").format(
-                index, len(to_stage), prep.layer.name()
+            feedback.setProgressText(
+                self.tr("Staging layer {}/{}: {}").format(index, len(to_stage), prep.layer.name())
             )
-            feedback.setProgressText(line)
-            feedback.pushInfo(line)
             self._stage_prep(prep, group, material, real_features, staging_dir, steps)
 
     def _stage_prep(

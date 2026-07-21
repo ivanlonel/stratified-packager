@@ -237,11 +237,11 @@ def write_template(
         if feedback.isCanceled():
             return
         steps.setCurrentStep(index - 1)
-        line = QCoreApplication.translate("Building", "Writing template layer {}/{}: {}").format(
-            index, len(layers), layer_write.table
+        feedback.setProgressText(
+            QCoreApplication.translate("Building", "Writing template layer {}/{}: {}").format(
+                index, len(layers), layer_write.table
+            )
         )
-        feedback.setProgressText(line)
-        feedback.pushInfo(line)
         layer_write.read_layer.removeSelection()
         write_vector_table(
             template_path,

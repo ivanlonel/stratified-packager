@@ -506,8 +506,9 @@ result; the run aborts only at the end if any stratum or zip failed.
    band — a `QgsProcessingMultiStepFeedback` stepping inside a band-mapping proxy feedback
    (`setStepWeights` would do both at once but is QGIS 4.0-only, §1.1). `setProgressText`
    names the step the bar is advancing through — the layer being prepared, staged or
-   templated, each stratum's per-layer writes, and the embedded-project builds — in step
-   with the matching log line.
+   templated, each stratum's per-layer writes, and the embedded-project builds. That text
+   **is** the step's log line — the Processing dialog appends it to its log and
+   `qgis_process` prints it — so a step is never also `pushInfo`d (that logged it twice).
 
 ## 9. Reporting
 
