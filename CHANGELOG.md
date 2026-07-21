@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
-## Unreleased
+## 0.2.0 - 2026-07-20
 
 - Processing: **fixed a multi-part `FULL_PACKAGE_PATH` producing the wrong output layout.** `FULL_PACKAGE_PATH` is the full package's zip path, but the code used only its last component as the zip name (flattened to the `OUTPUT_DIRECTORY` root) and the *whole* path as the in-zip GeoPackage path, never consulting `GPKG_PATH_EXPRESSION` — so `sub/dir/name` wrote `name.zip` at the root containing `sub/dir/name.gpkg`. `FULL_PACKAGE_PATH` is now the (extensionless) zip path in full, and the in-zip GeoPackage path follows `GPKG_PATH_EXPRESSION` like every stratum (empty ⇒ the zip basename). Single-part paths are unchanged.
 - Reporting: **fixed the run report (`REPORT` output) being written in the system locale encoding instead of UTF-8.** The per-zip `report.csv` is stdlib-written UTF-8, but the run report rides a Processing *feature sink* whose byte encoding the framework seeds from the OS codepage (cp1252 on a pt-BR Windows), so accented stratum/layer/detail text came out mojibake. The sink is now pinned to UTF-8 (no BOM) for text destinations; GeoPackage and memory-layer destinations are unaffected.
