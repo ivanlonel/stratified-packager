@@ -226,8 +226,8 @@ package *qgis-plugin-ci_args:
 @version:
     uv run python -c "from stratified_packager.__about__ import __version__; print(__version__)"
 
-[confirm('This will tag the current commit and push main + tag to origin, triggering the release workflow (GitHub release + OSGeo deploy). Continue? [y/N]')]
-[doc('Verify branch/tree/version/Bandit, then tag the release and push it')]
+[confirm('This will tag the origin/main HEAD and push the tag to origin, triggering the release workflow (GitHub release + OSGeo deploy). Continue? [y/N]')]
+[doc('Verify branch/tree/sync/version/Bandit, then tag the release and push the tag')]
 [group('Publishing')]
 [script]
 release version:
@@ -241,17 +241,26 @@ release version:
         {{ error }} "Working tree is not clean. Commit or stash changes first."
         exit 1
     }
+    # main is a protected branch (linear history + strict required status checks), so the
+    # recipe cannot push it. The version-close commit (CHANGELOG + metadata bump) must already
+    # be on origin/main via a PR; the tag is then created on that commit and pushed on its own.
+    git fetch --quiet origin main
+    if ((git rev-parse HEAD) -ne (git rev-parse origin/main)) {
+        {{ error }} "Local main is not in sync with origin/main."
+        {{ error }} "main is protected: land the version-close commit on main via a PR, then 'git pull' before releasing."
+        exit 1
+    }
     $metadataVersion = uv run python -c "from stratified_packager.__about__ import __version__; print(__version__)"
     if ($metadataVersion -ne '{{ version }}') {
         {{ error }} "metadata.txt version ($metadataVersion) does not match tag '{{ version }}'."
-        {{ error }} "Add the version to CHANGELOG.md and commit (the update-metadata hook syncs metadata.txt)."
+        {{ error }} "Add the version to CHANGELOG.md, commit (the update-metadata hook syncs metadata.txt), and merge it to main via a PR."
         {{ error }} "Note: a version rejected by plugins.qgis.org gets a SemVer bump, never a re-tag."
         exit 1
     }
     just bandit
     {{ title }} "Tagging and pushing {{ version }}..."
     git tag '{{ version }}'
-    git push origin main '{{ version }}'
+    git push origin '{{ version }}'
 
 [doc('Format code automatically')]
 [group('QA')]
