@@ -806,7 +806,7 @@ class TestWarmStart:
         )
         assert results[p.ZIP_COUNT] == 2
         assert any("Skipping staging" in line for line in feedback.infos)
-        assert not any(line.startswith("Staging layer") for line in feedback.infos)
+        assert not any(text.startswith("Staging layer") for text in feedback.texts)
         report = (scenario.out_dir / "report.csv").read_text(encoding="utf-8")
         assert "A,cities,2,warm" in report
         assert "B,cities,1,warm" in report
@@ -829,7 +829,7 @@ class TestWarmStart:
         )
         assert results[p.ZIP_COUNT] == 2
         assert any("Warm cache unusable" in line for line in feedback.warnings)
-        assert any(line.startswith("Staging layer") for line in feedback.infos)
+        assert any(text.startswith("Staging layer") for text in feedback.texts)
         assert not any("Skipping staging" in line for line in feedback.infos)
         report = (scenario.out_dir / "report.csv").read_text(encoding="utf-8")
         assert "A,cities,2,warm" in report
@@ -844,7 +844,6 @@ class TestWarmStart:
             {p.WARM_START_MODE: "update", p.WARM_START_DIR: str(tmp_path / "warm")},
             feedback=feedback,
         )
-        assert any(line.startswith("Staging layer") for line in feedback.infos)
         assert any(text.startswith("Staging layer") for text in feedback.texts)
         assert not any("Skipping staging" in line for line in feedback.infos)
 
