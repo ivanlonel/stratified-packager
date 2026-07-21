@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
+## Unreleased - 2026-07-21
+
+- Processing: **fixed every staging and template step being logged twice.** `setProgressText` already writes its text to the algorithm's log — the Processing dialog appends the progress text to its log panel and `qgis_process` prints it to stdout — so the two steps that additionally pushed the same line as an info message emitted each line twice in the run log. The redundant push is gone; the progress label and the log line itself are unchanged.
+
 ## 0.2.0 - 2026-07-20
 
 - Processing: **fixed a multi-part `FULL_PACKAGE_PATH` producing the wrong output layout.** `FULL_PACKAGE_PATH` is the full package's zip path, but the code used only its last component as the zip name (flattened to the `OUTPUT_DIRECTORY` root) and the *whole* path as the in-zip GeoPackage path, never consulting `GPKG_PATH_EXPRESSION` — so `sub/dir/name` wrote `name.zip` at the root containing `sub/dir/name.gpkg`. `FULL_PACKAGE_PATH` is now the (extensionless) zip path in full, and the in-zip GeoPackage path follows `GPKG_PATH_EXPRESSION` like every stratum (empty ⇒ the zip basename). Single-part paths are unchanged.
