@@ -33,6 +33,8 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication, QUrl
 from qgis.PyQt.QtXml import QDomDocument
 
+from stratified_packager.toolbelt.sql import sqlite_where_error
+
 from .params import ProjectInclusion
 
 if TYPE_CHECKING:
@@ -503,11 +505,26 @@ def _apply_styles_and_subsets(
             )
     for layer_id, subset in plan.subsets.items():
         replacement = replacements.get(layer_id)
-        if (
-            subset
-            and isinstance(replacement, QgsVectorLayer)
-            and not replacement.setSubsetString(subset)
-        ):
+        if not subset or not isinstance(replacement, QgsVectorLayer):
+            continue
+        # The subset is the source provider's SQL, but the replacement reads a GeoPackage: a
+        # dialect the layer API accepts can still be one SQLite cannot prepare, and that failure
+        # only ever reaches a GDAL error handler. Say so plainly, then apply it anyway — the
+        # probe cannot see the extension functions a real GeoPackage connection registers.
+        dialect_error = sqlite_where_error(
+            (field.name() for field in replacement.fields().toList()), subset
+        )
+        if dialect_error is not None:
+            feedback.pushWarning(
+                QCoreApplication.translate(
+                    "ProjectBuilder",
+                    "Embedded project: layer {}'s subset is not valid SQLite ({}), so the"
+                    " packaged project may show no features for it. This layer shares its"
+                    " table with others, so the subset is what separates them — rewrite it in"
+                    " SQL the GeoPackage understands. Subset: {}",
+                ).format(replacement.name(), dialect_error, subset)
+            )
+        if not replacement.setSubsetString(subset):
             feedback.pushWarning(
                 QCoreApplication.translate(
                     "ProjectBuilder", "Embedded project: subset for layer {} was not accepted: {}"

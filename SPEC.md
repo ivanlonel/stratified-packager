@@ -314,12 +314,16 @@ Resolution chain per input: **input > project variable > plugin setting > builti
   definition above.
 - A field used by a relation hop may be in `excluded_fields`: exclusion affects only the
   exported schema, never the matching (matching reads the source, not the output).
-- Resolving a chain is a **pure function** of the chain and the stratum's starting key tuple: the
-  run never reads a project layer for anything but matching and never mutates one (§8.1), so the
-  same pair always yields the same condition. Implementations therefore MAY memoize it per run —
-  bounded, so memory cannot grow with the stratum count — and the memo MUST NOT change any
-  observable result. This collapses two repeats: every packaged layer sharing a chain re-derives
-  the identical key set per stratum, and the §8.2 staging pass derives what Phase B derives again.
+- Resolving a hop is a **pure function** of the hops walked before it, the fields the next hop
+  reads back, and the stratum's starting key tuple: the run never reads a project layer for
+  anything but matching and never mutates one (§8.1), so the same triple always yields the same
+  key set. Implementations therefore MAY memoize hops per run — bounded, so memory cannot grow
+  with the stratum count — and the memo MUST NOT change any observable result.
+  The memoization unit is the **chain prefix**, not the whole chain: packaged layers routinely
+  share a chain's leading hops and diverge only at the final, layer-specific relation, so a
+  whole-chain key collides for none of them while a prefix key collides for all. The fields the
+  next hop reads back belong in the key because one relation traversed for two different
+  onward keys yields two different sets.
 - **Intermediate** hop layers (every hop but the last, whose far-side keys *are* the condition)
   are read straight from the project, once per `IN` chunk per member per stratum — the one read
   path per-layer staging does not cover, since staging only replaces a *packaged* layer's read
@@ -668,7 +672,14 @@ Layout per zip:
   matching method/predicate/chain; a whole-export member ⇒ full table everywhere).
 - Exported fields = **union of every member's kept fields**, where each member's kept fields
   always include the columns referenced by its own subset string — so re-applying the per-layer
-  subset strings on the embedded project's layers restores each member's exact view.
+  subset strings on the embedded project's layers restores each member's exact view. That holds
+  for the primary too: only its *read source's* subset is cleared (so the shared table holds the
+  union), never the plugin's record of it.
+- A subset string is the **source provider's** SQL, and the embedded project re-applies it to a
+  GeoPackage. A filter that does not parse as SQLite (a PostgreSQL `::` cast, a schema-qualified
+  table, a function SQLite lacks) is still accepted by the layer API — it fails later, inside the
+  data provider — so implementations SHOULD test it against the target dialect and warn, naming
+  the layer and the reason.
 - Staging composes with grouping (§8.2): the group stages **once**, through its primary, when any
   member's `stage` resolves true — the staged copy holds the union of every member's matches, so
   members never split into separate tables over staging.
@@ -696,7 +707,11 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
   `layer_styles` rows use); **relations** remapped among
   included layers (relations touching excluded layers are dropped); **project CRS, transform
   context, title**. No print layouts, map themes, macros, actions.
-- Per-layer subset strings re-applied (§12). Layers whose stratum table is absent
+- Per-layer subset strings re-applied **for §12 group members only** — their shared table holds
+  the union of every member's matches, so the subset is what separates them. An ungrouped layer's
+  table already *is* its subset view (the read source is a clone that kept the subset), so
+  re-applying would filter nothing while still requiring the source provider's SQL to parse as
+  SQLite; its packaged layer therefore carries no subset. Layers whose stratum table is absent
   (`KEEP_EMPTY_LAYERS=False`) are omitted from that stratum's project.
 - Paths stored relative (`Qgis.FilePathType.Relative` set explicitly; gpkg storage already
   defaults to relative datasources). `gpkg` mode writes into the GeoPackage's project storage

@@ -1041,6 +1041,48 @@ class TestDedupAndFullPackage:
         assert zip_report.count(",cities,") >= 1
         assert "cities_twin,cities," in zip_report  # member row points at shared table
 
+    def test_subsets_ride_only_on_shared_tables(self, scenario: Scenario, tmp_path: Path) -> None:
+        """
+        The embedded project re-applies a subset only where one table serves several layers.
+
+        A subset string is the *source* provider's SQL, but the packaged layer reads a
+        GeoPackage. Re-applying it where it separates nothing (an ungrouped layer, whose table
+        already holds exactly its own features) demanded that foreign SQL parse as SQLite for no
+        gain — a PostGIS filter then broke the delivered project. Within a §12 group the subset
+        is load-bearing and stays.
+
+        The ``cities_twin`` lookup doubles as the guard that a non-primary member reaches the
+        embedded project at all: it owns no write job, so its outcome has to come from its
+        group primary.
+        """
+        assert scenario.plots.setSubsetString('"tag" <= 1')  # ungrouped, own table
+        twin = QgsVectorLayer(scenario.cities.source(), "cities_twin", "ogr")
+        assert twin.isValid()
+        assert twin.setSubsetString('"cid" <= 1')  # grouped with cities, shares its table
+        assert scenario.project.addMapLayer(twin, addToLegend=False)
+
+        _run(
+            scenario,
+            {
+                p.LAYERS: [scenario.cities, twin, scenario.plots, scenario.roads],
+                p.PROJECT_INCLUSION: ProjectInclusion.QGZ.value,
+            },
+        )
+        extract_dir = tmp_path / "x_subsets"
+        with zipfile.ZipFile(scenario.out_dir / "A.zip") as archive:
+            archive.extractall(extract_dir)
+        reopened = QgsProject()
+        assert reopened.read(str(extract_dir / "A.qgz"))
+        subsets = {layer.name(): layer.subsetString() for layer in reopened.mapLayers().values()}
+        assert subsets["plots"] == ""
+        assert subsets["cities"] == ""  # the group primary is unfiltered
+        assert subsets["cities_twin"] == '"cid" <= 1'
+        # The dropped subset filtered nothing: plots' table is already its own view.
+        plots_layer = next(
+            layer for layer in reopened.mapLayers().values() if layer.name() == "plots"
+        )
+        assert plots_layer.featureCount() == 1  # tag 0, the only plot in stratum A
+
     def test_source_valued_layers_reports_the_collapse(
         self, scenario: Scenario, tmp_path: Path
     ) -> None:

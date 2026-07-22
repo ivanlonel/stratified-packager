@@ -94,7 +94,9 @@ def _merge_group(members: list[_LayerPrep], feedback: QgsProcessingFeedback) -> 
             ).format(primary.table)
         )
     primary.kept_field_indexes = _field_indexes(primary.read_layer, kept)
-    primary.subset_sql = ""
+    # Only the *read layer's* subset is dropped, never the prep's record of it: when every member
+    # is filtered the primary is a filtered member too, and the embedded project has to restore
+    # its own view from the union like any other member (§12).
     if any(member.plan.method is params.MatchingMethod.WHOLE_EXPORT for member in members):
         primary.plan = LayerMatchPlan(
             layer_id=primary.layer.id(), method=params.MatchingMethod.WHOLE_EXPORT

@@ -121,7 +121,7 @@ from .report import (
     RunReportRow,
     write_zip_report,
 )
-from .reporting import account_orphans, collect_report_rows, zip_report_rows
+from .reporting import account_orphans, collect_report_rows, outcome_for, zip_report_rows
 from .staging import effective_stage, staged_layer_uri
 from .strata import (
     FULL_PACKAGE_KEY,
@@ -167,7 +167,7 @@ hop layer gets its own file, so one fixed name never collides."""
 
 def _report_chain_memo(chain_context: ChainContext, feedback: QgsProcessingFeedback) -> None:
     """
-    Report how much re-querying the §7.1 chain memo saved, once per run.
+    Report how many §7.1 hop queries the chain memo saved, once per run.
 
     Debug-level: the memo is an optimization whose effect never changes an output, so it
     belongs with the other diagnostics rather than in the run's info stream.
@@ -177,7 +177,8 @@ def _report_chain_memo(chain_context: ChainContext, feedback: QgsProcessingFeedb
     """
     if chain_context.hits or chain_context.misses:
         feedback.pushDebugInfo(
-            f"relation-chain memo: {chain_context.hits} hit(s), {chain_context.misses} miss(es)"
+            f"relation-chain hop memo: {chain_context.hits} hit(s), "
+            f"{chain_context.misses} miss(es)"
         )
 
 
@@ -2256,10 +2257,13 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         gpkg_path = material.gpkg_paths[member.name]
         zip_root = material.zip_roots[material.zip_of_stratum[member.name]]
         to_root = "../" * member.gpkg_rel.count("/")
+        # Through outcome_for, so a §12 non-primary member — which has no job and therefore no
+        # result of its own — inherits its primary's and still reaches the project (§12: every
+        # member maps to the shared table). A raw lookup dropped those layers silently.
         vector_tables = {
             prep.layer.id(): prep.table
             for prep in material.preps
-            if (outcome := state.layer_results.get((member.name, prep.layer.id()))) is not None
+            if (outcome := outcome_for(state, member.name, prep)) is not None
             and outcome.status != STATUS_EMPTY_SKIPPED
         }
         data_sources = {
@@ -2293,8 +2297,14 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             data_sources=data_sources,
             embedded_only=tuple(layer.id() for layer in material.inputs.embedded_layers),
             styles_qml=styles,
+            # Only a §12 group member needs its subset back: its table holds the union of every
+            # member's matches. An ungrouped layer's table already *is* its subset view (the read
+            # source is a clone that kept the subset), so re-applying it would filter nothing —
+            # while still demanding that provider-native SQL parse as SQLite (§13).
             subsets={
-                prep.layer.id(): prep.subset_sql for prep in material.preps if prep.subset_sql
+                prep.layer.id(): prep.subset_sql
+                for prep in material.preps
+                if prep.subset_sql and prep.group_primary_id is not None
             },
             display_names=display_names,
         )
