@@ -13,7 +13,11 @@ from __future__ import annotations
 
 import pytest
 
-from stratified_packager.toolbelt.sql import quote_identifier, safe_table_name
+from stratified_packager.toolbelt.sql import (
+    quote_identifier,
+    safe_table_name,
+    sqlite_where_error,
+)
 
 
 class TestSafeTableName:
@@ -60,3 +64,65 @@ class TestQuoting:
         :param expected: Quoted form.
         """
         assert quote_identifier(name) == expected
+
+
+class TestSqliteWhereError:
+    """Tests for :func:`sqlite_where_error`."""
+
+    COLUMNS = ("cod_uf_2000", "cod_setor", "nome mun")
+
+    @pytest.mark.parametrize(
+        "where",
+        [
+            '"cod_setor" = 1',
+            "cod_setor IS NULL OR cod_uf_2000 > 35",
+            "\"nome mun\" LIKE 'S%'",
+            "substr(cod_setor, 1, 2) = '35'",
+            "CAST(cod_uf_2000 AS text) = '35'",
+        ],
+        ids=["quoted", "boolean", "quoted-space", "builtin-function", "standard-cast"],
+    )
+    def test_compilable_clauses_pass(self, where: str) -> None:
+        """
+        A clause SQLite can compile reports nothing.
+
+        :param where: The candidate clause.
+        """
+        assert sqlite_where_error(self.COLUMNS, where) is None
+
+    @pytest.mark.parametrize(
+        ("where", "expected"),
+        [
+            ("cod_uf_2000::text = '35'", 'unrecognized token: ":"'),
+            (
+                "EXISTS (SELECT 1 FROM consultas_e_criticas.cafa_cnefe_prioritarios c"
+                " WHERE c.cod_setor = cod_setor)",
+                "no such table",
+            ),
+            ("lpad(cod_setor, 2, '0') = '35'", "no such function"),
+            ("no_such_column = 1", "no such column"),
+            ("cod_setor = ", "incomplete input"),
+        ],
+        ids=["postgres-cast", "schema-qualified", "postgres-function", "unknown-column", "syntax"],
+    )
+    def test_foreign_dialect_reported(self, where: str, expected: str) -> None:
+        """
+        A clause SQLite cannot compile reports its own message.
+
+        These are the shapes a PostGIS subset string arrives in: the ``::`` cast is what made a
+        real run log one ``Failed to prepare SQL`` per stratum.
+
+        :param where: The candidate clause.
+        :param expected: A fragment of SQLite's complaint.
+        """
+        message = sqlite_where_error(self.COLUMNS, where)
+        assert message is not None
+        assert expected in message
+
+    def test_no_columns_cannot_be_probed(self) -> None:
+        """Without columns there is no table to compile against, so nothing is claimed."""
+        assert sqlite_where_error((), "anything = 1") is None
+
+    def test_clause_is_never_executed(self) -> None:
+        """``EXPLAIN`` compiles the clause; a clause that would error at runtime still passes."""
+        assert sqlite_where_error(("a",), "1 / 0 = a") is None

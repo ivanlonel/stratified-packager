@@ -8,7 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
-## Unreleased - 2026-07-21
+## Unreleased - 2026-07-22
+
+- Embedded project: **fixed a layer's subset string being re-applied to the packaged GeoPackage, breaking the delivered project.** A subset string is the *source* provider's SQL, but the embedded project re-applies it to the layer's GeoPackage table. A filter written for another provider — a PostgreSQL `::` cast, a schema-qualified table, a function SQLite lacks — is accepted by the layer API and only fails deeper, inside the data provider, where the failure surfaces as a bare `ERROR 1: Failed to prepare SQL …` on stderr and nothing else. The unusable filter was then stored in every stratum's project, so the delivered packages opened with that layer showing no features (the GeoPackage data was always correct). The subset is now re-applied only where it does work: a shared-source group (§12), whose one table holds every member's features and needs the subsets to tell them apart. An ungrouped layer's table already *is* its subset view, so nothing is filtered and nothing is demanded of the SQL. When a re-applied subset does not compile as SQLite the run now says so in plain language, naming the layer and the reason, instead of leaving a GDAL error as the only clue.
+
+- Embedded project: **fixed layers sharing a data source being left out of the packaged project.** Only one member of a shared-source group runs a write job, so the others have no result of their own; the project builder looked their outcome up directly and silently skipped every layer it did not find. Those layers were in the GeoPackage and in the report, but absent from the `.qgz`/stored project — the run gave no sign. They now inherit the group primary's outcome, as the reporting side already did.
+
+- Matching: **fixed the relation-chain memo never hitting.** It keyed on the whole chain, but packaged layers rarely share a chain outright — they share its leading hops and diverge at the final, layer-specific relation — so no two lookups ever matched and every layer re-derived hops another layer had just walked. On a 25-layer, 94-stratum project that was 4092 hop queries where 279 distinct answers existed (`0 hit(s), 2325 miss(es)` in the run log). Hops are now memoized per chain *prefix*, keyed also by the fields the next hop reads back, since one relation traversed for two different onward keys yields two different sets. Results are unchanged, and the run's `relation-chain hop memo:` line reports the saving.
+
+- Shared sources: a group whose members are **all** filtered no longer loses the primary member's own view. Clearing the primary's subset is what lets its table hold the union, but the plugin also forgot the subset, so that one member showed the whole union in the packaged project instead of its own features.
 
 - Processing: **fixed every staging and template step being logged twice.** `setProgressText` already writes its text to the algorithm's log — the Processing dialog appends the progress text to its log panel and `qgis_process` prints it to stdout — so the two steps that additionally pushed the same line as an info message emitted each line twice in the run log. The redundant push is gone; the progress label and the log line itself are unchanged.
 

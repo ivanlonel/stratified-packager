@@ -37,11 +37,12 @@ if TYPE_CHECKING:
 __all__: list[str] = [
     "account_orphans",
     "collect_report_rows",
+    "outcome_for",
     "zip_report_rows",
 ]
 
 
-def _outcome_for(
+def outcome_for(
     state: _BuildState, stratum_name: str, prep: _LayerPrep
 ) -> LayerWriteResult | None:
     """
@@ -74,7 +75,7 @@ def zip_report_rows(
     rows: list[ZipReportRow] = []
     for member in members:
         for prep in material.preps:
-            outcome = _outcome_for(state, member.name, prep)
+            outcome = outcome_for(state, member.name, prep)
             rows.append(
                 ZipReportRow(
                     stratum=member.name,
@@ -130,7 +131,7 @@ def collect_report_rows(
     """
     for stratum in strata:
         for prep in material.preps:
-            outcome = _outcome_for(state, stratum.name, prep)
+            outcome = outcome_for(state, stratum.name, prep)
             if stratum.name in state.failed:
                 report_rows.append(
                     RunReportRow(

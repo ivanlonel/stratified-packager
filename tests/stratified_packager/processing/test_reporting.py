@@ -16,7 +16,7 @@ import pytest
 pytest.importorskip("qgis", reason="reporting imports qgis.core at module load.")
 
 # Imported only after the importorskip guard above confirms QGIS is available.
-from stratified_packager.processing.reporting import _outcome_for
+from stratified_packager.processing.reporting import outcome_for
 
 if TYPE_CHECKING:
     from stratified_packager.processing.building import LayerWriteResult
@@ -38,20 +38,20 @@ def _state(results: dict[tuple[str, str], LayerWriteResult]) -> _BuildState:
 
 
 class TestOutcomeFor:
-    """`_outcome_for` follows the §12 dedup-primary indirection."""
+    """`outcome_for` follows the §12 dedup-primary indirection."""
 
     def test_own_outcome_wins(self) -> None:
         """A layer with its own recorded outcome returns it directly."""
         outcome = cast("LayerWriteResult", object())
         state = _state({("north", "own"): outcome})
-        assert _outcome_for(state, "north", _prep("own", None)) is outcome
+        assert outcome_for(state, "north", _prep("own", None)) is outcome
 
     def test_falls_back_to_group_primary(self) -> None:
         """A non-primary member with no own outcome reads its primary's."""
         outcome = cast("LayerWriteResult", object())
         state = _state({("north", "primary"): outcome})
-        assert _outcome_for(state, "north", _prep("member", "primary")) is outcome
+        assert outcome_for(state, "north", _prep("member", "primary")) is outcome
 
     def test_missing_outcome_is_none(self) -> None:
         """An ungrouped layer with no recorded outcome returns None."""
-        assert _outcome_for(_state({}), "north", _prep("x", None)) is None
+        assert outcome_for(_state({}), "north", _prep("x", None)) is None

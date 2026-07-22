@@ -474,6 +474,57 @@ class TestChainContext:
         assert (context.hits, context.misses) == (1, 1)
         assert first == second
 
+    def _leaf_off_cities(
+        self,
+        network: Network,
+        name: str,
+        cities_field: str,
+        rows: list[tuple[object, ...]],
+    ) -> QgsVectorLayer:
+        """Hang a new layer off ``cities``, so its chain shares the first hop with districts."""
+        field_type = network.cities.fields().field(cities_field).typeName().lower()
+        leaf = _table(name, f"field=lid:integer&field=ref:{field_type}", rows)
+        assert network.project.addMapLayer(leaf, addToLegend=False)
+        add_relation(f"r_{name}_cities", leaf, network.cities, [("ref", cities_field)])
+        return leaf
+
+    def test_layers_sharing_a_chain_prefix_share_the_memo(
+        self, network: Network, feedback: QgsProcessingFeedback
+    ) -> None:
+        """
+        Chains that diverge only at their last hop still reuse the hops they share.
+
+        The regression this guards: keying the memo on the *whole* chain made it useless in
+        practice, because packaged layers overwhelmingly share a prefix and differ at the final,
+        layer-specific relation.
+        """
+        leaf = self._leaf_off_cities(network, "blocks", "cid", [(20, 1), (21, 2)])
+        districts_plan = self._plan(network, network.districts)
+        leaf_plan = self._plan(network, leaf)
+        assert districts_plan.chain[:1] == leaf_plan.chain[:1]  # shared prefix
+        assert districts_plan.chain[1:] != leaf_plan.chain[1:]  # divergent tail
+
+        context = ChainContext()
+        self._resolve(network, districts_plan, "A", feedback, context)
+        assert (context.hits, context.misses) == (0, 1)
+        self._resolve(network, leaf_plan, "A", feedback, context)
+        assert (context.hits, context.misses) == (1, 1)
+
+    def test_a_shared_hop_read_for_other_keys_is_not_shared(
+        self, network: Network, feedback: QgsProcessingFeedback
+    ) -> None:
+        """The same relation traversed for a different onward key is a different question."""
+        leaf = self._leaf_off_cities(network, "zones", "state_code", [(30, "A"), (31, "B")])
+        districts_plan = self._plan(network, network.districts)
+        leaf_plan = self._plan(network, leaf)
+        assert districts_plan.chain[:1] == leaf_plan.chain[:1]
+        assert districts_plan.chain[1].from_fields != leaf_plan.chain[1].from_fields
+
+        context = ChainContext()
+        self._resolve(network, districts_plan, "A", feedback, context)
+        self._resolve(network, leaf_plan, "A", feedback, context)
+        assert (context.hits, context.misses) == (0, 2)
+
     def test_memo_never_changes_the_result(
         self, network: Network, feedback: QgsProcessingFeedback
     ) -> None:

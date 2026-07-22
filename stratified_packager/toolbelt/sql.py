@@ -9,11 +9,17 @@ helpers stay usable from background threads, ``scripts/`` and osgeo-free tests. 
 
 from __future__ import annotations
 
-from typing import Final
+import sqlite3
+from contextlib import closing
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 __all__: list[str] = [
     "quote_identifier",
     "safe_table_name",
+    "sqlite_where_error",
 ]
 
 _RESERVED_TABLE_PREFIXES: Final = ("gpkg", "sqlite_")
@@ -45,3 +51,37 @@ def quote_identifier(name: str, /) -> str:
     """
     escaped = name.replace('"', '""')
     return f'"{escaped}"'
+
+
+def sqlite_where_error(columns: Iterable[str], where: str, /) -> str | None:
+    """
+    Report why SQLite could not compile *where* as a ``WHERE`` clause over *columns*.
+
+    A filter written for another provider's dialect (a PostgreSQL ``::`` cast, a
+    schema-qualified table, a function SQLite lacks) is accepted by the layer API yet fails
+    when the SQLite/GeoPackage backend prepares the statement — where the failure surfaces as
+    a bare ``CPLError`` rather than a caller-visible one. Compiling it here answers the same
+    question up front.
+
+    The statement is compiled with ``EXPLAIN``, which resolves every table, column and function
+    name **without executing anything**. Compilation runs against a throwaway in-memory table,
+    so no GeoPackage is touched and the caller needs only the column names. Extension functions
+    a real GeoPackage connection would register (SpatiaLite's, GDAL's) are absent here, so treat
+    a complaint as advisory rather than proof the filter is unusable.
+
+    :param columns: The column names the clause may reference.
+    :param where: The candidate ``WHERE`` clause (no leading keyword).
+    :return: SQLite's message, or :data:`None` when the clause compiles.
+    """
+    declarations = ", ".join(quote_identifier(name) for name in columns)
+    if not declarations:
+        return None
+    # closing(), not the connection's own context manager: that one wraps a *transaction* and
+    # leaves the handle open.
+    with closing(sqlite3.connect(":memory:")) as connection:
+        try:
+            connection.execute(f"CREATE TABLE probe ({declarations})")
+            connection.execute(f"EXPLAIN SELECT 1 FROM probe WHERE {where}")  # noqa: S608  # nosec B608  # compiling the caller's clause is the whole point; EXPLAIN never runs it
+        except sqlite3.Error as err:
+            return str(err)
+    return None

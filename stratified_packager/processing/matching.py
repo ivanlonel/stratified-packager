@@ -140,11 +140,18 @@ class MatchCondition:
     """Whether :attr:`fids` (rather than the key columns) define membership."""
 
 
+type HopMemoKey = tuple[RelationPath, tuple[str, ...], tuple[object, ...]]
+"""A memoized hop's identity: the chain prefix walked so far, the fields the arrival hop
+collects, and the stratum's starting key tuple (SPEC §7.1)."""
+
 _CHAIN_MEMO_CAPACITY: Final = 64
-"""Chain resolutions :class:`ChainContext` keeps (SPEC §7.1). The access pattern is one stratum
-resolved repeatedly — by every layer sharing its chain, and again by Phase B after Phase A's
-staging pass — then never revisited, so a small memo captures nearly every hit while holding far
-less than every stratum's key sets."""
+"""Hop resolutions :class:`ChainContext` keeps (SPEC §7.1). Phase B resolves one stratum against
+every layer before moving on, and layers sharing a chain prefix share these entries, so a small
+memo captures nearly every hit while holding far less than every stratum's key sets.
+ponytail: Phase A calls :func:`~.building.stage_union` once per staged *group*, sweeping all
+strata inside each — so its cross-group reuse would need one entry per prefix per stratum and
+does not fit here. Raise the cap only if a profile shows Phase A's hop queries actually
+dominate."""
 
 
 @dataclass
@@ -152,11 +159,12 @@ class ChainContext:
     """
     Per-run relation-chain resolution context: staged hop layers plus a bounded key memo (§7.1).
 
-    Resolving a chain is a pure function of the chain and the stratum's starting key values —
-    the run never reads a project layer for anything else and never mutates one (§8.1) — so the
-    same ``(chain, start keys)`` pair always yields the same condition. Two call patterns repeat
-    it: every packaged layer sharing a relation chain re-derives the identical key set per
-    stratum, and :func:`~.building.stage_union` (Phase A) derives what Phase B derives again.
+    Resolving a chain is a pure function of the hops walked and the stratum's starting key values
+    — the run never reads a project layer for anything else and never mutates one (§8.1) — so the
+    same :data:`HopMemoKey` always yields the same key set. Memoizing per **hop prefix** rather
+    than per whole chain is what makes that pay: packaged layers rarely share a chain outright,
+    but many share its leading hops and diverge only at the final, layer-specific relation, so a
+    whole-chain key collides for none of them while a prefix key collides for all.
 
     Held per run and passed explicitly down the build call chain, never module-side, so nothing
     shares mutable state between runs.
@@ -171,12 +179,12 @@ class ChainContext:
     memoization (every resolution queries the hops)."""
 
     hits: int = field(default=0, init=False)
-    """Chain resolutions served from the memo."""
+    """Hop resolutions served from the memo."""
 
     misses: int = field(default=0, init=False)
-    """Chain resolutions that had to query the hops."""
+    """Hop resolutions that had to query the arrival layer."""
 
-    _memo: OrderedDict[tuple[RelationPath, tuple[object, ...]], MatchCondition] = field(
+    _memo: OrderedDict[HopMemoKey, frozenset[tuple[object, ...]]] = field(
         default_factory=OrderedDict, init=False, repr=False
     )
 
@@ -193,29 +201,29 @@ class ChainContext:
             return staged
         return cast("QgsVectorLayer | None", project.mapLayer(layer_id))
 
-    def get(self, key: tuple[RelationPath, tuple[object, ...]]) -> MatchCondition | None:
+    def get(self, key: HopMemoKey) -> frozenset[tuple[object, ...]] | None:
         """
-        Look one chain resolution up, refreshing its recency on a hit.
+        Look one hop resolution up, refreshing its recency on a hit.
 
-        :param key: The ``(chain, starting key tuple)`` pair.
-        :return: The memoized condition, or :data:`None` when not memoized.
+        :param key: The hop's identity.
+        :return: The memoized key set, or :data:`None` when not memoized.
         """
-        condition = self._memo.get(key)
-        if condition is None:
+        keys = self._memo.get(key)
+        if keys is None:
             self.misses += 1
             return None
         self._memo.move_to_end(key)
         self.hits += 1
-        return condition
+        return keys
 
-    def put(self, key: tuple[RelationPath, tuple[object, ...]], condition: MatchCondition) -> None:
+    def put(self, key: HopMemoKey, keys: frozenset[tuple[object, ...]]) -> None:
         """
-        Memoize one chain resolution, evicting the least recently used entries past capacity.
+        Memoize one hop resolution, evicting the least recently used entries past capacity.
 
-        :param key: The ``(chain, starting key tuple)`` pair.
-        :param condition: The resolved membership condition.
+        :param key: The hop's identity.
+        :param keys: The key set the hop's query produced.
         """
-        self._memo[key] = condition
+        self._memo[key] = keys
         self._memo.move_to_end(key)
         while len(self._memo) > self.capacity:
             self._memo.popitem(last=False)
@@ -501,8 +509,9 @@ def attribute_keys_for_stratum(
     by construction — the request reads the layer, not its selection). NULL keys never
     match. The final hop's far-side key set becomes the membership condition.
 
-    With a *chain_context*, an identical ``(chain, starting keys)`` pair is answered from its
-    memo instead of re-querying the hops, and hops whose layer was staged read the local copy.
+    With a *chain_context*, a hop already walked for this stratum under the same chain prefix is
+    answered from its memo instead of re-queried, and hops whose layer was staged read the local
+    copy.
 
     :param plan: The layer's attribute plan (chain in strat → layer order).
     :param stratum_feature: The stratum feature.
@@ -520,14 +529,7 @@ def attribute_keys_for_stratum(
         return MatchCondition(fids=(stratum_feature.id(),), by_fid=True)
 
     start = tuple(stratum_feature.attribute(name) for name in plan.chain[0].from_fields)
-    if chain_context is not None:
-        memoized = chain_context.get((plan.chain, start))
-        if memoized is not None:
-            return memoized
-    condition = _propagate_chain(plan, start, stratum_name, project, feedback, chain_context)
-    if chain_context is not None:
-        chain_context.put((plan.chain, start), condition)
-    return condition
+    return _propagate_chain(plan, start, stratum_name, project, feedback, chain_context)
 
 
 def _propagate_chain(
@@ -541,8 +543,8 @@ def _propagate_chain(
     """
     Walk the chain's hops, propagating *start* to the target layer's key set (SPEC §7.1).
 
-    The uncached body of :func:`attribute_keys_for_stratum`, split out so the memo has a
-    single value to store.
+    Each intermediate hop's outgoing key set is memoized on *chain_context* under the prefix that
+    produced it, so a later chain sharing those leading hops walks them for free.
 
     :param plan: The layer's attribute plan (non-empty chain).
     :param start: The stratum's starting key tuple.
@@ -579,12 +581,21 @@ def _propagate_chain(
             return MatchCondition(
                 key_fields=tuple(hop.to_fields), keys=tuple(sorted(keys, key=repr))
             )
+        # What this hop yields depends on the hops already walked, the fields the *next* hop
+        # reads back, and the stratum's starting keys — nothing else (§7.1). Two chains that
+        # share these share the answer even when their remaining hops differ.
+        collect_fields = tuple(plan.chain[hop_index + 1].from_fields)
+        memo_key: HopMemoKey = (plan.chain[: hop_index + 1], collect_fields, start)
+        memoized = chain_context.get(memo_key) if chain_context is not None else None
+        if memoized is not None:
+            keys = set(memoized)
+            continue
         chain_target_layer = project.mapLayer(plan.layer_id)
         prefix = f"attribute[{chain_target_layer.name()}]: " if chain_target_layer else ""
         hop_target_layer = cast("QgsVectorLayer", target)
-        keys = _query_far_keys(
-            hop_target_layer, hop.to_fields, keys, plan.chain[hop_index + 1].from_fields, feedback
-        )
+        keys = _query_far_keys(hop_target_layer, hop.to_fields, keys, collect_fields, feedback)
+        if chain_context is not None:
+            chain_context.put(memo_key, frozenset(keys))
         feedback.pushDebugInfo(
             f"{prefix}chain hop {hop.edge.relation_id} ({stratum_name}): "
             f"{len(keys)} key(s) at {hop_target_layer.name()}"
