@@ -274,8 +274,11 @@ def resolve_qgis_pyqt_xref(
 # dotted-suffix and retargets it, so it links instead.
 
 _XREF_ALIASES: Final[dict[str, str]] = {
-    # Bare stdlib name autodoc renders without a resolvable module.
+    # Bare stdlib names autodoc renders without a resolvable module (imported under
+    # ``TYPE_CHECKING`` with PEP 563 string annotations, so runtime hint resolution
+    # can't qualify them).
     "Path": "pathlib.Path",
+    "Future": "concurrent.futures.Future",
     # Private submodule path autodoc reads off ``Future.__module__``.
     "concurrent.futures._base.Future": "concurrent.futures.Future",
 }
