@@ -706,7 +706,12 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
   for the resolved `STYLE_CATEGORIES` (default all, §3; the same rewritten QML payloads the gpkg
   `layer_styles` rows use); **relations** remapped among
   included layers (relations touching excluded layers are dropped); **project CRS, transform
-  context, title**. No print layouts, map themes, macros, actions.
+  context, title**; **initial map view** — the source project's *saved* map-canvas extent
+  (parsed from its `.qgs`/`.qgz` file), else its configured default view extent, set as the
+  embedded project's `defaultViewExtent` so it opens at the same position and zoom as the
+  original. A headless `QgsProject.write` emits no `<mapcanvas>` element, so that default view
+  extent is what drives the on-open canvas; it is the *saved* view, so save the project before
+  packaging to capture an unsaved pan/zoom. No print layouts, map themes, macros, actions.
 - Per-layer subset strings re-applied **for §12 group members only** — their shared table holds
   the union of every member's matches, so the subset is what separates them. An ungrouped layer's
   table already *is* its subset view (the read source is a clone that kept the subset), so

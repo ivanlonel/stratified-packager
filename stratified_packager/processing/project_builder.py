@@ -6,7 +6,8 @@ Runs on the algorithm thread during Phase C — never against
 the stratum GeoPackage tables and the ``data/`` payload copies, restores the layer-tree
 structure (groups, order, visibility) restricted to included layers, applies the full
 (rewritten) styles, remaps relations among included layers, and carries the project
-CRS, transform context and title. Paths are stored relative: the caller builds the
+CRS, transform context, title and the source's initial map view (so it opens at the same
+position and zoom). Paths are stored relative: the caller builds the
 stratum inside a directory tree that mirrors the zip layout, so Qt's relative-path
 storage produces portable ``./…`` sources (SPEC §13).
 """
@@ -15,7 +16,9 @@ from __future__ import annotations
 
 import contextlib
 import os
+import zipfile
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from qgis.core import (
@@ -25,13 +28,15 @@ from qgis.core import (
     QgsLayerTreeLayer,
     QgsProcessingException,
     QgsProject,
+    QgsRectangle,
+    QgsReferencedRectangle,
     QgsRelation,
     QgsRelationContext,
     QgsVectorLayer,
     QgsVirtualLayerDefinition,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QUrl
-from qgis.PyQt.QtXml import QDomDocument
+from qgis.PyQt.QtXml import QDomDocument, QDomElement
 
 from stratified_packager.toolbelt.sql import sqlite_where_error
 
@@ -39,11 +44,15 @@ from .params import ProjectInclusion
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
-    from pathlib import Path
 
     from qgis.core import QgsMapLayer, QgsProcessingFeedback
 
-__all__: list[str] = ["StratumProjectPlan", "build_stratum_project"]
+__all__: list[str] = [
+    "StratumProjectPlan",
+    "build_stratum_project",
+    "read_saved_view_extent",
+    "resolve_initial_view",
+]
 
 
 @dataclass
@@ -82,6 +91,11 @@ class StratumProjectPlan:
     """Source layer id -> custom display name for this stratum (SPEC §4 ``layer_name``,
     already evaluated). Absent ids keep the original layer name."""
 
+    initial_view: QgsReferencedRectangle | None = None
+    """The source project's initial map view (§13) — its saved canvas extent, else its
+    configured default view extent — applied to the embedded project's view settings so it
+    opens at the same position and zoom. :data:`None` leaves QGIS's full-extent default."""
+
 
 def build_stratum_project(
     source: QgsProject, plan: StratumProjectPlan, feedback: QgsProcessingFeedback
@@ -99,6 +113,7 @@ def build_stratum_project(
     fresh.setTransformContext(source.transformContext())
     fresh.setTitle(plan.title)
     fresh.setFilePathStorage(Qgis.FilePathType.Relative)
+    _apply_initial_view(fresh, plan)
 
     replacements = _build_layers(source, plan, feedback)
     _replicate_tree(source, fresh, replacements, feedback)
@@ -134,6 +149,135 @@ def build_stratum_project(
             ).format(plan.title, destination, _write_failure_detail(plan, messages))
         )
     feedback.pushDebugInfo(f"embedded project[{plan.title}] -> {destination}")
+
+
+def _apply_initial_view(fresh: QgsProject, plan: StratumProjectPlan) -> None:
+    """
+    Set the embedded project's initial map view from the plan (§13).
+
+    A headless :meth:`~qgis.core.QgsProject.write` emits no ``<mapcanvas>`` element, so the
+    written project has no per-canvas saved extent; :meth:`~qgis.core.QgsProjectViewSettings`'
+    default view extent is therefore honoured on open, landing the canvas on the source
+    project's view instead of the full layer extent.
+
+    :param fresh: The project under construction.
+    :param plan: The stratum's project plan.
+    """
+    if plan.initial_view is None or plan.initial_view.isNull():
+        return
+    settings = fresh.viewSettings()
+    if settings is not None:
+        settings.setDefaultViewExtent(plan.initial_view)
+
+
+def resolve_initial_view(project: QgsProject) -> QgsReferencedRectangle | None:
+    """
+    Resolve where the source project opens, for the embedded projects (§13).
+
+    Reproduces the original's initial view: its **saved** map-canvas extent (read from the
+    project file — the normal GUI-saved case), else its configured default view extent, else
+    :data:`None` (QGIS falls back to the full extent of the layers). The rectangle is returned
+    in the project CRS, which the caller has already set on the embedded project, so applying
+    it needs no reprojection.
+
+    :param project: The open project being packaged.
+    :return: The initial view rectangle, or :data:`None` when none can be determined.
+    """
+    saved = read_saved_view_extent(Path(project.fileName()))
+    if saved is not None:
+        return QgsReferencedRectangle(QgsRectangle(*saved), project.crs())
+    settings = project.viewSettings()
+    if settings is not None:
+        default = settings.defaultViewExtent()
+        if not default.isNull():
+            return default
+    return None
+
+
+def read_saved_view_extent(project_file: Path) -> tuple[float, float, float, float] | None:
+    """
+    Read the last-saved map-canvas extent from a project file.
+
+    QGIS Desktop stores the canvas view under a top-level ``<mapcanvas>`` element; a headless
+    :meth:`~qgis.core.QgsProject.write` never emits one, which is why generated projects open
+    on the full layer extent rather than where the original was saved. This parses that
+    element (preferring the primary ``theMapCanvas``) straight from the ``.qgs`` XML —
+    extracting it from the ``.qgz`` archive first — and returns its extent.
+
+    :param project_file: The source project file (``.qgs`` or ``.qgz``).
+    :return: ``(xmin, ymin, xmax, ymax)`` in the project CRS, or :data:`None` when the file is
+        not a readable project, carries no ``<mapcanvas>`` extent, or the extent is degenerate.
+    """
+    document = _read_project_document(project_file)
+    if document is None:
+        return None
+    canvas = _primary_map_canvas(document)
+    if canvas is None:
+        return None
+    extent = canvas.firstChildElement("extent")
+    if extent.isNull():
+        return None
+    try:
+        bounds = (
+            float(extent.firstChildElement("xmin").text()),
+            float(extent.firstChildElement("ymin").text()),
+            float(extent.firstChildElement("xmax").text()),
+            float(extent.firstChildElement("ymax").text()),
+        )
+    except ValueError:
+        return None
+    xmin, ymin, xmax, ymax = bounds
+    if xmax <= xmin or ymax <= ymin:
+        return None
+    return bounds
+
+
+def _read_project_document(project_file: Path) -> QDomDocument | None:
+    """
+    Load a project file's XML — ``.qgs`` directly, the ``.qgz`` archive's inner ``.qgs``.
+
+    :param project_file: The source project file.
+    :return: The parsed document, or :data:`None` when the file is missing, is not a
+        ``.qgs``/``.qgz``, or does not parse as XML.
+    """
+    try:
+        suffix = project_file.suffix.lower()
+        if suffix == ".qgz":
+            with zipfile.ZipFile(project_file) as archive:
+                member = next((n for n in archive.namelist() if n.endswith(".qgs")), None)
+                if member is None:
+                    return None
+                data = archive.read(member)
+        elif suffix == ".qgs":
+            data = project_file.read_bytes()
+        else:
+            return None
+    except (OSError, zipfile.BadZipFile):
+        return None
+    document = QDomDocument()
+    if not document.setContent(data.decode("utf-8", "replace"))[0]:
+        return None
+    return document
+
+
+def _primary_map_canvas(document: QDomDocument) -> QDomElement | None:
+    """
+    Find the primary ``<mapcanvas>`` element, preferring the ``theMapCanvas`` main view.
+
+    :param document: The parsed project XML.
+    :return: The chosen element, or :data:`None` when the project has no ``<mapcanvas>``.
+    """
+    canvases = document.elementsByTagName("mapcanvas")
+    fallback: QDomElement | None = None
+    for index in range(canvases.count()):
+        element = canvases.at(index).toElement()
+        if element.isNull():
+            continue
+        if element.attribute("name") == "theMapCanvas":
+            return element
+        if fallback is None:
+            fallback = element
+    return fallback
 
 
 @contextlib.contextmanager

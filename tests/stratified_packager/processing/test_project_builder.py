@@ -3,8 +3,8 @@ Tests for :mod:`stratified_packager.processing.project_builder`.
 
 Builds a source project (grouped vector layers + relation + raster payload + styles),
 a stratum gpkg inside a zip-mirror tree, then writes embedded projects in both modes
-and re-opens them to verify tree structure, styles, relations, subset strings and
-relative datasources (SPEC §13/§21).
+and re-opens them to verify tree structure, CRS, initial map view, styles, relations, subset
+strings and relative datasources (SPEC §13/§21).
 """
 # pylint: disable=redefined-outer-name
 
@@ -22,6 +22,7 @@ pytest.importorskip("qgis", reason="The builder constructs full QgsProjects.")
 
 # Imported only after the importorskip guard above confirms QGIS is available.
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
     QgsCoordinateTransformContext,
     QgsFeature,
     QgsGeometry,
@@ -32,6 +33,8 @@ from qgis.core import (
     QgsProcessingFeedback,
     QgsProject,
     QgsRasterLayer,
+    QgsRectangle,
+    QgsReferencedRectangle,
     QgsSingleSymbolRenderer,
     QgsVectorFileWriter,
     QgsVectorLayer,
@@ -45,6 +48,8 @@ from stratified_packager.processing.params import ProjectInclusion
 from stratified_packager.processing.project_builder import (
     StratumProjectPlan,
     build_stratum_project,
+    read_saved_view_extent,
+    resolve_initial_view,
 )
 from tests.stratified_packager._qgis_helpers import add_relation
 from tests.stratified_packager.processing.test_bundling import _write_tif
@@ -98,6 +103,9 @@ def built(qgis_new_project: QgsProject, tmp_path: Path) -> Built:
     assert raster.isValid()
 
     project = qgis_new_project
+    # A projected project CRS distinct from the 4326 layers, to prove the *project* CRS (not a
+    # layer's) survives into the embedded project (SPEC §13).
+    project.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))  # ty: ignore  # stub lacks ctor
     assert project.addMapLayers([cities, states, raster], addToLegend=False)
     root = project.layerTreeRoot()
     assert root is not None
@@ -168,6 +176,7 @@ class TestQgzMode:
         reopened = QgsProject()
         assert reopened.read(str(qgz))
         assert reopened.title() == "A"
+        assert reopened.crs() == built.project.crs()  # project CRS carried (§13)
         names = sorted(layer.name() for layer in reopened.mapLayers().values())
         assert names == ["cities", "dem", "states"]
 
@@ -200,6 +209,25 @@ class TestQgzMode:
         sources = re.findall(r"<datasource>([^<]+)</datasource>", xml)
         assert any(s.startswith("./A.gpkg|layername=") for s in sources)
         assert any(s == "./data/dem/dem.tif" for s in sources)
+
+    def test_initial_view_round_trips(self, built: Built) -> None:
+        """`initial_view` becomes the embedded project's default view extent (§13)."""
+        plan = _plan(built, ProjectInclusion.QGZ)
+        extent = QgsRectangle(10.0, 20.0, 30.0, 40.0)
+        plan.initial_view = QgsReferencedRectangle(extent, built.project.crs())
+        build_stratum_project(built.project, plan, QgsProcessingFeedback())
+
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        settings = reopened.viewSettings()
+        assert settings is not None
+        restored = settings.defaultViewExtent()
+        assert not restored.isNull()
+        assert restored.crs() == built.project.crs()
+        assert restored.xMinimum() == pytest.approx(10.0)
+        assert restored.yMinimum() == pytest.approx(20.0)
+        assert restored.xMaximum() == pytest.approx(30.0)
+        assert restored.yMaximum() == pytest.approx(40.0)
 
     def test_display_names_override_layer_labels(self, built: Built) -> None:
         """`display_names` renames rebuilt layers; unlisted layers keep their original name."""
@@ -318,8 +346,123 @@ class TestGpkgMode:
         assert rows == [("A",)]
         reopened = QgsProject()
         assert reopened.read(f"geopackage:{built.gpkg}?projectName=A")
+        assert reopened.crs() == built.project.crs()  # project CRS carried (§13)
         assert sorted(layer.name() for layer in reopened.mapLayers().values()) == [
             "cities",
             "dem",
             "states",
         ]
+
+
+_MAPCANVAS_QGS = (
+    "<qgis>"
+    '<mapcanvas name="theMapCanvas">'
+    "<extent><xmin>10</xmin><ymin>20</ymin><xmax>30</xmax><ymax>40</ymax></extent>"
+    "</mapcanvas>"
+    "</qgis>"
+)
+"""A minimal project XML carrying a saved primary map-canvas extent."""
+
+_TWO_CANVAS_QGS = (
+    "<qgis>"
+    '<mapcanvas name="other">'
+    "<extent><xmin>1</xmin><ymin>1</ymin><xmax>2</xmax><ymax>2</ymax></extent>"
+    "</mapcanvas>"
+    '<mapcanvas name="theMapCanvas">'
+    "<extent><xmin>10</xmin><ymin>20</ymin><xmax>30</xmax><ymax>40</ymax></extent>"
+    "</mapcanvas>"
+    "</qgis>"
+)
+"""Two canvases, the primary listed second, to check the theMapCanvas preference."""
+
+_DEGENERATE_QGS = (
+    "<qgis>"
+    '<mapcanvas name="theMapCanvas">'
+    "<extent><xmin>5</xmin><ymin>5</ymin><xmax>5</xmax><ymax>9</ymax></extent>"
+    "</mapcanvas>"
+    "</qgis>"
+)
+"""A zero-width canvas extent (xmax == xmin), which must be rejected."""
+
+
+class TestReadSavedViewExtent:
+    """Parsing the saved map-canvas extent from a project file (SPEC §13)."""
+
+    def test_reads_qgs(self, tmp_path: Path) -> None:
+        """A .qgs with theMapCanvas yields its extent."""
+        path = tmp_path / "p.qgs"
+        path.write_text(_MAPCANVAS_QGS, encoding="utf-8")
+        assert read_saved_view_extent(path) == (10.0, 20.0, 30.0, 40.0)
+
+    def test_reads_qgz(self, tmp_path: Path) -> None:
+        """A .qgz is unzipped and its inner .qgs parsed."""
+        path = tmp_path / "p.qgz"
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("p.qgs", _MAPCANVAS_QGS)
+        assert read_saved_view_extent(path) == (10.0, 20.0, 30.0, 40.0)
+
+    def test_prefers_the_map_canvas(self, tmp_path: Path) -> None:
+        """The primary theMapCanvas wins over a secondary canvas listed first."""
+        path = tmp_path / "p.qgs"
+        path.write_text(_TWO_CANVAS_QGS, encoding="utf-8")
+        assert read_saved_view_extent(path) == (10.0, 20.0, 30.0, 40.0)
+
+    @pytest.mark.parametrize(
+        "content",
+        ["<qgis></qgis>", _DEGENERATE_QGS],
+        ids=["no-canvas", "degenerate-extent"],
+    )
+    def test_returns_none_for_unusable_extent(self, tmp_path: Path, content: str) -> None:
+        """No usable extent -> None (the full-extent fallback)."""
+        path = tmp_path / "p.qgs"
+        path.write_text(content, encoding="utf-8")
+        assert read_saved_view_extent(path) is None
+
+    def test_non_project_suffix_ignored(self, tmp_path: Path) -> None:
+        """A file that is not a .qgs/.qgz project is ignored."""
+        path = tmp_path / "p.txt"
+        path.write_text(_MAPCANVAS_QGS, encoding="utf-8")
+        assert read_saved_view_extent(path) is None
+
+    def test_missing_file(self, tmp_path: Path) -> None:
+        """A path that does not exist -> None."""
+        assert read_saved_view_extent(tmp_path / "nope.qgs") is None
+
+
+class TestResolveInitialView:
+    """Resolving where the source project opens (SPEC §13)."""
+
+    def test_reads_saved_canvas_from_file(self, tmp_path: Path) -> None:
+        """A project whose file carries a saved canvas resolves to it, in the project CRS."""
+        path = tmp_path / "src.qgs"
+        path.write_text(_MAPCANVAS_QGS, encoding="utf-8")
+        project = QgsProject()
+        project.setFileName(str(path))
+        project.setCrs(QgsCoordinateReferenceSystem("EPSG:4326"))  # ty: ignore  # stub lacks ctor
+        resolved = resolve_initial_view(project)
+        assert resolved is not None
+        assert resolved.crs() == project.crs()
+        bounds = (
+            resolved.xMinimum(),
+            resolved.yMinimum(),
+            resolved.xMaximum(),
+            resolved.yMaximum(),
+        )
+        assert bounds == (10.0, 20.0, 30.0, 40.0)
+
+    def test_falls_back_to_default_view_extent(self, qgis_new_project: QgsProject) -> None:
+        """Without a saved canvas, the configured default view extent is used."""
+        project = qgis_new_project
+        project.setCrs(QgsCoordinateReferenceSystem("EPSG:4326"))  # ty: ignore  # stub lacks ctor
+        settings = project.viewSettings()
+        assert settings is not None
+        settings.setDefaultViewExtent(
+            QgsReferencedRectangle(QgsRectangle(1.0, 2.0, 3.0, 4.0), project.crs())
+        )
+        resolved = resolve_initial_view(project)
+        assert resolved is not None
+        assert (resolved.xMinimum(), resolved.yMaximum()) == (1.0, 4.0)
+
+    def test_returns_none_without_any_view(self, qgis_new_project: QgsProject) -> None:
+        """A project with no file and no default view extent resolves to None."""
+        assert resolve_initial_view(qgis_new_project) is None

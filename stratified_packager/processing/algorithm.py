@@ -113,6 +113,7 @@ from .params import (
 from .project_builder import (
     StratumProjectPlan,
     build_stratum_project,
+    resolve_initial_view,
 )
 from .report import (
     STATUS_DRY_RUN,
@@ -1067,6 +1068,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         included: list[QgsMapLayer] = [*ordered, *ordered_payloads, *inputs.embedded_layers]
         if inputs.project_inclusion is not params.ProjectInclusion.NONE:
             material.layer_name_expressions = self._collect_layer_name_expressions(included)
+            material.initial_view = resolve_initial_view(project)
         if inputs.include_styles:
             home = project.absolutePath()
             material.assets = style_asset_mapping(included, Path(home) if home else None, feedback)
@@ -2307,6 +2309,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                 if prep.subset_sql and prep.group_primary_id is not None
             },
             display_names=display_names,
+            initial_view=material.initial_view,
         )
 
     def _stratum_build(
