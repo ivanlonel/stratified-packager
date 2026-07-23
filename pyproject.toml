@@ -168,7 +168,7 @@ messages_control.disable = [
   "wrong-import-position",      # C0413 — governed by ruff E402 (which sanctions the pytest.importorskip guard).
 ]
 format.max-module-lines = 1500  # default 1000 # C0302 — well-documented code can be pretty verbose
-design.max-attributes = 14  # default 7  # R0902
+design.max-attributes = 15  # default 7  # R0902 (_Material aggregates Phase A→B/C run state)
 design.max-locals = 18  # default 15 # R0914
 design.max-positional-arguments = 8  # default 5  # R0917
 # lxml.etree is a C extension; let pylint introspect it instead of flagging I1101.

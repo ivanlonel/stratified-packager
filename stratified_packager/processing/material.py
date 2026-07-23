@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from concurrent.futures import Future
     from pathlib import Path
 
-    from qgis.core import QgsMapLayer, QgsProject, QgsVectorLayer
+    from qgis.core import QgsMapLayer, QgsProject, QgsReferencedRectangle, QgsVectorLayer
 
     from .building import LayerWriteResult
     from .matching import LayerMatchPlan
@@ -171,6 +171,10 @@ class _Material:
     layer_name_expressions: dict[str, str] = field(default_factory=dict)
     """Layer id -> non-empty ``stratified_packager_layer_name`` expression text (SPEC §4),
     snapshotted and parse-validated in Phase A; empty unless an embedded project is built."""
+
+    initial_view: QgsReferencedRectangle | None = None
+    """The source project's initial map view (§13), snapshotted in Phase A; :data:`None`
+    unless an embedded project is built or the source has no resolvable view."""
 
     template_path: Path | None = None
     """The §8.1.5 template gpkg (non-warm-marked whole-export layers), if built."""
