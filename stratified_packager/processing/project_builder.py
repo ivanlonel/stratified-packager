@@ -156,7 +156,7 @@ def _apply_initial_view(fresh: QgsProject, plan: StratumProjectPlan) -> None:
     Set the embedded project's initial map view from the plan (§13).
 
     A headless :meth:`~qgis.core.QgsProject.write` emits no ``<mapcanvas>`` element, so the
-    written project has no per-canvas saved extent; :meth:`~qgis.core.QgsProjectViewSettings`'
+    written project has no per-canvas saved extent; :class:`~qgis.core.QgsProjectViewSettings`'
     default view extent is therefore honoured on open, landing the canvas on the source
     project's view instead of the full layer extent.
 
