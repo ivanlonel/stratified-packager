@@ -591,14 +591,14 @@ def _propagate_chain(
             keys = set(memoized)
             continue
         chain_target_layer = project.mapLayer(plan.layer_id)
-        prefix = f"attribute[{chain_target_layer.name()}]: " if chain_target_layer else ""
+        packaged_name = chain_target_layer.name() if chain_target_layer else plan.layer_id
         hop_target_layer = cast("QgsVectorLayer", target)
         keys = _query_far_keys(hop_target_layer, hop.to_fields, keys, collect_fields, feedback)
         if chain_context is not None:
             chain_context.put(memo_key, frozenset(keys))
         feedback.pushDebugInfo(
-            f"{prefix}chain hop {hop.edge.relation_id} ({stratum_name}): "
-            f"{len(keys)} key(s) at {hop_target_layer.name()}"
+            f"matching[{packaged_name}] stratum '{stratum_name}': hop via relation "
+            f"'{hop.edge.relation_id}' yielded {len(keys)} key(s) from {hop_target_layer.name()}"
         )
     # Unreachable: the loop always returns at the last hop.
     raise QgsProcessingException(
@@ -890,5 +890,8 @@ def spatial_fids_for_stratum(
             if matches(feature.geometry()):
                 matched.append(feature.id())
         fids = tuple(matched)
-    feedback.pushDebugInfo(f"spatial[{layer.name()}]: {len(fids)} feature(s) match {stratum_name}")
+    feedback.pushDebugInfo(
+        f"matching[{layer.name()}] stratum '{stratum_name}': "
+        f"{len(fids)} feature(s) matched spatially"
+    )
     return MatchCondition(fids=fids, by_fid=True)
