@@ -675,11 +675,15 @@ Layout per zip:
   subset strings on the embedded project's layers restores each member's exact view. That holds
   for the primary too: only its *read source's* subset is cleared (so the shared table holds the
   union), never the plugin's record of it.
-- A subset string is the **source provider's** SQL, and the embedded project re-applies it to a
-  GeoPackage. A filter that does not parse as SQLite (a PostgreSQL `::` cast, a schema-qualified
-  table, a function SQLite lacks) is still accepted by the layer API — it fails later, inside the
-  data provider — so implementations SHOULD test it against the target dialect and warn, naming
-  the layer and the reason.
+- A subset string is the **source provider's** SQL, but a §12 group member's subset is re-applied
+  by the embedded project to a **GeoPackage** (§13). A filter that does not parse as SQLite (a
+  PostgreSQL `::` cast, a schema-qualified table, a function SQLite lacks) is still accepted by the
+  layer API — it fails later, inside the data provider — and could never recover a member's view
+  from the shared union table. Such a member is therefore **excluded from grouping upfront** (the
+  group key itself still ignores the subset component, so portable subsets never split a group): it
+  stages standalone (§8.2), so its filter is materialized on the source provider where it is valid,
+  and it carries no re-applied subset in the embedded project. Portability is decided by compiling
+  the clause against the target dialect over the layer's own fields.
 - Staging composes with grouping (§8.2): the group stages **once**, through its primary, when any
   member's `stage` resolves true — the staged copy holds the union of every member's matches, so
   members never split into separate tables over staging.
@@ -713,8 +717,10 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
   extent is what drives the on-open canvas; it is the *saved* view, so save the project before
   packaging to capture an unsaved pan/zoom. No print layouts, map themes, macros, actions.
 - Per-layer subset strings re-applied **for §12 group members only** — their shared table holds
-  the union of every member's matches, so the subset is what separates them. An ungrouped layer's
-  table already *is* its subset view (the read source is a clone that kept the subset), so
+  the union of every member's matches, so the subset is what separates them (and a group member's
+  subset is guaranteed to parse as SQLite: §12 stages a non-portable one standalone instead, so
+  this re-apply never fails inside the provider). An ungrouped layer's table already *is* its
+  subset view (the read source is a clone that kept the subset, materialized at staging), so
   re-applying would filter nothing while still requiring the source provider's SQL to parse as
   SQLite; its packaged layer therefore carries no subset. Layers whose stratum table is absent
   (`KEEP_EMPTY_LAYERS=False`) are omitted from that stratum's project.

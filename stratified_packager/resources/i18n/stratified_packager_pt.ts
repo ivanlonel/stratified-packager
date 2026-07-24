@@ -792,17 +792,22 @@
     <translation>&lt;h3&gt;Padrões e precedência&lt;/h3&gt;&lt;p&gt;Cada parâmetro omitido é resolvido por &lt;b&gt;entrada explícita &amp;gt; variável de projeto (&lt;code&gt;stratified_packager_&amp;lt;param&amp;gt;&lt;/code&gt;) &amp;gt; configuração do plugin &amp;gt; padrão embutido&lt;/b&gt;. Os valores de escopo de projeto e de camada são editáveis na página de Opções do plugin, na página de Propriedades do projeto e na página por camada.&lt;/p&gt;&lt;h3&gt;Cache quente&lt;/h3&gt;&lt;p&gt;Com um diretório de cache quente, &lt;b&gt;Usar partida a quente&lt;/b&gt; inicia cada GeoPackage de estrato a partir de uma cópia em cache e acrescenta apenas as camadas não marcadas; &lt;b&gt;Atualizar o cache quente&lt;/b&gt; primeiro grava o arquivo de cache de cada estrato e só então constrói os entregáveis semeados a partir desse cache fresco — uma execução interrompida ainda deixa um cache completo e reutilizável. Um arquivo em cache que não corresponda mais às suas tabelas marcadas retorna a uma construção a frio para aquele estrato (relatado como cold-fallback).&lt;/p&gt;&lt;h3&gt;Execução sem interface (qgis_process)&lt;/h3&gt;&lt;p&gt;Passe &lt;code&gt;--project_path&lt;/code&gt;: o algoritmo requer um projeto. O framework de Processing reinstancia o algoritmo depois que o projeto é carregado, de modo que os padrões de variáveis de projeto e configurações do plugin são resolvidos corretamente sem GUI. &lt;code&gt;QgsSettings&lt;/code&gt; é por perfil, então o qgis_process usa o perfil padrão a menos que outro seja indicado.&lt;/p&gt;</translation>
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="74" />
+    <location filename="../../processing/dedup.py" line="70" />
+    <source>Layer {} is not deduplicated: its subset must run on the source provider, not the GeoPackage, so it keeps its own staged copy.</source>
+    <translation>Camada {} não é desduplicada: seu subconjunto precisa ser executado no provedor de origem, não no GeoPackage, portanto mantém sua própria cópia preparada.</translation>
+  </message>
+  <message>
+    <location filename="../../processing/dedup.py" line="98" />
     <source>Deduplicating shared source into table {}: {}</source>
     <translation>Desduplicando origem compartilhada na tabela {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="92" />
+    <location filename="../../processing/dedup.py" line="116" />
     <source>Could not clear the subset of shared table {}.</source>
     <translation>Não foi possível limpar o subconjunto da tabela compartilhada {}.</translation>
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="131" />
+    <location filename="../../processing/dedup.py" line="155" />
     <source>Shared table {} is warm-marked through {}; every member of the dedup group follows.</source>
     <translation>A tabela compartilhada {} está marcada como quente através de {}; todos os membros do grupo de deduplicação a acompanham.</translation>
   </message>

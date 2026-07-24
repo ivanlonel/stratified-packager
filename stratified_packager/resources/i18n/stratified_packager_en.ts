@@ -789,17 +789,22 @@
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="74" />
+    <location filename="../../processing/dedup.py" line="70" />
+    <source>Layer {} is not deduplicated: its subset must run on the source provider, not the GeoPackage, so it keeps its own staged copy.</source>
+    <translation type="unfinished" />
+  </message>
+  <message>
+    <location filename="../../processing/dedup.py" line="98" />
     <source>Deduplicating shared source into table {}: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="92" />
+    <location filename="../../processing/dedup.py" line="116" />
     <source>Could not clear the subset of shared table {}.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="131" />
+    <location filename="../../processing/dedup.py" line="155" />
     <source>Shared table {} is warm-marked through {}; every member of the dedup group follows.</source>
     <translation type="unfinished" />
   </message>

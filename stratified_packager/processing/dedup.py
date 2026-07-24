@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 from qgis.core import QgsProviderRegistry
 from qgis.PyQt.QtCore import QCoreApplication
 
+from stratified_packager.toolbelt.sql import sqlite_where_error
+
 from . import params
 from .matching import LayerMatchPlan
 from .material import _field_indexes
@@ -41,7 +43,10 @@ def apply_dedup(material: _Material, feedback: QgsProcessingFeedback) -> None:
     when every member is filtered): its table hosts the union of every member's match
     set and kept fields (always including the columns each member's subset references).
     Runs before staging, so a staged group builds **one** staging copy through its primary
-    instead of one per member (§8.2).
+    instead of one per member (§8.2). A member whose subset is not portable to the delivered
+    GeoPackage (it references tables or functions absent from it) is excluded from grouping and
+    staged standalone, so its filter is materialized on the source provider rather than
+    re-applied against a shared table it could never evaluate.
 
     :param material: The run material (preps mutated in place).
     :param feedback: Execution feedback channel.
@@ -50,6 +55,25 @@ def apply_dedup(material: _Material, feedback: QgsProcessingFeedback) -> None:
         return
     groups: dict[tuple[str, frozenset[tuple[str, str]]], list[_LayerPrep]] = {}
     for prep in material.preps:
+        if (
+            prep.subset_sql
+            and sqlite_where_error(
+                [field.name() for field in prep.layer.fields().toList()], prep.subset_sql
+            )
+            is not None
+        ):
+            # A subset the delivered GeoPackage cannot evaluate (external tables, non-SQLite
+            # functions like lpad) can never be re-applied there to recover this member's view
+            # (§12), so folding it onto a shared table would strand it. Keep it standalone —
+            # staging then materializes the filter on the source provider instead.
+            feedback.pushInfo(
+                QCoreApplication.translate(
+                    "StratifiedPackagerAlgorithm",
+                    "Layer {} is not deduplicated: its subset must run on the source provider,"
+                    " not the GeoPackage, so it keeps its own staged copy.",
+                ).format(prep.layer.name())
+            )
+            continue
         key = source_group_key(prep.layer, feedback)
         if key is not None:
             groups.setdefault(key, []).append(prep)
