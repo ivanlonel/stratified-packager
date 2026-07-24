@@ -55,23 +55,26 @@ def apply_dedup(material: _Material, feedback: QgsProcessingFeedback) -> None:
         return
     groups: dict[tuple[str, frozenset[tuple[str, str]]], list[_LayerPrep]] = {}
     for prep in material.preps:
-        if (
-            prep.subset_sql
-            and sqlite_where_error(
+        subset_error = (
+            sqlite_where_error(
                 [field.name() for field in prep.layer.fields().toList()], prep.subset_sql
             )
-            is not None
-        ):
+            if prep.subset_sql
+            else None
+        )
+        if subset_error is not None:
             # A subset the delivered GeoPackage cannot evaluate (external tables, non-SQLite
             # functions like lpad) can never be re-applied there to recover this member's view
             # (§12), so folding it onto a shared table would strand it. Keep it standalone —
-            # staging then materializes the filter on the source provider instead.
+            # staging then materializes the filter on the source provider instead. Naming the
+            # SQLite reason tells a portable-looking subset a spatialite function tripped apart
+            # from a genuinely foreign one.
             feedback.pushInfo(
                 QCoreApplication.translate(
                     "StratifiedPackagerAlgorithm",
-                    "Layer {} is not deduplicated: its subset must run on the source provider,"
-                    " not the GeoPackage, so it keeps its own staged copy.",
-                ).format(prep.layer.name())
+                    "Layer {} is not deduplicated ({}): its subset must run on the source"
+                    " provider, not the GeoPackage, so it keeps its own staged copy.",
+                ).format(prep.layer.name(), subset_error)
             )
             continue
         key = source_group_key(prep.layer, feedback)
