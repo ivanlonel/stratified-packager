@@ -792,22 +792,22 @@
     <translation>&lt;h3&gt;Valores predeterminados y precedencia&lt;/h3&gt;&lt;p&gt;Cada parámetro omitido se resuelve mediante &lt;b&gt;entrada explícita &amp;gt; variable de proyecto (&lt;code&gt;stratified_packager_&amp;lt;param&amp;gt;&lt;/code&gt;) &amp;gt; ajuste del complemento &amp;gt; valor predeterminado incorporado&lt;/b&gt;. Los valores de ámbito de proyecto y de capa se editan desde la página de Opciones del complemento, la página de Propiedades del proyecto y la página por capa.&lt;/p&gt;&lt;h3&gt;Caché caliente&lt;/h3&gt;&lt;p&gt;Con un directorio de caché caliente, &lt;b&gt;Usar arranque en caliente&lt;/b&gt; inicia cada GeoPackage de estrato desde una copia en caché y añade solo las capas no marcadas; &lt;b&gt;Actualizar la caché caliente&lt;/b&gt; primero escribe el archivo de caché de cada estrato y luego construye los entregables sembrados desde esa caché fresca — una ejecución interrumpida aún deja una caché completa y reutilizable. Un archivo en caché que ya no coincide con sus tablas marcadas se repliega a una construcción en frío para ese estrato (informado como cold-fallback).&lt;/p&gt;&lt;h3&gt;Ejecución sin interfaz (qgis_process)&lt;/h3&gt;&lt;p&gt;Pase &lt;code&gt;--project_path&lt;/code&gt;: el algoritmo requiere un proyecto. El framework de Processing vuelve a instanciar el algoritmo después de cargar el proyecto, de modo que los valores predeterminados de variables de proyecto y ajustes del complemento se resuelven correctamente sin GUI. &lt;code&gt;QgsSettings&lt;/code&gt; es por perfil, así que qgis_process usa el perfil predeterminado salvo que se indique otro.&lt;/p&gt;</translation>
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="70" />
-    <source>Layer {} is not deduplicated: its subset must run on the source provider, not the GeoPackage, so it keeps its own staged copy.</source>
-    <translation>La capa {} no se desduplica: su subconjunto debe ejecutarse en el proveedor de origen, no en el GeoPackage, por lo que conserva su propia copia preparada.</translation>
+    <location filename="../../processing/dedup.py" line="73" />
+    <source>Layer {} is not deduplicated ({}): its subset must run on the source provider, not the GeoPackage, so it keeps its own staged copy.</source>
+    <translation>La capa {} no se desduplica ({}): su subconjunto debe ejecutarse en el proveedor de origen, no en el GeoPackage, por lo que conserva su propia copia preparada.</translation>
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="98" />
+    <location filename="../../processing/dedup.py" line="101" />
     <source>Deduplicating shared source into table {}: {}</source>
     <translation>Desduplicando el origen compartido en la tabla {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="116" />
+    <location filename="../../processing/dedup.py" line="119" />
     <source>Could not clear the subset of shared table {}.</source>
     <translation>No se pudo limpiar el subconjunto de la tabla compartida {}.</translation>
   </message>
   <message>
-    <location filename="../../processing/dedup.py" line="155" />
+    <location filename="../../processing/dedup.py" line="158" />
     <source>Shared table {} is warm-marked through {}; every member of the dedup group follows.</source>
     <translation>La tabla compartida {} está marcada en caliente a través de {}; todos los miembros del grupo de deduplicación la siguen.</translation>
   </message>

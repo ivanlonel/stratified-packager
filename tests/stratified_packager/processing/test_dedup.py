@@ -127,8 +127,13 @@ class TestApplyDedupPortability:
 
     @pytest.mark.parametrize(
         "unportable",
-        ["lpad(\"a\", 2, '0') = '01'", '"a" IN (SELECT x FROM other_db.foo)', "\"a\"::text = '1'"],
-        ids=["lpad", "schema-qualified", "postgres-cast"],
+        [
+            "lpad(\"a\", 2, '0') = '01'",
+            '"a" IN (SELECT x FROM other_db.foo)',
+            "\"a\"::text = '1'",
+            "missing = 1",
+        ],
+        ids=["lpad", "schema-qualified", "postgres-cast", "missing-column"],
     )
     def test_unportable_subset_opts_out_of_grouping(
         self, tmp_path: Path, feedback: QgsProcessingFeedback, unportable: str
@@ -166,4 +171,6 @@ class TestApplyDedupPortability:
         primary = self._prep(gpkg, "plain", "")
         portable = self._prep(gpkg, "portable", "substr(\"b\", 1, 3) = 'row'")
         apply_dedup(self._material(primary, portable), feedback)
+        assert primary.group_primary_id == primary.layer.id()
         assert portable.group_primary_id == primary.layer.id()
+        assert portable.table == primary.table
