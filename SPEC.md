@@ -706,7 +706,16 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
 - **Layer display names** honor the `stratified_packager_layer_name` expression (§4) when set,
   evaluated per stratum (`@stratum_name`/`@stratum_name_sanitized`); empty inherits the original
   name. Only the project's display name changes — gpkg table names are unaffected.
-- **Layer tree structure** (groups, order, visibility) restricted to included layers; **styles**
+- **Layer tree structure** (groups, order) restricted to included layers, with each node's
+  **presentation state mirrored** so the packaged project's Layers panel is indistinguishable
+  from the original's: check state, collapsed/expanded state of groups and of layer legends,
+  mutually-exclusive groups, and every node custom property QGIS persists (legend feature
+  counts, renamed/reordered/hidden legend classes). The `embedded`/`embedded_project` markers
+  are the exception — they would send QGIS looking for the source machine's project file, so a
+  node embedded from another project is flattened into a plain group. Layout-legend-only node
+  settings (legend patch shape/size, split behavior, label expression) and the *Layer Order*
+  panel's custom render order are out of scope (no layouts ship, and a partial custom order
+  silently stops layers rendering); **styles**
   for the resolved `STYLE_CATEGORIES` (default all, §3; the same rewritten QML payloads the gpkg
   `layer_styles` rows use); **relations** remapped among
   included layers (relations touching excluded layers are dropped); **project CRS, transform

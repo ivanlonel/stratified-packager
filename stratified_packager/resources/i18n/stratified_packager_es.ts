@@ -209,72 +209,72 @@
 </context><context>
   <name>ProjectBuilder</name>
   <message>
-    <location filename="../../processing/project_builder.py" line="142" />
+    <location filename="../../processing/project_builder.py" line="152" />
     <source>Failed to remove project file {}</source>
     <translation>No se pudo eliminar el archivo de proyecto {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="147" />
+    <location filename="../../processing/project_builder.py" line="157" />
     <source>Writing the embedded project for stratum {} failed ({}): {}</source>
     <translation>error al escribir el proyecto incrustado del estrato {} ({}): {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="379" />
+    <location filename="../../processing/project_builder.py" line="389" />
     <source>Embedded project: table {} for layer {} did not open; dropped.</source>
     <translation>Proyecto incrustado: la tabla {} para la capa {} no se abrió; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="397" />
+    <location filename="../../processing/project_builder.py" line="407" />
     <source>Embedded project: payload {} for layer {} did not open; dropped.</source>
     <translation>Proyecto incrustado: el archivo de datos {} para la capa {} no se abrió; descartado.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="470" />
+    <location filename="../../processing/project_builder.py" line="480" />
     <source>Embedded project: virtual layer {} source {} has no table in this stratum; dropped.</source>
     <translation>Proyecto incrustado: la capa virtual {} tiene la fuente {} sin tabla en este estrato; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="497" />
+    <location filename="../../processing/project_builder.py" line="507" />
     <source>Embedded project: virtual layer {} did not re-open against the stratum gpkg; dropped.</source>
     <translation>Proyecto incrustado: la capa virtual {} no se reabrió en el gpkg del estrato; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="510" />
+    <location filename="../../processing/project_builder.py" line="520" />
     <source>Embedded project: style for virtual layer {} not applied: {}</source>
     <translation>Proyecto incrustado: el estilo de la capa virtual {} no se aplicó: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="565" />
+    <location filename="../../processing/project_builder.py" line="597" />
     <source>Embedded project: no layer tree available.</source>
     <translation>Proyecto incrustado: no hay árbol de capas disponible.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="587" />
+    <location filename="../../processing/project_builder.py" line="622" />
     <source>Embedded project: layer {} was rejected.</source>
     <translation>Proyecto incrustado: la capa {} fue rechazada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="638" />
+    <location filename="../../processing/project_builder.py" line="673" />
     <source>Embedded project: style for layer {} did not parse.</source>
     <translation>Proyecto incrustado: el estilo de la capa {} no se pudo analizar.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="646" />
+    <location filename="../../processing/project_builder.py" line="681" />
     <source>Embedded project: style for layer {} not applied: {}</source>
     <translation>Proyecto incrustado: el estilo de la capa {} no se aplicó: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="663" />
+    <location filename="../../processing/project_builder.py" line="698" />
     <source>Embedded project: layer {}'s subset is not valid SQLite ({}), so the packaged project may show no features for it. This layer shares its table with others, so the subset is what separates them — rewrite it in SQL the GeoPackage understands. Subset: {}</source>
     <translation>Proyecto incrustado: el subconjunto de la capa {} no es SQLite válido ({}), por lo que el proyecto empaquetado puede no mostrar ninguna entidad de ella. Esta capa comparte su tabla con otras, y es el subconjunto lo que las separa — reescríbalo en SQL que el GeoPackage entienda. Subconjunto: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="673" />
+    <location filename="../../processing/project_builder.py" line="708" />
     <source>Embedded project: subset for layer {} was not accepted: {}</source>
     <translation>Proyecto incrustado: el subconjunto de la capa {} no se aceptó: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="728" />
+    <location filename="../../processing/project_builder.py" line="763" />
     <source>Embedded project: relation {} could not be remapped: {}</source>
     <translation>Proyecto incrustado: no se pudo reasignar la relación {}: {}</translation>
   </message>

@@ -209,72 +209,72 @@
 </context><context>
   <name>ProjectBuilder</name>
   <message>
-    <location filename="../../processing/project_builder.py" line="142" />
+    <location filename="../../processing/project_builder.py" line="152" />
     <source>Failed to remove project file {}</source>
     <translation>Falha ao remover o arquivo de projeto {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="147" />
+    <location filename="../../processing/project_builder.py" line="157" />
     <source>Writing the embedded project for stratum {} failed ({}): {}</source>
     <translation>falha ao gravar o projeto incorporado do estrato {} ({}): {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="379" />
+    <location filename="../../processing/project_builder.py" line="389" />
     <source>Embedded project: table {} for layer {} did not open; dropped.</source>
     <translation>Projeto incorporado: a tabela {} para a camada {} não abriu; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="397" />
+    <location filename="../../processing/project_builder.py" line="407" />
     <source>Embedded project: payload {} for layer {} did not open; dropped.</source>
     <translation>Projeto incorporado: o arquivo de dados {} para a camada {} não abriu; descartado.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="470" />
+    <location filename="../../processing/project_builder.py" line="480" />
     <source>Embedded project: virtual layer {} source {} has no table in this stratum; dropped.</source>
     <translation>Projeto incorporado: a camada virtual {} tem a fonte {} sem tabela neste estrato; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="497" />
+    <location filename="../../processing/project_builder.py" line="507" />
     <source>Embedded project: virtual layer {} did not re-open against the stratum gpkg; dropped.</source>
     <translation>Projeto incorporado: a camada virtual {} não reabriu no gpkg do estrato; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="510" />
+    <location filename="../../processing/project_builder.py" line="520" />
     <source>Embedded project: style for virtual layer {} not applied: {}</source>
     <translation>Projeto incorporado: o estilo da camada virtual {} não foi aplicado: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="565" />
+    <location filename="../../processing/project_builder.py" line="597" />
     <source>Embedded project: no layer tree available.</source>
     <translation>Projeto incorporado: nenhuma árvore de camadas disponível.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="587" />
+    <location filename="../../processing/project_builder.py" line="622" />
     <source>Embedded project: layer {} was rejected.</source>
     <translation>Projeto incorporado: a camada {} foi rejeitada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="638" />
+    <location filename="../../processing/project_builder.py" line="673" />
     <source>Embedded project: style for layer {} did not parse.</source>
     <translation>Projeto incorporado: o estilo da camada {} não pôde ser analisado.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="646" />
+    <location filename="../../processing/project_builder.py" line="681" />
     <source>Embedded project: style for layer {} not applied: {}</source>
     <translation>Projeto incorporado: o estilo da camada {} não foi aplicado: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="663" />
+    <location filename="../../processing/project_builder.py" line="698" />
     <source>Embedded project: layer {}'s subset is not valid SQLite ({}), so the packaged project may show no features for it. This layer shares its table with others, so the subset is what separates them — rewrite it in SQL the GeoPackage understands. Subset: {}</source>
     <translation>Projeto incorporado: o subconjunto da camada {} não é SQLite válido ({}), portanto o projeto empacotado pode não mostrar nenhuma feição dela. Esta camada compartilha a tabela com outras, e é o subconjunto que as separa — reescreva-o em SQL que o GeoPackage entenda. Subconjunto: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="673" />
+    <location filename="../../processing/project_builder.py" line="708" />
     <source>Embedded project: subset for layer {} was not accepted: {}</source>
     <translation>Projeto incorporado: o subconjunto da camada {} não foi aceito: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="728" />
+    <location filename="../../processing/project_builder.py" line="763" />
     <source>Embedded project: relation {} could not be remapped: {}</source>
     <translation>Projeto incorporado: não foi possível remapear a relação {}: {}</translation>
   </message>

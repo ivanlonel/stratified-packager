@@ -4,10 +4,11 @@ Embedded per-stratum project construction (SPEC §13).
 Runs on the algorithm thread during Phase C — never against
 :meth:`~qgis.core.QgsProject.instance`. The fresh project re-points included layers at
 the stratum GeoPackage tables and the ``data/`` payload copies, restores the layer-tree
-structure (groups, order, visibility) restricted to included layers, applies the full
-(rewritten) styles, remaps relations among included layers, and carries the project
-CRS, transform context, title and the source's initial map view (so it opens at the same
-position and zoom). Paths are stored relative: the caller builds the
+structure (groups, order) and each node's presentation state (check state, expanded state,
+legend customizations) restricted to included layers, applies the full (rewritten) styles,
+remaps relations among included layers, and carries the project CRS, transform context,
+title and the source's initial map view (so it opens at the same position and zoom).
+Paths are stored relative: the caller builds the
 stratum inside a directory tree that mirrors the zip layout, so Qt's relative-path
 storage produces portable ``./…`` sources (SPEC §13).
 """
@@ -19,7 +20,7 @@ import os
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from qgis.core import (
     Qgis,
@@ -45,7 +46,7 @@ from .params import ProjectInclusion
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
-    from qgis.core import QgsMapLayer, QgsProcessingFeedback
+    from qgis.core import QgsLayerTreeNode, QgsMapLayer, QgsProcessingFeedback
 
 __all__: list[str] = [
     "StratumProjectPlan",
@@ -53,6 +54,15 @@ __all__: list[str] = [
     "read_saved_view_extent",
     "resolve_initial_view",
 ]
+
+_TREE_NODE_SKIP_PROPERTIES: Final[frozenset[str]] = frozenset({"embedded", "embedded_project"})
+"""Layer-tree node custom properties never carried into the embedded project.
+
+They mark a node whose children QGIS reloads from *another* project file on open
+(:meth:`~qgis.core.QgsProject.createEmbeddedGroup`), by an absolute path that does not ship
+beside the packaged data — the tree walk flattens such a node's children into a plain group
+instead, and carrying the markers would send QGIS looking for the source machine's project.
+"""
 
 
 @dataclass
@@ -544,6 +554,28 @@ def _resolve_virtual_source_table(
     return None
 
 
+def _copy_node_state(source_node: QgsLayerTreeNode, target_node: QgsLayerTreeNode) -> None:
+    """
+    Mirror one layer-tree node's presentation state onto its replacement (SPEC §13).
+
+    Carries the collapsed/expanded state, the check state, and every custom property the node
+    holds. That property bag is where QGIS keeps the rest of what the Layers panel shows —
+    the legend feature counts (``showFeatureCount``) and the legend-node customizations
+    (renamed, reordered and hidden classes, under ``legend/…``) — so the packaged project's
+    panel reads like the original's. It is copied wholesale rather than key by key so this
+    does not drift as QGIS grows new node state; only the keys that would point QGIS back at
+    the source machine are dropped (:data:`_TREE_NODE_SKIP_PROPERTIES`).
+
+    :param source_node: The node in the project being packaged.
+    :param target_node: The freshly created node in the embedded project.
+    """
+    target_node.setExpanded(source_node.isExpanded())
+    target_node.setItemVisibilityChecked(source_node.itemVisibilityChecked())
+    for key in source_node.customProperties():
+        if key not in _TREE_NODE_SKIP_PROPERTIES:
+            target_node.setCustomProperty(key, source_node.customProperty(key))
+
+
 def _replicate_tree(
     source: QgsProject,
     fresh: QgsProject,
@@ -551,7 +583,7 @@ def _replicate_tree(
     feedback: QgsProcessingFeedback,
 ) -> None:
     """
-    Replicate the layer tree (groups, order, visibility) for included layers.
+    Replicate the layer tree (groups, order, node state) for included layers.
 
     :param source: The open project being packaged.
     :param fresh: The project under construction.
@@ -575,8 +607,11 @@ def _replicate_tree(
             if isinstance(child, QgsLayerTreeGroup):
                 new_group = target_group.addGroup(child.name())
                 if new_group is not None:
-                    new_group.setItemVisibilityChecked(child.itemVisibilityChecked())
+                    _copy_node_state(child, new_group)
                     walk(child, new_group)
+                    # Only once the children exist: the default initial index (-1) resolves to
+                    # whichever child the copied check state left checked.
+                    new_group.setIsMutuallyExclusive(child.isMutuallyExclusive())
             elif isinstance(child, QgsLayerTreeLayer):
                 replacement = replacements.get(child.layerId())
                 if replacement is None:
@@ -591,7 +626,7 @@ def _replicate_tree(
                     continue
                 node = target_group.addLayer(replacement)
                 if node is not None:
-                    node.setItemVisibilityChecked(child.itemVisibilityChecked())
+                    _copy_node_state(child, node)
 
     walk(source_root, fresh_root)
     _append_unplaced(fresh, fresh_root, replacements, placed)

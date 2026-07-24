@@ -229,6 +229,49 @@ class TestQgzMode:
         assert restored.xMaximum() == pytest.approx(30.0)
         assert restored.yMaximum() == pytest.approx(40.0)
 
+    def test_layer_tree_node_state_is_mirrored(self, built: Built) -> None:
+        """Collapsed state, legend tweaks and mutually-exclusive groups carry over (§13)."""
+        root = built.project.layerTreeRoot()
+        assert root is not None
+        group = root.findGroup("G")
+        assert group is not None
+        group.setExpanded(False)
+        group.setIsMutuallyExclusive(True)
+        # Would send QGIS looking for the packaging machine's project file on open.
+        group.setCustomProperty("embedded", 1)
+        group.setCustomProperty("embedded_project", "/elsewhere/other.qgs")
+        cities_node = group.findLayer(built.cities)
+        assert cities_node is not None
+        cities_node.setExpanded(False)
+        cities_node.setCustomProperty("showFeatureCount", 1)  # QGIS stores this flag as an int
+        cities_node.setCustomProperty("legend/node-order", ["1", "0"])
+        states_node = root.findLayer(built.states)
+        assert states_node is not None
+        states_node.setExpanded(True)
+
+        build_stratum_project(
+            built.project, _plan(built, ProjectInclusion.QGZ), QgsProcessingFeedback()
+        )
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        new_root = reopened.layerTreeRoot()
+        assert new_root is not None
+        new_group = new_root.findGroup("G")
+        assert new_group is not None
+        assert not new_group.isExpanded()
+        assert new_group.isMutuallyExclusive()
+        assert "embedded" not in new_group.customProperties()
+        assert "embedded_project" not in new_group.customProperties()
+
+        new_cities = new_group.children()[0]
+        assert new_cities.name() == "cities"
+        assert not new_cities.isExpanded()
+        assert new_cities.customProperty("showFeatureCount") == 1
+        assert new_cities.customProperty("legend/node-order") == ["1", "0"]
+        # Copied per node, not collapsed wholesale.
+        new_states = next(child for child in new_root.children() if child.name() == "states")
+        assert new_states.isExpanded()
+
     def test_display_names_override_layer_labels(self, built: Built) -> None:
         """`display_names` renames rebuilt layers; unlisted layers keep their original name."""
         feedback = QgsProcessingFeedback()
