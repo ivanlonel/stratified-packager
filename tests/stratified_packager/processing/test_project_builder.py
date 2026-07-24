@@ -263,8 +263,9 @@ class TestQgzMode:
         assert "embedded" not in new_group.customProperties()
         assert "embedded_project" not in new_group.customProperties()
 
-        new_cities = new_group.children()[0]
-        assert new_cities.name() == "cities"
+        # By name, not position: the reopened project's layer ids differ from the source's,
+        # so `findLayer` is out and node order is not what this test is pinning.
+        new_cities = next(child for child in new_group.children() if child.name() == "cities")
         assert not new_cities.isExpanded()
         assert new_cities.customProperty("showFeatureCount") == 1
         assert new_cities.customProperty("legend/node-order") == ["1", "0"]
