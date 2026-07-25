@@ -22,8 +22,9 @@ failures into one final exception. Cancellation is observed through the feedback
 from __future__ import annotations
 
 import shutil
+import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from qgis.core import (
     Qgis,
@@ -71,6 +72,9 @@ __all__: list[str] = [
     "write_template",
     "write_vector_table",
 ]
+
+_SLOWEST_REPORTED: Final = 3
+"""How many of a stratum's slowest layers :func:`write_stratum` names in its timing line."""
 
 
 @dataclass(frozen=True)
@@ -314,6 +318,7 @@ def write_stratum(
         warm_used, template_used = _seed(build, result, feedback)
         warm_boundary = _warm_count(build) if build.snapshot_to is not None else -1
         steps = QgsProcessingMultiStepFeedback(len(build.layers), feedback)
+        elapsed: list[tuple[float, str]] = []
         for index, layer_write in enumerate(build.layers):
             if feedback.isCanceled():
                 result.ok, result.error = False, "canceled"
@@ -324,6 +329,7 @@ def write_stratum(
                     label or build.name, index + 1, len(build.layers), layer_write.table
                 )
             )
+            started = time.perf_counter()
             result.layers.append(
                 _build_layer(
                     build,
@@ -336,8 +342,10 @@ def write_stratum(
                     chain_context=chain_context,
                 )
             )
+            elapsed.append((time.perf_counter() - started, layer_write.table))
             if index + 1 == warm_boundary and build.snapshot_to is not None:
                 _snapshot_warm(build.gpkg_path, build.snapshot_to)
+        _report_slowest_layers(label or build.name, elapsed, feedback)
         for source, destination in build.data_payloads:
             if feedback.isCanceled():
                 result.ok, result.error = False, "canceled"
@@ -361,6 +369,36 @@ def write_stratum(
             )
         result.ok, result.error = False, f"{type(err).__name__}: {err}"
     return result
+
+
+def _report_slowest_layers(
+    label: str, elapsed: Sequence[tuple[float, str]], feedback: QgsProcessingFeedback
+) -> None:
+    """
+    Push one line naming the stratum's total layer-write time and its slowest layers.
+
+    ``qgis_process`` block-buffers stdout, so a harness that timestamps the piped lines
+    timestamps *flushes*, not work: a stall inside a stratum cannot be attributed to a
+    layer from those timestamps (dozens of layer lines arrive in one millisecond-wide
+    burst). Measuring here and carrying the numbers in the message body makes the
+    attribution survive the buffering.
+
+    :param label: The stratum's progress label, e.g. ``Stratum 4/93: urban``.
+    :param elapsed: One ``(seconds, table)`` pair per layer written, in write order.
+    :param feedback: Execution feedback channel.
+    """
+    if not elapsed:
+        return
+    feedback.pushInfo(
+        QCoreApplication.translate("Building", "{}: {:.1f}s writing layers; slowest {}").format(
+            label,
+            sum(seconds for seconds, _ in elapsed),
+            ", ".join(
+                f"{table} {seconds:.1f}s"
+                for seconds, table in sorted(elapsed, reverse=True)[:_SLOWEST_REPORTED]
+            ),
+        )
+    )
 
 
 def _seed(

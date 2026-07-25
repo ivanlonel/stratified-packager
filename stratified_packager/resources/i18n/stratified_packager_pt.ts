@@ -4,12 +4,12 @@
 <context>
   <name>Building</name>
   <message>
-    <location filename="../../processing/building.py" line="241" />
+    <location filename="../../processing/building.py" line="245" />
     <source>Writing template layer {}/{}: {}</source>
     <translation>Gravando camada de modelo {}/{}: {}</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/building.py" line="255" />
+    <location filename="../../processing/building.py" line="259" />
     <source>template gpkg holds %n layer(s)</source>
     <translation>
       <numerusform>o gpkg de modelo contém %n camada</numerusform>
@@ -17,48 +17,53 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="323" />
+    <location filename="../../processing/building.py" line="328" />
     <source>{} — layer {}/{}: {}</source>
     <translation>{} — camada {}/{}: {}</translation>
   </message>
   <message>
+    <location filename="../../processing/building.py" line="366" />
     <location filename="../../processing/building.py" line="358" />
-    <location filename="../../processing/building.py" line="350" />
     <source>Failed to remove partial gpkg {} after error: {}</source>
     <translation>Falha ao remover o gpkg parcial {} após o erro: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="389" />
+    <location filename="../../processing/building.py" line="393" />
+    <source>{}: {:.1f}s writing layers; slowest {}</source>
+    <translation>{}: {:.1f}s gravando camadas; mais lentas {}</translation>
+  </message>
+  <message>
+    <location filename="../../processing/building.py" line="427" />
     <source>warm start used for {}</source>
     <translation>início a quente usado para {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="606" />
+    <location filename="../../processing/building.py" line="644" />
     <source>spatial matching needs a stratification layer</source>
     <translation>a correspondência espacial requer uma camada de estratificação</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="656" />
+    <location filename="../../processing/building.py" line="694" />
     <source>Staging {}: matching stratum {}/{}</source>
     <translation>Preparando {}: correspondência com o estrato {}/{}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="672" />
+    <location filename="../../processing/building.py" line="710" />
     <source>Staging {}: writing the staged copy</source>
     <translation>Preparando {}: gravando a cópia preparada</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="731" />
+    <location filename="../../processing/building.py" line="769" />
     <source>writing table {} canceled</source>
     <translation>gravação da tabela {} cancelada</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="734" />
+    <location filename="../../processing/building.py" line="772" />
     <source>writing table {} failed: {}</source>
     <translation>falha ao gravar a tabela {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="839" />
+    <location filename="../../processing/building.py" line="877" />
     <source>WAL checkpoint incomplete; not snapshotting a stale warm cache</source>
     <translation>Checkpoint WAL incompleto; não será feito snapshot de um cache quente obsoleto</translation>
   </message>

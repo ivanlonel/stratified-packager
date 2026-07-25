@@ -9,6 +9,7 @@ handling, the field-subset writer, the whole-export template, and per-layer stag
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, cast, override
 
 import pytest
@@ -29,6 +30,7 @@ from stratified_packager.processing.building import (
     LayerWrite,
     StratumBuild,
     StyleDoc,
+    _report_slowest_layers,
     discard_gpkg,
     stage_union,
     warm_rejection,
@@ -225,6 +227,81 @@ class _TextRecordingFeedback(QgsProcessingFeedback):
         """Record the progress *text* and forward it."""
         self.texts.append(text or "")
         super().setProgressText(text or "")
+
+
+class _InfoRecordingFeedback(QgsProcessingFeedback):
+    """A feedback double collecting the ``pushInfo`` lines for assertions."""
+
+    @override
+    def __init__(self) -> None:
+        super().__init__()
+        self.infos: list[str] = []
+
+    @override
+    def pushInfo(self, info: str | None = None) -> None:
+        """Record the *info* line and forward it."""
+        self.infos.append(info or "")
+        super().pushInfo(info or "")
+
+
+def test_report_slowest_layers_ranks_and_truncates() -> None:
+    """The timing line totals every layer but names only the slowest few, worst first."""
+    recorder = _InfoRecordingFeedback()
+    _report_slowest_layers(
+        "Stratum 2/94: SP-CENTRO 1",
+        [
+            (1.0, "quick"),
+            (60.0, "middling"),
+            (7200.0, "worst"),
+            (0.5, "quickest"),
+            (120.0, "third"),
+        ],
+        recorder,
+    )
+    # The total covers all five; only the worst three are named, slowest first.
+    assert recorder.infos == [
+        "Stratum 2/94: SP-CENTRO 1: 7381.5s writing layers;"
+        " slowest worst 7200.0s, third 120.0s, middling 60.0s"
+    ]
+
+
+def test_report_slowest_layers_silent_without_layers() -> None:
+    """A stratum that wrote no layer pushes no timing line."""
+    recorder = _InfoRecordingFeedback()
+    _report_slowest_layers("Stratum 1/1: empty", [], recorder)
+    assert not recorder.infos
+
+
+def test_write_stratum_reports_layer_timings(tmp_path: Path, project: QgsProject) -> None:
+    """A real stratum write ends with a timing line naming the layer it wrote."""
+    strat, strat_feat = _stratum()
+    points = _points("pts", [(10, 1, 1), (11, 2, 2)])
+    layer_write = LayerWrite(
+        layer_id=points.id(),
+        table="pts",
+        read_layer=_clone(points),
+        members=(_spatial_plan(points),),
+        kept_field_indexes=(),
+    )
+    recorder = _InfoRecordingFeedback()
+    result = write_stratum(
+        StratumBuild(
+            name="s1",
+            gpkg_path=tmp_path / "s1.gpkg",
+            layers=(layer_write,),
+            stratum_feature=strat_feat,
+        ),
+        label="Stratum 1/1: s1",
+        project=project,
+        strat_layer=strat,
+        feedback=recorder,
+    )
+    assert result.ok, result.error
+    timings = [line for line in recorder.infos if "writing layers; slowest" in line]
+    assert len(timings) == 1, recorder.infos
+    assert re.fullmatch(
+        r"Stratum 1/1: s1: \d+\.\ds writing layers; slowest pts \d+\.\ds", timings[0]
+    ), timings[0]
 
 
 def test_write_template_reports_progress_text(tmp_path: Path) -> None:
