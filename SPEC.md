@@ -513,6 +513,12 @@ result; the run aborts only at the end if any stratum or zip failed.
    templated, each stratum's per-layer writes, and the embedded-project builds. That text
    **is** the step's log line — the Processing dialog appends it to its log and
    `qgis_process` prints it — so a step is never also `pushInfo`d (that logged it twice).
+   Each stratum then closes with one `pushInfo` **timing line**: the total seconds spent
+   writing its layers and the slowest few by name. A summary, not a step, so it does not
+   double-log. It carries the numbers in the message body deliberately — `qgis_process`
+   block-buffers stdout, so a harness that timestamps the piped lines timestamps *flushes*,
+   not work (dozens of layer lines arrive in one millisecond-wide burst), and a stall inside
+   a stratum cannot otherwise be attributed to the layer that caused it.
 
 ## 9. Reporting
 
