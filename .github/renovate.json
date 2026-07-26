@@ -43,7 +43,7 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "/^\\.github/workflows/qa\\.yml$/"
+        "/^\\.github/workflows/testing\\.yml$/"
       ],
       // RE2 matches per-file (not per-line), so \s spans the newline + indentation
       // between the paired qgis_variant / qgis_version lines. Quotes are optional to
@@ -138,8 +138,10 @@
     },
     {
       // Only bump the micro (patch) version of the QGIS Chocolatey packages so CI
-      // keeps exercising the pinned major.minor lines (3.34, 3.44, 4.0). Major/minor
-      // moves change the tested QGIS baseline and stay a deliberate, manual edit.
+      // keeps exercising the pinned major.minor lines (the qgis_line values 3.40, 3.44,
+      // 4.2). Major/minor moves change the tested QGIS baseline, and they also rename the
+      // required status checks, so they stay a deliberate, manual edit paired with a
+      // ruleset update.
       "matchManagers": [
         "custom.regex"
       ],
