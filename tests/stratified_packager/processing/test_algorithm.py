@@ -311,7 +311,7 @@ def test_run_report_is_utf8_regardless_of_context_encoding(tmp_path: Path) -> No
     raw = report_path.read_bytes()
     assert not raw.startswith(b"\xef\xbb\xbf")  # no BOM (§9.2)
     assert "São Paulo".encode() in raw  # UTF-8 bytes present
-    assert "São Paulo".encode("cp1252") not in raw  # not locale-encoded
+    assert "São Paulo".encode(context.defaultEncoding()) not in raw  # not locale-encoded
     raw.decode("utf-8")  # decodes cleanly
 
 
@@ -1469,6 +1469,7 @@ class TestAuditRegressionFixes:
         with zipfile.ZipFile(full_zip) as archive:
             names = set(archive.namelist())
         assert "data/all.gpkg" in names  # in-zip gpkg path from GPKG_PATH_EXPRESSION
+        assert "bundle.gpkg" not in names  # ...and the zip's own basename never leaks into one
 
     def test_full_package_gpkg_expression_referencing_a_field_aborts(
         self, scenario: Scenario
