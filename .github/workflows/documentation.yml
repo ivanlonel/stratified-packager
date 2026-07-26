@@ -15,7 +15,7 @@ on: # zizmor: ignore[dangerous-triggers]
   push:
     branches:
       - main
-    paths: &doc_paths
+    paths:
       - .github/workflows/documentation.yml
       - docs/**/*
       # Source feeds __about__ substitutions (version, author, …) and the API autodoc pages.
@@ -31,7 +31,10 @@ on: # zizmor: ignore[dangerous-triggers]
   pull_request:
     branches:
       - main
-    paths: *doc_paths # identical to the push trigger's doc inputs anchored above
+    # Deliberately unfiltered: "🏗 Build docs" is a required status check, and GitHub reports
+    # no check at all for a workflow that path-filtering skipped — the PR would then wait
+    # forever on a context that never arrives. The push trigger above stays filtered; it
+    # gates the Pages deploy, and nothing can push to main directly.
 
   workflow_dispatch:
 
