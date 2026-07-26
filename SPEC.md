@@ -513,12 +513,15 @@ result; the run aborts only at the end if any stratum or zip failed.
    templated, each stratum's per-layer writes, and the embedded-project builds. That text
    **is** the step's log line — the Processing dialog appends it to its log and
    `qgis_process` prints it — so a step is never also `pushInfo`d (that logged it twice).
-   Each stratum then closes with one `pushInfo` **timing line**: the total seconds spent
-   writing its layers and the slowest few by name. A summary, not a step, so it does not
-   double-log. It carries the numbers in the message body deliberately — `qgis_process`
-   block-buffers stdout, so a harness that timestamps the piped lines timestamps *flushes*,
-   not work (dozens of layer lines arrive in one millisecond-wide burst), and a stall inside
-   a stratum cannot otherwise be attributed to the layer that caused it.
+   Each stratum then closes with two `pushInfo` **timing lines**: the total seconds spent
+   writing its layers with the slowest few by name, and the seconds spent writing its embedded
+   project. Summaries, not steps, so they do not double-log. They carry the numbers in the
+   message body deliberately — `qgis_process` block-buffers stdout, so a harness that
+   timestamps the piped lines timestamps *flushes*, not work (dozens of layer lines arrive in
+   one millisecond-wide burst), and a stall inside a stratum cannot otherwise be attributed to
+   the phase that caused it. The two phases are timed separately because they fail differently:
+   the layer writes are local gpkg I/O, while the embedded-project build touches every §13
+   embedded-only layer, which the writes never see.
 
 ## 9. Reporting
 
@@ -702,6 +705,17 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
 - Included layers re-pointed at the stratum gpkg tables (dedup-aware), `data/` files (relative
   paths), remote layers with their original sources (offline caveat documented), annotation
   layers carried over.
+- **Embedded-only layers** — those riding in the project alone (remote sources, annotations) —
+  are serialized **once per run** to their `<maplayer>` XML and reproduced per stratum from
+  those bytes, read back with `FlagDontResolveLayers` so the source is never opened. Every
+  stratum ships the same definitions, and re-creating a layer instead re-constructs its
+  provider from the URI: for a remote provider that is a blocking network request (a WMS layer
+  fetches GetCapabilities), charged once per layer *per stratum* against a server whose answer
+  never changes and which may not answer at all. Because the layer has no provider to
+  re-serialize itself from, the stored document is authoritative on write — so the §4
+  `layer_name` override is patched into that XML rather than set on the layer. A layer type
+  that cannot be reproduced this way is re-created as before. Live virtual layers are excluded:
+  they are re-pointed at each stratum's gpkg (below), not reused.
 - **Live virtual layers** (`materialize_virtual_layer=false` with every queried source packaged,
   §4) are carried into the project with their query, uid and geometry preserved and each source
   re-pointed at this stratum's gpkg table; style and attribute-form config ride along (the layer

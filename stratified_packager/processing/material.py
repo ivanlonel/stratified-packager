@@ -140,6 +140,7 @@ class _PayloadPrep:
 
 
 @dataclass
+# pylint: disable-next=too-many-instance-attributes  # plain record: the Phase-A→B/C hand-off
 class _Material:
     """Everything Phase A hands to Phases B/C (one object instead of long params)."""
 
@@ -175,6 +176,11 @@ class _Material:
     initial_view: QgsReferencedRectangle | None = None
     """The source project's initial map view (§13), snapshotted in Phase A; :data:`None`
     unless an embedded project is built or the source has no resolvable view."""
+
+    embedded_xml: dict[str, str] = field(default_factory=dict)
+    """Layer id -> serialized ``<maplayer>`` document for the §13 embedded-only layers,
+    snapshotted once in Phase A; empty unless an embedded project is built. Every stratum's
+    project rebuilds them from these bytes rather than reopening their (often remote) source."""
 
     template_path: Path | None = None
     """The §8.1.5 template gpkg (non-warm-marked whole-export layers), if built."""

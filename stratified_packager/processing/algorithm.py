@@ -114,6 +114,7 @@ from .project_builder import (
     StratumProjectPlan,
     build_stratum_project,
     resolve_initial_view,
+    snapshot_embedded_layers,
 )
 from .report import (
     STATUS_DRY_RUN,
@@ -1069,6 +1070,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         if inputs.project_inclusion is not params.ProjectInclusion.NONE:
             material.layer_name_expressions = self._collect_layer_name_expressions(included)
             material.initial_view = resolve_initial_view(project)
+            material.embedded_xml = snapshot_embedded_layers(inputs.embedded_layers)
         if inputs.include_styles:
             home = project.absolutePath()
             material.assets = style_asset_mapping(included, Path(home) if home else None, feedback)
@@ -2224,6 +2226,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             # pooled open detects it and retries without nolock instead of breaking
             # mid-statement when a later write materializes the sidecar (§13); the
             # checkpoint in _maybe_submit_zip reverts it before zipping.
+            started = time.perf_counter()
             try:
                 with gpkg.wal_session(material.gpkg_paths[member.name]) as wal_ok:
                     if not wal_ok:
@@ -2233,6 +2236,13 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                             )
                         )
                     build_stratum_project(material.project, plan, feedback)
+                feedback.pushInfo(
+                    # Its own line: the stratum's other timing covers the layer writes only, and
+                    # this phase reopens layers the writes never touch (§13 embedded-only).
+                    self.tr("Stratum {}: {:.1f}s writing the embedded project.").format(
+                        member.name, time.perf_counter() - started
+                    )
+                )
             except QgsProcessingException as err:
                 # The data gpkg is intact (the stratum already succeeded); only the embedded
                 # project failed. Ship the data without it rather than dropping the stratum
@@ -2298,6 +2308,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             vector_tables=vector_tables,
             data_sources=data_sources,
             embedded_only=tuple(layer.id() for layer in material.inputs.embedded_layers),
+            embedded_xml=material.embedded_xml,
             styles_qml=styles,
             # Only a §12 group member needs its subset back: its table holds the union of every
             # member's matches. An ungrouped layer's table already *is* its subset view (the read

@@ -50,6 +50,7 @@ from stratified_packager.processing.project_builder import (
     build_stratum_project,
     read_saved_view_extent,
     resolve_initial_view,
+    snapshot_embedded_layers,
 )
 from tests.stratified_packager._qgis_helpers import add_relation
 from tests.stratified_packager.processing.test_bundling import _write_tif
@@ -376,6 +377,100 @@ class TestLiveVirtualLayer:
         reopened = QgsProject()
         assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
         assert "v_cities" not in [layer.name() for layer in reopened.mapLayers().values()]
+
+
+class TestEmbeddedOnlyLayers:
+    """Embedded-only layers reproduced from the run's XML snapshot (SPEC §13)."""
+
+    @staticmethod
+    def _add_basemap(built: Built, tmp_path: Path) -> QgsRasterLayer:
+        """Add a second raster to the source project, standing in for a remote basemap."""
+        basemap = QgsRasterLayer(str(_write_tif(tmp_path / "basemap.tif")), "basemap", "gdal")
+        assert basemap.isValid()
+        assert built.project.addMapLayer(basemap, addToLegend=False)
+        root = built.project.layerTreeRoot()
+        assert root is not None
+        root.addLayer(basemap)
+        return basemap
+
+    @staticmethod
+    def _spy_on_clone(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        """Record the id of every raster layer put through ``clone``."""
+        cloned: list[str] = []
+        inherited = QgsRasterLayer.clone
+
+        def spy(self: QgsRasterLayer) -> QgsRasterLayer | None:
+            cloned.append(self.id())
+            return inherited(self)
+
+        monkeypatch.setattr(QgsRasterLayer, "clone", spy)
+        return cloned
+
+    def test_snapshot_covers_revivable_layers_only(self, built: Built, tmp_path: Path) -> None:
+        """A live virtual layer stays out of the snapshot; a raster goes in."""
+        basemap = self._add_basemap(built, tmp_path)
+        definition = QgsVirtualLayerDefinition()
+        definition.addSource("c", built.cities.id())
+        definition.setQuery('SELECT * FROM "c"')
+        vlayer = QgsVectorLayer(definition.toString(), "v_cities", "virtual")
+
+        assert list(snapshot_embedded_layers([basemap, vlayer])) == [basemap.id()]
+
+    def test_revived_without_reopening_the_source(
+        self, built: Built, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        A snapshotted layer ships intact and never goes through ``clone``.
+
+        ``clone`` re-constructs the provider from the URI, which for a remote source is a
+        blocking network request charged once per stratum — the regression this guards.
+        """
+        basemap = self._add_basemap(built, tmp_path)
+        cloned = self._spy_on_clone(monkeypatch)
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (basemap.id(),)
+        plan.embedded_xml = snapshot_embedded_layers([basemap])
+        build_stratum_project(built.project, plan, QgsProcessingFeedback())
+
+        assert basemap.id() not in cloned
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        shipped = next(
+            layer for layer in reopened.mapLayers().values() if layer.name() == "basemap"
+        )
+        assert shipped.providerType() == "gdal"
+        assert "basemap.tif" in shipped.source()
+
+    def test_display_name_override_reaches_the_shipped_project(
+        self, built: Built, tmp_path: Path
+    ) -> None:
+        """A §4 ``layer_name`` override is patched into the XML, not lost to the stored bytes."""
+        basemap = self._add_basemap(built, tmp_path)
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (basemap.id(),)
+        plan.embedded_xml = snapshot_embedded_layers([basemap])
+        plan.display_names = {basemap.id(): "basemap A"}
+        build_stratum_project(built.project, plan, QgsProcessingFeedback())
+
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        assert "basemap A" in [layer.name() for layer in reopened.mapLayers().values()]
+
+    def test_falls_back_to_clone_without_a_snapshot(
+        self, built: Built, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An unsnapshotted layer type still ships, through the original clone path."""
+        basemap = self._add_basemap(built, tmp_path)
+        cloned = self._spy_on_clone(monkeypatch)
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (basemap.id(),)
+        plan.display_names = {basemap.id(): "basemap A"}
+        build_stratum_project(built.project, plan, QgsProcessingFeedback())
+
+        assert basemap.id() in cloned
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        assert "basemap A" in [layer.name() for layer in reopened.mapLayers().values()]
 
 
 class TestGpkgMode:
