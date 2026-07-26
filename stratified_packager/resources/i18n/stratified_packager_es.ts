@@ -1092,22 +1092,22 @@
     <translation>Informe de la ejecución (cargado como capa en memoria cuando no se indica una ruta)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1402" />
+    <location filename="../../processing/params.py" line="1404" />
     <source>Published zip paths (JSON array)</source>
     <translation>Rutas de los zips publicados (arreglo JSON)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1408" />
+    <location filename="../../processing/params.py" line="1410" />
     <source>Strata resolved</source>
     <translation>Estratos resueltos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1411" />
+    <location filename="../../processing/params.py" line="1413" />
     <source>Zips published</source>
     <translation>Zips publicados</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1415" />
+    <location filename="../../processing/params.py" line="1417" />
     <source>Failed strata (JSON array)</source>
     <translation>Estratos con errores (arreglo JSON)</translation>
   </message>
