@@ -411,3 +411,5 @@ serve-cov port="8080":
 browse-cov port="8080":
     @{{ title }} "Opening test coverage reports..."
     uv run -m webbrowser -t http://localhost:{{ port }}
+
+# temporary probe: verify the docs check reports on a non-doc PR
