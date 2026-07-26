@@ -1396,6 +1396,8 @@ def declare_outputs(algorithm: QgsProcessingAlgorithm) -> None:
     """
     # OUTPUT_DIRECTORY's folder output and REPORT's layer output are auto-declared by
     # their destination parameters (a folder destination, a feature sink).
+    # Labels translate here, not via QT_TRANSLATE_NOOP: this runs from initAlgorithm(), after
+    # the plugin translator is installed, and nothing re-translates what QGIS is handed.
     outputs = (
         QgsProcessingOutputString(
             ZIP_PATHS,
@@ -1405,7 +1407,7 @@ def declare_outputs(algorithm: QgsProcessingAlgorithm) -> None:
         ),
         QgsProcessingOutputNumber(
             STRATA_COUNT,
-            QT_TRANSLATE_NOOP("StratifiedPackagerAlgorithm", "Strata resolved"),
+            QCoreApplication.translate("StratifiedPackagerAlgorithm", "Strata resolved"),
         ),
         QgsProcessingOutputNumber(
             ZIP_COUNT, QCoreApplication.translate("StratifiedPackagerAlgorithm", "Zips published")

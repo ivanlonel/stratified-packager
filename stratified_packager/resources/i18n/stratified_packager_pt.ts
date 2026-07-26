@@ -1092,22 +1092,22 @@
     <translation>Relatório da execução (carregado como camada em memória quando nenhum caminho é fornecido)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1402" />
+    <location filename="../../processing/params.py" line="1404" />
     <source>Published zip paths (JSON array)</source>
     <translation>Caminhos dos zips publicados (array JSON)</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1408" />
+    <location filename="../../processing/params.py" line="1410" />
     <source>Strata resolved</source>
     <translation>Estratos resolvidos</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1411" />
+    <location filename="../../processing/params.py" line="1413" />
     <source>Zips published</source>
     <translation>Zips publicados</translation>
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1415" />
+    <location filename="../../processing/params.py" line="1417" />
     <source>Failed strata (JSON array)</source>
     <translation>Estratos com falha (array JSON)</translation>
   </message>

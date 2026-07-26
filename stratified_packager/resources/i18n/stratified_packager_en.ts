@@ -1089,22 +1089,22 @@
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1402" />
+    <location filename="../../processing/params.py" line="1404" />
     <source>Published zip paths (JSON array)</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1408" />
+    <location filename="../../processing/params.py" line="1410" />
     <source>Strata resolved</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1411" />
+    <location filename="../../processing/params.py" line="1413" />
     <source>Zips published</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/params.py" line="1415" />
+    <location filename="../../processing/params.py" line="1417" />
     <source>Failed strata (JSON array)</source>
     <translation type="unfinished" />
   </message>

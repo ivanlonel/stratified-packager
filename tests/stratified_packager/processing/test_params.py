@@ -485,6 +485,31 @@ class TestDeclaration:
             params.FAILED_STRATA,
         }
 
+    def test_output_labels_are_translated_at_use(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        Every declared output label is routed through ``translate`` at declaration time.
+
+        Regression: ``STRATA_COUNT``'s label was authored with ``QT_TRANSLATE_NOOP``, which
+        only marks for extraction and hands QGIS back the source string. ``declare_outputs``
+        runs from ``initAlgorithm``, after the plugin translator is installed, so nothing ever
+        re-translated it: the label stayed English for the whole session while the ``.ts``
+        files carried a finished translation no lookup reached. English output cannot tell the
+        two apart, hence the stubbed ``translate``.
+        """
+        monkeypatch.setattr(
+            params,
+            "QCoreApplication",
+            SimpleNamespace(translate=lambda context, text: f"{context}|{text}"),
+        )
+        algorithm = _DummyAlgorithm()
+        declare_outputs(algorithm)
+        assert {o.name(): o.description() for o in algorithm.outputDefinitions()} == {
+            params.ZIP_PATHS: "StratifiedPackagerAlgorithm|Published zip paths (JSON array)",
+            params.STRATA_COUNT: "StratifiedPackagerAlgorithm|Strata resolved",
+            params.ZIP_COUNT: "StratifiedPackagerAlgorithm|Zips published",
+            params.FAILED_STRATA: "StratifiedPackagerAlgorithm|Failed strata (JSON array)",
+        }
+
     def test_param_spec_is_frozen(self) -> None:
         """The spec table rows are immutable value objects."""
         spec = params.PARAM_SPECS[params.DRY_RUN]
