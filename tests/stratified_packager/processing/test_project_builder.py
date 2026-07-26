@@ -589,6 +589,35 @@ class TestResolveInitialView:
         )
         assert bounds == (10.0, 20.0, 30.0, 40.0)
 
+    def test_saved_canvas_wins_over_default_view_extent(
+        self, qgis_new_project: QgsProject, tmp_path: Path
+    ) -> None:
+        """
+        With both configured, the saved canvas wins — the SPEC §13 order.
+
+        The sibling tests each exercise one branch with the other absent, so swapping the two
+        checks in :func:`resolve_initial_view` leaves both of them passing.
+        """
+        path = tmp_path / "src.qgs"
+        path.write_text(_MAPCANVAS_QGS, encoding="utf-8")
+        project = qgis_new_project
+        project.setFileName(str(path))
+        project.setCrs(QgsCoordinateReferenceSystem("EPSG:4326"))  # ty: ignore  # stub lacks ctor
+        settings = project.viewSettings()
+        assert settings is not None
+        settings.setDefaultViewExtent(
+            QgsReferencedRectangle(QgsRectangle(1.0, 2.0, 3.0, 4.0), project.crs())
+        )
+        resolved = resolve_initial_view(project)
+        assert resolved is not None
+        bounds = (
+            resolved.xMinimum(),
+            resolved.yMinimum(),
+            resolved.xMaximum(),
+            resolved.yMaximum(),
+        )
+        assert bounds == (10.0, 20.0, 30.0, 40.0)  # the saved canvas, not the default view
+
     def test_falls_back_to_default_view_extent(self, qgis_new_project: QgsProject) -> None:
         """Without a saved canvas, the configured default view extent is used."""
         project = qgis_new_project
