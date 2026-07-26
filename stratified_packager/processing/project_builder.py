@@ -27,13 +27,17 @@ from qgis.core import (
     QgsApplication,
     QgsLayerTreeGroup,
     QgsLayerTreeLayer,
+    QgsMapLayer,
     QgsProcessingException,
     QgsProject,
+    QgsRasterLayer,
+    QgsReadWriteContext,
     QgsRectangle,
     QgsReferencedRectangle,
     QgsRelation,
     QgsRelationContext,
     QgsVectorLayer,
+    QgsVectorTileLayer,
     QgsVirtualLayerDefinition,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QUrl
@@ -44,16 +48,29 @@ from stratified_packager.toolbelt.sql import sqlite_where_error
 from .params import ProjectInclusion
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
-    from qgis.core import QgsLayerTreeNode, QgsMapLayer, QgsProcessingFeedback
+    from qgis.core import QgsLayerTreeNode, QgsProcessingFeedback
 
 __all__: list[str] = [
     "StratumProjectPlan",
     "build_stratum_project",
     "read_saved_view_extent",
     "resolve_initial_view",
+    "snapshot_embedded_layers",
 ]
+
+_REVIVABLE_LAYER_TYPES: Final[dict[Qgis.LayerType, Callable[[], QgsMapLayer]]] = {
+    Qgis.LayerType.Raster: QgsRasterLayer,
+    Qgis.LayerType.Vector: QgsVectorLayer,
+    Qgis.LayerType.VectorTile: QgsVectorTileLayer,
+}
+"""Layer types :func:`snapshot_embedded_layers` can reproduce from XML.
+
+Each entry must construct an empty, source-less layer that
+:meth:`~qgis.core.QgsMapLayer.readLayerXml` can then fill.
+Types absent here keep the :meth:`~qgis.core.QgsMapLayer.clone` path — correct but, for a
+remote provider, a blocking network round-trip per stratum."""
 
 _TREE_NODE_SKIP_PROPERTIES: Final[frozenset[str]] = frozenset({"embedded", "embedded_project"})
 """Layer-tree node custom properties never carried into the embedded project.
@@ -90,6 +107,11 @@ class StratumProjectPlan:
 
     embedded_only: tuple[str, ...] = ()
     """Source layer ids riding only in the project (remote sources, annotations)."""
+
+    embedded_xml: dict[str, str] = field(default_factory=dict)
+    """The run's :func:`snapshot_embedded_layers` result: source layer id -> serialized
+    ``<maplayer>`` document. Shared by every stratum, so a remote layer is reproduced without
+    reopening its source. Absent ids fall back to :meth:`~qgis.core.QgsMapLayer.clone`."""
 
     styles_qml: dict[str, str] = field(default_factory=dict)
     """Source layer id -> rewritten QML document (SPEC §14 asset paths)."""
@@ -430,8 +452,10 @@ def _embedded_replacement(
     """
     Build the embedded-only replacement for one layer.
 
-    Live virtual layers are re-pointed at the stratum gpkg (:func:`_rebuild_virtual_layer`);
-    remote and annotation layers are cloned with their original sources.
+    Live virtual layers are re-pointed at the stratum gpkg (:func:`_rebuild_virtual_layer`).
+    Everything else is reproduced from the run's :func:`snapshot_embedded_layers` XML, which
+    keeps the original source without reopening it; only a layer type the snapshot cannot
+    reproduce falls back to :meth:`~qgis.core.QgsMapLayer.clone`.
 
     :param original: The source project's embedded-only layer.
     :param source: The open project being packaged.
@@ -441,6 +465,10 @@ def _embedded_replacement(
     """
     if original.providerType() == "virtual":
         return _rebuild_virtual_layer(original, source, plan, feedback)
+    xml = plan.embedded_xml.get(original.id())
+    revived = _revive_embedded_layer(original, xml, plan) if xml else None
+    if revived is not None:
+        return revived
     clone = original.clone()
     if clone is None:
         return None
@@ -448,6 +476,93 @@ def _embedded_replacement(
     if custom_name:
         clone.setName(custom_name)
     return clone
+
+
+def snapshot_embedded_layers(layers: Iterable[QgsMapLayer]) -> dict[str, str]:
+    """
+    Serialize the embedded-only layers once for the whole run (SPEC §13).
+
+    Every stratum's project carries the same embedded-only layers, and rebuilding one with
+    :meth:`~qgis.core.QgsMapLayer.clone` re-constructs its provider from the URI. For a remote
+    provider that construction is a blocking network request — a WMS layer fetches
+    GetCapabilities — so cloning charges the run one round-trip per layer *per stratum*,
+    against a server whose answer never changes and which may not answer at all.
+
+    Serializing here instead makes :func:`_revive_embedded_layer` a pure XML operation.
+    Live virtual layers are excluded: they are re-pointed at each stratum's gpkg, not reused.
+
+    :param layers: The run's embedded-only layers.
+    :return: Layer id -> serialized ``<maplayer>`` document, for the layers that can be
+        reproduced; the rest are absent and keep the clone path.
+    """
+    snapshot: dict[str, str] = {}
+    context = QgsReadWriteContext()
+    for layer in layers:
+        if layer.providerType() == "virtual" or layer.type() not in _REVIVABLE_LAYER_TYPES:
+            continue
+        document = QDomDocument()
+        element = document.createElement("maplayer")
+        document.appendChild(element)
+        if layer.writeLayerXml(element, document, context):
+            snapshot[layer.id()] = document.toString()
+    return snapshot
+
+
+def _revive_embedded_layer(
+    original: QgsMapLayer, xml: str, plan: StratumProjectPlan
+) -> QgsMapLayer | None:
+    """
+    Rebuild one embedded-only layer from its snapshot XML, without opening its source.
+
+    ``FlagDontResolveLayers`` fills the layer's state from the document but skips provider
+    construction, so no network request is made. The layer therefore has no provider to
+    serialize itself back from, which is what
+    :meth:`~qgis.core.QgsMapLayer.setOriginalXmlProperties` covers:
+    :meth:`~qgis.core.QgsProject.write` emits those bytes verbatim. That also makes the
+    stored document — not the layer object — authoritative, so a §4 ``layer_name`` override
+    has to be patched into the XML rather than applied with ``setName``.
+
+    :param original: The source project's layer (its type picks the empty layer to fill).
+    :param xml: The layer's snapshot document.
+    :param plan: The stratum's project plan.
+    :return: The replacement layer, or :data:`None` for the caller to fall back to cloning.
+    """
+    factory = _REVIVABLE_LAYER_TYPES.get(original.type())
+    document = QDomDocument()
+    if factory is None or not document.setContent(xml)[0]:
+        return None
+    element = document.documentElement()
+    custom_name = plan.display_names.get(original.id())
+    if custom_name:
+        _rename_layer_element(document, element, custom_name)
+    revived = factory()
+    if not revived.readLayerXml(
+        element, QgsReadWriteContext(), QgsMapLayer.ReadFlag.FlagDontResolveLayers
+    ):
+        return None
+    revived.setOriginalXmlProperties(document.toString())
+    return revived
+
+
+def _rename_layer_element(document: QDomDocument, element: QDomElement, name: str) -> None:
+    """
+    Rewrite a serialized layer's ``<layername>`` in place.
+
+    :param document: The document owning *element* (creates the node when absent).
+    :param element: The ``<maplayer>`` element.
+    :param name: The display name to store.
+    """
+    nodes = element.elementsByTagName("layername")
+    if nodes.isEmpty():
+        node = element.appendChild(document.createElement("layername"))
+    else:
+        node = nodes.at(0)
+    text = document.createTextNode(name)
+    children = node.childNodes()
+    if children.isEmpty():
+        node.appendChild(text)
+    else:
+        node.replaceChild(text, children.at(0))
 
 
 def _rebuild_virtual_layer(
