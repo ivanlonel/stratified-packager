@@ -163,7 +163,11 @@ jobs:
           if-no-files-found: warn
 
   qa-qgis-windows:
-    name: "🪟 QGIS QA · ${{ matrix.qgis_variant }} ${{ matrix.qgis_version }}"
+    # Named by qgis_line, never qgis_version: this job is a required status check, and the
+    # check name IS the required context. Putting the patch version here would rename the
+    # context on every Renovate patch bump, so the old context would stop reporting and
+    # every PR would block on a check that no longer exists. Keep qgis_line patch-free.
+    name: "🪟 QGIS QA · ${{ matrix.qgis_line }}"
     runs-on: windows-latest
     timeout-minutes: 60
     permissions:
@@ -172,13 +176,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # qgis_line must follow qgis_version: the renovate.json custom manager matches the
+        # two adjacent qgis_variant / qgis_version lines, so nothing may come between them.
         include:
           - qgis_variant: qgis-ltr
             qgis_version: "3.40.15"
+            qgis_line: "3.40"
           - qgis_variant: qgis-ltr
             qgis_version: "3.44.12"
+            qgis_line: "3.44"
           - qgis_variant: qgis
             qgis_version: "4.2.0"
+            qgis_line: "4.2"
 
     steps:
       - name: Get source code
