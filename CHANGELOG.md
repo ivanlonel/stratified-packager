@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
-## Unreleased - 2026-07-23
+## 0.3.0 - 2026-07-27
 
 - Translations: **fixed the "Strata resolved" algorithm output staying English in every language.** The label was authored with `QT_TRANSLATE_NOOP`, which marks a string for extraction and hands back the source text — correct for a table built at import time, wrong here, because the outputs are declared from `initAlgorithm` and so are already past the point where the plugin translator is installed. Its three sibling outputs translate at that call and were unaffected. The Portuguese and Spanish translations existed and were finished all along; nothing ever looked them up, which is what makes this class of bug read as a missing translation. The output now translates like its siblings, and a test pins all four against a stubbed translator, since English output cannot tell a translated label from an untranslated one.
 
