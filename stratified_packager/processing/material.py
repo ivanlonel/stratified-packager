@@ -12,7 +12,7 @@ depend on one lower-layer module rather than on each other.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from qgis.core import QgsProcessingException
 from qgis.PyQt.QtCore import QCoreApplication
@@ -25,7 +25,7 @@ from .matching import ChainContext
 from .strata import FULL_PACKAGE_KEY
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Collection, Sequence
     from concurrent.futures import Future
     from pathlib import Path
 
@@ -45,7 +45,11 @@ __all__: list[str] = [
     "_field_indexes",
     "_is_warm_marked",
     "_warm_file_name",
+    "slowest_summary",
 ]
+
+_SLOWEST_REPORTED: Final = 3
+"""How many of a phase's slowest entries :func:`slowest_summary` names."""
 
 
 @dataclass
@@ -266,3 +270,26 @@ def _warm_file_name(stratum_name: str) -> str:
         key contains characters that are not legal in filenames).
     """
     return "__full__" if stratum_name == FULL_PACKAGE_KEY else stratum_name
+
+
+def slowest_summary(elapsed: Sequence[tuple[float, str]]) -> tuple[float, str]:
+    """
+    Total a phase's measured times and name its slowest few, worst first.
+
+    ``qgis_process`` block-buffers stdout, so a harness that timestamps the piped lines
+    timestamps *flushes*, not work: a stall inside a stratum cannot be attributed to the step
+    that caused it from those timestamps (dozens of lines arrive in one millisecond-wide
+    burst). Measuring in-process and carrying the numbers in the message body is what makes
+    the attribution survive the buffering. Callers own their own sentence — the phases read
+    differently and a shared one would not translate.
+
+    :param elapsed: One ``(seconds, name)`` pair per step, in any order.
+    :return: The total seconds, and the slowest few rendered as ``name 1.2s, other 0.3s``.
+    """
+    return (
+        sum(seconds for seconds, _ in elapsed),
+        ", ".join(
+            f"{name} {seconds:.1f}s"
+            for seconds, name in sorted(elapsed, reverse=True)[:_SLOWEST_REPORTED]
+        ),
+    )

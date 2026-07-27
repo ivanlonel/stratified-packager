@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import time
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -45,6 +46,7 @@ from qgis.PyQt.QtXml import QDomDocument, QDomElement
 
 from stratified_packager.toolbelt.sql import sqlite_where_error
 
+from .material import slowest_summary
 from .params import ProjectInclusion
 
 if TYPE_CHECKING:
@@ -59,6 +61,12 @@ __all__: list[str] = [
     "resolve_initial_view",
     "snapshot_embedded_layers",
 ]
+
+_WRITE_STEP: Final = "<project write>"
+"""Name :func:`_report_slowest_steps` gives the project write, alongside the layer names.
+
+Angle-bracketed like the SPEC's other pseudo-names (``<full>``, ``<unmatched>``), so it cannot
+collide with a layer."""
 
 _REVIVABLE_LAYER_TYPES: Final[dict[Qgis.LayerType, Callable[[], QgsMapLayer]]] = {
     Qgis.LayerType.Raster: QgsRasterLayer,
@@ -147,7 +155,7 @@ def build_stratum_project(
     fresh.setFilePathStorage(Qgis.FilePathType.Relative)
     _apply_initial_view(fresh, plan)
 
-    replacements = _build_layers(source, plan, feedback)
+    replacements, elapsed = _build_layers(source, plan, feedback)
     _replicate_tree(source, fresh, replacements, feedback)
     _apply_styles_and_subsets(plan, replacements, feedback)
     _remap_relations(source, fresh, replacements, feedback)
@@ -161,8 +169,11 @@ def build_stratum_project(
         destination = f"geopackage:{plan.gpkg_path}?projectName={plan.title}"
 
     # `write` returns only a bool; capture the log it emits to recover the reason on failure.
+    started = time.perf_counter()
     with _capture_log() as messages:
         written = fresh.write(destination)
+    elapsed.append((time.perf_counter() - started, _WRITE_STEP))
+    _report_slowest_steps(plan.title, elapsed, feedback)
     if not written:
         # A failed QGZ write may leave a partial .qgz; drop it so the zip ships data only.
         # GPKG mode writes into the gpkg itself — never unlink there, that is the data.
@@ -181,6 +192,31 @@ def build_stratum_project(
             ).format(plan.title, destination, _write_failure_detail(plan, messages))
         )
     feedback.pushDebugInfo(f"embedded project[{plan.title}] -> {destination}")
+
+
+def _report_slowest_steps(
+    title: str, elapsed: Sequence[tuple[float, str]], feedback: QgsProcessingFeedback
+) -> None:
+    """
+    Push one line breaking this stratum's embedded-project build down by step.
+
+    Read against the caller's total for the whole phase: when the two agree the cost is in a
+    layer this line names, and when they diverge it is in the tree/style/relation work between
+    them. That pairing is what makes a stall in here attributable at all — see
+    :func:`~stratified_packager.processing.material.slowest_summary`.
+
+    :param title: The stratum's title.
+    :param elapsed: One ``(seconds, name)`` pair per layer opened, plus the project write.
+    :param feedback: Execution feedback channel.
+    """
+    if not elapsed:
+        return
+    total, slowest = slowest_summary(elapsed)
+    feedback.pushInfo(
+        QCoreApplication.translate(
+            "ProjectBuilder", "Stratum {}: {:.1f}s in embedded-project steps; slowest {}"
+        ).format(title, total, slowest)
+    )
 
 
 def _apply_initial_view(fresh: QgsProject, plan: StratumProjectPlan) -> None:
@@ -383,7 +419,7 @@ def _fast_open() -> QgsVectorLayer.LayerOptions:
 
 def _build_layers(
     source: QgsProject, plan: StratumProjectPlan, feedback: QgsProcessingFeedback
-) -> dict[str, QgsMapLayer]:
+) -> tuple[dict[str, QgsMapLayer], list[tuple[float, str]]]:
     """
     Create the fresh project's layers, keyed by their source layer id.
 
@@ -393,19 +429,23 @@ def _build_layers(
     :param source: The open project being packaged.
     :param plan: The stratum's project plan.
     :param feedback: Execution feedback channel.
-    :return: Source layer id -> replacement layer.
+    :return: Source layer id -> replacement layer, and one ``(seconds, name)`` pair per layer
+        opened, for the caller's timing line.
     """
     replacements: dict[str, QgsMapLayer] = {}
+    elapsed: list[tuple[float, str]] = []
     for layer_id, table in plan.vector_tables.items():
         original = source.mapLayer(layer_id)
         if original is None:
             continue
         display = plan.display_names.get(layer_id) or original.name()
+        started = time.perf_counter()
         # as_posix() matches _rebuild_virtual_layer's spelling: one pooled OGR dataset per
         # member gpkg instead of two (a second connection widens the §13 nolock/WAL window).
         replacement = QgsVectorLayer(
             f"{plan.gpkg_path.as_posix()}|layername={table}", display, "ogr", _fast_open()
         )
+        elapsed.append((time.perf_counter() - started, table))
         if not replacement.isValid():
             feedback.pushWarning(
                 QCoreApplication.translate(
@@ -419,11 +459,13 @@ def _build_layers(
         original = source.mapLayer(layer_id)
         if original is None:
             continue
+        started = time.perf_counter()
         payload_layer = original.clone()
         if payload_layer is None:
             continue
         display = plan.display_names.get(layer_id) or original.name()
         payload_layer.setDataSource(str(payload), display, original.providerType())
+        elapsed.append((time.perf_counter() - started, payload.name))
         if not payload_layer.isValid():
             feedback.pushWarning(
                 QCoreApplication.translate(
@@ -437,10 +479,12 @@ def _build_layers(
         original = source.mapLayer(layer_id)
         if original is None:
             continue
+        started = time.perf_counter()
         embedded_layer = _embedded_replacement(original, source, plan, feedback)
+        elapsed.append((time.perf_counter() - started, original.name()))
         if embedded_layer is not None:
             replacements[layer_id] = embedded_layer
-    return replacements
+    return replacements, elapsed
 
 
 def _embedded_replacement(
@@ -575,7 +619,8 @@ def _rebuild_virtual_layer(
     Re-point a live virtual layer's sources at this stratum's gpkg tables.
 
     Each source the virtual layer queries is rewritten to the GeoPackage table that holds
-    that layer in this stratum; the query, uid and geometry definition are preserved. The
+    that layer in this stratum; the query, subset, uid and geometry definition are preserved,
+    and the layer is left without a computed extent so the build never runs the query. The
     layer is dropped (returning :data:`None`) when any source has no table in this stratum
     (e.g. an empty layer omitted under ``KEEP_EMPTY_LAYERS=False``). Style and attribute-form
     config ride along by cloning the original and only swapping its data source.
@@ -608,6 +653,13 @@ def _rebuild_virtual_layer(
             src.encoding() or "UTF-8",
         )
     rebuilt.setQuery(definition.query())
+    # The subset is the author's filter over the query result, so dropping it would ship more
+    # features than they configured. ``lazy`` is deliberately *not* carried over: it defers the
+    # provider's load, and a layer that only populates after a manual reload is not a delivered
+    # layer. The build cost it would have hidden is dealt with by the extent below instead.
+    # The suppression: this is QgsVirtualLayerDefinition's setter, which returns None — QGS201
+    # matches it by the name of QgsVectorLayer's flag-returning method.
+    rebuilt.setSubsetString(definition.subsetString())  # noqa: QGS201
     if definition.uid():
         rebuilt.setUid(definition.uid())
     if definition.hasDefinedGeometry():
@@ -626,6 +678,13 @@ def _rebuild_virtual_layer(
             ).format(original.name())
         )
         return None
+    # Writing the project serializes every layer's extent, and a virtual layer derives its own
+    # by running the query over the stratum gpkg — whose join columns QgsVectorFileWriter leaves
+    # unindexed, making that a nested-loop scan whose cost grows faster than the stratum does
+    # (measured superlinear; hours per stratum on a large one). Nothing in the package needs the
+    # value: left unset the element is simply omitted, and the recipient's QGIS derives it once,
+    # locally, when something first asks. The layer itself stays fully loaded either way.
+    rebuilt_layer.setExtent(QgsRectangle())
     # Carry symbology and the attribute-form config (the QML Forms category) from the original.
     style = QDomDocument()
     original.exportNamedStyle(style)

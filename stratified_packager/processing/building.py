@@ -24,7 +24,7 @@ from __future__ import annotations
 import shutil
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from qgis.core import (
     Qgis,
@@ -43,6 +43,7 @@ from .matching import (
     spatial_fids_for_stratum,
     stratum_geometry_in_layer_crs,
 )
+from .material import slowest_summary
 from .params import MatchingMethod
 from .report import STATUS_EMPTY_KEPT, STATUS_EMPTY_SKIPPED, STATUS_OK, STATUS_WARM
 
@@ -72,9 +73,6 @@ __all__: list[str] = [
     "write_template",
     "write_vector_table",
 ]
-
-_SLOWEST_REPORTED: Final = 3
-"""How many of a stratum's slowest layers :func:`write_stratum` names in its timing line."""
 
 
 @dataclass(frozen=True)
@@ -377,11 +375,8 @@ def _report_slowest_layers(
     """
     Push one line naming the stratum's total layer-write time and its slowest layers.
 
-    ``qgis_process`` block-buffers stdout, so a harness that timestamps the piped lines
-    timestamps *flushes*, not work: a stall inside a stratum cannot be attributed to a
-    layer from those timestamps (dozens of layer lines arrive in one millisecond-wide
-    burst). Measuring here and carrying the numbers in the message body makes the
-    attribution survive the buffering.
+    See :func:`~stratified_packager.processing.material.slowest_summary` for why the numbers
+    ride in the message body rather than being read off the log's timestamps.
 
     :param label: The stratum's progress label, e.g. ``Stratum 4/93: urban``.
     :param elapsed: One ``(seconds, table)`` pair per layer written, in write order.
@@ -389,14 +384,10 @@ def _report_slowest_layers(
     """
     if not elapsed:
         return
+    total, slowest = slowest_summary(elapsed)
     feedback.pushInfo(
         QCoreApplication.translate("Building", "{}: {:.1f}s writing layers; slowest {}").format(
-            label,
-            sum(seconds for seconds, _ in elapsed),
-            ", ".join(
-                f"{table} {seconds:.1f}s"
-                for seconds, table in sorted(elapsed, reverse=True)[:_SLOWEST_REPORTED]
-            ),
+            label, total, slowest
         )
     )
 

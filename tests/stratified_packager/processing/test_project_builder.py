@@ -47,6 +47,7 @@ from qgis.PyQt.QtXml import QDomDocument
 from stratified_packager.processing.params import ProjectInclusion
 from stratified_packager.processing.project_builder import (
     StratumProjectPlan,
+    _rebuild_virtual_layer,
     build_stratum_project,
     read_saved_view_extent,
     resolve_initial_view,
@@ -60,6 +61,19 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.qgis
 """Marks the whole module as requiring a QGIS runtime."""
+
+
+class _InfoRecordingFeedback(QgsProcessingFeedback):
+    """Feedback that keeps every pushed info line, for asserting on the timing report."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.infos: list[str] = []
+        """Every line passed to :meth:`pushInfo`."""
+
+    @override
+    def pushInfo(self, info: str | None = None) -> None:  # PyQGIS override
+        self.infos.append(info or "")
 
 
 @dataclass
@@ -335,11 +349,14 @@ class TestLiveVirtualLayer:
     """Live virtual layers re-pointed at the stratum gpkg (SPEC §13)."""
 
     @staticmethod
-    def _add_virtual(built: Built, ref: str) -> QgsVectorLayer:
+    def _add_virtual(built: Built, ref: str, subset: str = "") -> QgsVectorLayer:
         """Add a by-id virtual layer over *ref* to the source project's tree."""
         definition = QgsVirtualLayerDefinition()
         definition.addSource("c", ref)
         definition.setQuery('SELECT * FROM "c"')
+        # The suppression: the definition's setter returns None — QGS201 matches it by the name
+        # of QgsVectorLayer's flag-returning method.
+        definition.setSubsetString(subset)  # noqa: QGS201
         vlayer = QgsVectorLayer(definition.toString(), "v_cities", "virtual")
         assert built.project.addMapLayer(vlayer, addToLegend=False)
         root = built.project.layerTreeRoot()
@@ -377,6 +394,71 @@ class TestLiveVirtualLayer:
         reopened = QgsProject()
         assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
         assert "v_cities" not in [layer.name() for layer in reopened.mapLayers().values()]
+
+    def test_rebuilt_layer_carries_no_computed_extent(self, built: Built) -> None:
+        """Deriving a virtual layer's extent runs its query, once per stratum — skip it (§13)."""
+        vlayer = self._add_virtual(built, built.cities.id())
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (vlayer.id(),)
+        rebuilt = _rebuild_virtual_layer(vlayer, built.project, plan, QgsProcessingFeedback())
+
+        assert rebuilt is not None
+        assert rebuilt.extent().isNull()
+        # The untouched source layer does resolve one, so the skip above is the deliberate act
+        # and not an artefact of a query with nothing in it.
+        assert not vlayer.extent().isNull()
+
+    def test_delivers_its_features_without_a_stored_extent(self, built: Built) -> None:
+        """Skipping the build-time extent must not cost the recipient the data (§13)."""
+        vlayer = self._add_virtual(built, built.cities.id())
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (vlayer.id(),)
+        build_stratum_project(built.project, plan, QgsProcessingFeedback())
+
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        new_v = next(
+            layer for layer in reopened.mapLayers().values() if layer.name() == "v_cities"
+        )
+        assert new_v.isValid()
+        assert "cid" in [field_def.name() for field_def in new_v.fields()]
+        assert new_v.featureCount() == 1
+
+    def test_subset_string_reaches_the_package(self, built: Built) -> None:
+        """The author's filter is part of the definition and must not be dropped (§13)."""
+        vlayer = self._add_virtual(built, built.cities.id(), subset='"cid" > 100')
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (vlayer.id(),)
+        build_stratum_project(built.project, plan, QgsProcessingFeedback())
+
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        new_v = next(
+            layer for layer in reopened.mapLayers().values() if layer.name() == "v_cities"
+        )
+        assert new_v.isValid()
+        rebuilt = QgsVirtualLayerDefinition.fromUrl(QUrl(new_v.source()))
+        assert rebuilt.subsetString() == '"cid" > 100'
+        # The one fixture row is cid=1; dropping the filter would ship it.
+        assert new_v.featureCount() == 0
+
+    def test_build_reports_its_slowest_steps(self, built: Built) -> None:
+        """One timing line per stratum, naming steps — the phase is not a black box (§8)."""
+        vlayer = self._add_virtual(built, built.cities.id())
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (vlayer.id(),)
+        recorder = _InfoRecordingFeedback()
+        build_stratum_project(built.project, plan, recorder)
+
+        timings = [line for line in recorder.infos if "in embedded-project steps" in line]
+        assert len(timings) == 1, recorder.infos
+        # Every opened layer and the project write are candidates for the slowest few.
+        assert re.search(
+            r"Stratum A: \d+\.\ds in embedded-project steps; slowest \S+ \d+\.\ds", timings[0]
+        )
+        assert any(
+            name in timings[0] for name in ("cities", "states", "v_cities", "<project write>")
+        )
 
 
 class TestEmbeddedOnlyLayers:

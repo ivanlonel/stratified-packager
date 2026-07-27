@@ -513,15 +513,18 @@ result; the run aborts only at the end if any stratum or zip failed.
    templated, each stratum's per-layer writes, and the embedded-project builds. That text
    **is** the step's log line — the Processing dialog appends it to its log and
    `qgis_process` prints it — so a step is never also `pushInfo`d (that logged it twice).
-   Each stratum then closes with two `pushInfo` **timing lines**: the total seconds spent
-   writing its layers with the slowest few by name, and the seconds spent writing its embedded
-   project. Summaries, not steps, so they do not double-log. They carry the numbers in the
-   message body deliberately — `qgis_process` block-buffers stdout, so a harness that
-   timestamps the piped lines timestamps *flushes*, not work (dozens of layer lines arrive in
-   one millisecond-wide burst), and a stall inside a stratum cannot otherwise be attributed to
-   the phase that caused it. The two phases are timed separately because they fail differently:
-   the layer writes are local gpkg I/O, while the embedded-project build touches every §13
-   embedded-only layer, which the writes never see.
+   Each stratum then closes with three `pushInfo` **timing lines**: the total seconds spent
+   writing its layers with the slowest few by name, the seconds spent building its embedded
+   project, and that build broken down by step — every layer it opens plus the project write
+   (`<project write>`), again with the slowest few by name. Summaries, not steps, so they do not
+   double-log. They carry the numbers in the message body deliberately — `qgis_process`
+   block-buffers stdout, so a harness that timestamps the piped lines timestamps *flushes*, not
+   work (dozens of layer lines arrive in one millisecond-wide burst), and a stall inside a
+   stratum cannot otherwise be attributed to the step that caused it. The write phases are timed
+   apart because they fail differently: the layer writes are local gpkg I/O, while the
+   embedded-project build touches every §13 embedded-only layer, which the writes never see. The
+   last two are read as a pair — when the breakdown's total matches the phase's, the cost is in a
+   layer it names; when they diverge, it is in the tree/style/relation work between them.
 
 ## 9. Reporting
 
@@ -717,9 +720,16 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
   that cannot be reproduced this way is re-created as before. Live virtual layers are excluded:
   they are re-pointed at each stratum's gpkg (below), not reused.
 - **Live virtual layers** (`materialize_virtual_layer=false` with every queried source packaged,
-  §4) are carried into the project with their query, uid and geometry preserved and each source
-  re-pointed at this stratum's gpkg table; style and attribute-form config ride along (the layer
-  is cloned and only its data source swapped). A virtual layer is dropped (with a warning) for any
+  §4) are carried into the project with their query, subset, uid and geometry preserved and each
+  source re-pointed at this stratum's gpkg table; style and attribute-form config ride along (the
+  layer is cloned and only its data source swapped). The re-pointed layer is left **without a
+  computed extent**: deriving one runs the query over the stratum gpkg, where the writer leaves
+  the queried columns unindexed, so a join scans nested-loop and costs more than linearly in the
+  stratum's size — paid once per stratum for a value the package never reads. Unset, it is simply
+  absent from the written project and the recipient's QGIS derives it on demand, locally, once.
+  The definition's `lazy` flag is deliberately *not* carried over: it would defer the provider's
+  load, and a layer that populates only after a manual reload is not a delivered layer.
+  A virtual layer is dropped (with a warning) for any
   stratum missing a referenced table (e.g. `KEEP_EMPTY_LAYERS=False`). Source references resolve by
   layer id, or by exact provider+source match for embedded sources. When a source is not packaged,
   the layer is materialized into its own table instead (§4) and behaves like any packaged vector.
