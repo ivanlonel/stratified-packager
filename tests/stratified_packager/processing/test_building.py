@@ -260,8 +260,10 @@ def test_report_slowest_layers_ranks_and_truncates() -> None:
     )
     # The total covers all five; only the worst three are named, slowest first.
     assert recorder.infos == [
-        "Stratum 2/94: SP-CENTRO 1: 7381.5s writing layers;"
-        " slowest worst 7200.0s, third 120.0s, middling 60.0s"
+        (
+            "Stratum 2/94: SP-CENTRO 1: 7381.5s writing layers;"
+            " slowest worst 7200.0s, third 120.0s, middling 60.0s"
+        )
     ]
 
 

@@ -144,20 +144,26 @@ class TestRemoveDiacriticalMarks:
             (UNICODE_BLOCKS["Basic Latin"], UNICODE_BLOCKS["Basic Latin"]),
             (
                 UNICODE_BLOCKS["Latin-1 Supplement"],
-                "\xa0¡¢£¤¥¦§¨©ª«¬®¯°±²³\xb4µ¶·\xb8¹º»¼½¾¿AAAAAAÆCEEEEIIIIÐNOOOOO\xd7ØUUUUYÞß"
-                "aaaaaaæceeeeiiiiðnooooo÷øuuuuyþy",
+                (
+                    "\xa0¡¢£¤¥¦§¨©ª«¬®¯°±²³\xb4µ¶·\xb8¹º»¼½¾¿AAAAAAÆCEEEEIIIIÐNOOOOO\xd7Ø"
+                    "UUUUYÞßaaaaaaæceeeeiiiiðnooooo÷øuuuuyþy"
+                ),
             ),
             (
                 UNICODE_BLOCKS["Latin Extended-A"],
-                "AaAaAaCcCcCcCcDdĐđEeEeEeEeEeGgGgGgGgHhĦħIiIiIiIiI\u0131ĲĳJjKkĸLlLlLlĿŀŁł"
-                "NnNnNnŉŊŋOoOoOoŒœRrRrRrSsSsSsSsTtTtŦŧUuUuUuUuUuUuWwYyYZzZzZz\u017f",
+                (
+                    "AaAaAaCcCcCcCcDdĐđEeEeEeEeEeGgGgGgGgHhĦħIiIiIiIiI\u0131ĲĳJjKkĸLlLlLlĿŀŁł"
+                    "NnNnNnŉŊŋOoOoOoŒœRrRrRrSsSsSsSsTtTtŦŧUuUuUuUuUuUuWwYyYZzZzZz\u017f"
+                ),
             ),
             (
                 UNICODE_BLOCKS["Latin Extended-B"],
-                "ƀƁƂƃ\u0184ƅƆƇƈƉƊƋƌ\u018dƎƏƐƑƒƓƔƕƖƗƘƙƚƛƜƝƞƟOoƢƣƤƥ\u01a6\u01a7ƨƩƪƫƬƭƮUuƱƲƳƴƵƶ"
-                "\u01b7Ƹƹƺƻ\u01bc\u01bdƾƿ\u01c0ǁǂ\u01c3ǄǅǆǇǈǉǊǋǌ"
-                "AaIiOoUuUuUuUuUuǝAaAaÆæǤǥGgKkOoOo\u01b7ʒjǱǲǳGgǶǷNnAaÆæØøAaAaEeEeIiIiOoOoRrRrUuUu"
-                "SsTt\u021cȝHhȠȡ\u0222\u0223ȤȥAaEeOoOoOoOoYyȴȵȶȷȸȹȺȻȼȽȾȿɀ\u0241ɂɃɄɅɆɇɈɉɊɋɌɍɎɏ",
+                (
+                    "ƀƁƂƃ\u0184ƅƆƇƈƉƊƋƌ\u018dƎƏƐƑƒƓƔƕƖƗƘƙƚƛƜƝƞƟOoƢƣƤƥ\u01a6\u01a7ƨƩƪƫƬƭƮUu"
+                    "ƱƲƳƴƵƶ\u01b7Ƹƹƺƻ\u01bc\u01bdƾƿ\u01c0ǁǂ\u01c3ǄǅǆǇǈǉǊǋǌAaIiOoUuUuUuUuUu"
+                    "ǝAaAaÆæǤǥGgKkOoOo\u01b7ʒjǱǲǳGgǶǷNnAaÆæØøAaAaEeEeIiIiOoOoRrRrUuUuSsTt"
+                    "\u021cȝHhȠȡ\u0222\u0223ȤȥAaEeOoOoOoOoYyȴȵȶȷȸȹȺȻȼȽȾȿɀ\u0241ɂɃɄɅɆɇɈɉɊɋɌɍɎɏ"
+                ),
             ),
             (UNICODE_BLOCKS["IPA Extensions"], UNICODE_BLOCKS["IPA Extensions"]),
             (
@@ -175,10 +181,12 @@ class TestRemoveDiacriticalMarks:
             ),
             (
                 UNICODE_BLOCKS["Latin Extended Additional"],
-                "AaBbBbBbCcDdDdDdDdDdEeEeEeEeEeFfGgHhHhHhHhHhIiIiKkKkKkLlLlLlLlMmMmMmNnNnNnNn"
-                "OoOoOoOoPpPpRrRrRrRrSsSsSsSsSsTtTtTtTtUuUuUuUuUuVvVvWwWwWwWwWwXxXxYyZzZzZz"
-                "htwyẚ\u017fẜ\u1e9dẞẟAaAaAaAaAaAaAaAaAaAaAaAaEeEeEeEeEeEeEeEeIiIi"
-                "OoOoOoOoOoOoOoOoOoOoOoOoUuUuUuUuUuUuUuYyYyYyYyỺỻỼỽỾ\u1eff",
+                (
+                    "AaBbBbBbCcDdDdDdDdDdEeEeEeEeEeFfGgHhHhHhHhHhIiIiKkKkKkLlLlLlLlMmMmMmNnNnNnNn"
+                    "OoOoOoOoPpPpRrRrRrRrSsSsSsSsSsTtTtTtTtUuUuUuUuUuVvVvWwWwWwWwWwXxXxYyZzZzZz"
+                    "htwyẚ\u017fẜ\u1e9dẞẟAaAaAaAaAaAaAaAaAaAaAaAaEeEeEeEeEeEeEeEeIiIi"
+                    "OoOoOoOoOoOoOoOoOoOoOoOoUuUuUuUuUuUuUuYyYyYyYyỺỻỼỽỾ\u1eff"
+                ),
             ),
             (
                 UNICODE_BLOCKS["Superscripts and Subscripts"],
@@ -187,9 +195,11 @@ class TestRemoveDiacriticalMarks:
             (UNICODE_BLOCKS["Currency Symbols"], UNICODE_BLOCKS["Currency Symbols"]),
             (
                 UNICODE_BLOCKS["Letterlike Symbols"],
-                "℀℁\u2102℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔\u2115№℗℘\u2119\u211a\u211b\u211c\u211d℞℟"
-                "℠℡™℣\u2124℥Ω℧\u2128℩KA\u212c\u212d\u212e\u212f\u2130\u2131Ⅎ\u2133\u2134"
-                "ℵℶℷℸ\u2139℺℻ℼℽℾℿ⅀⅁⅂⅃⅄\u2145\u2146\u2147\u2148\u2149⅊⅋⅌⅍ⅎ⅏",
+                (
+                    "℀℁\u2102℃℄℅℆ℇ℈℉ℊℋℌℍℎℏℐℑℒℓ℔\u2115№℗℘\u2119\u211a\u211b\u211c\u211d℞℟"
+                    "℠℡™℣\u2124℥Ω℧\u2128℩KA\u212c\u212d\u212e\u212f\u2130\u2131Ⅎ\u2133\u2134"
+                    "ℵℶℷℸ\u2139℺℻ℼℽℾℿ⅀⅁⅂⅃⅄\u2145\u2146\u2147\u2148\u2149⅊⅋⅌⅍ⅎ⅏"
+                ),
             ),
             (UNICODE_BLOCKS["Number Forms"], UNICODE_BLOCKS["Number Forms"]),
             (UNICODE_BLOCKS["Enclosed Alphanumerics"], UNICODE_BLOCKS["Enclosed Alphanumerics"]),
@@ -290,13 +300,17 @@ class TestSanitizeIdentifierName:
             ),
             (
                 UNICODE_BLOCKS["Latin Extended-A"],
-                "AaAaAaCcCcCcCcDd_EeEeEeEeEeGgGgGgGgHh_IiIiIiIiI_JjKk_LlLlLl_NnNnNn_OoOoOo"
-                "_RrRrRrSsSsSsSsTtTt_UuUuUuUuUuUuWwYyYZzZzZz_",
+                (
+                    "AaAaAaCcCcCcCcDd_EeEeEeEeEeGgGgGgGgHh_IiIiIiIiI_JjKk_LlLlLl_NnNnNn"
+                    "_OoOoOo_RrRrRrSsSsSsSsTtTt_UuUuUuUuUuUuWwYyYZzZzZz_"
+                ),
             ),
             (
                 UNICODE_BLOCKS["Latin Extended-B"],
-                "_Oo_Uu_AaIiOoUuUuUuUuUu_AaAa_GgKkOoOo_j_Gg_NnAa_AaAaEeEeIiIiOoOoRrRrUuUuSsTt"
-                "_Hh_AaEeOoOoOoOoYy_",
+                (
+                    "_Oo_Uu_AaIiOoUuUuUuUuUu_AaAa_GgKkOoOo_j_Gg_NnAa"
+                    "_AaAaEeEeIiIiOoOoRrRrUuUuSsTt_Hh_AaEeOoOoOoOoYy_"
+                ),
             ),
             (UNICODE_BLOCKS["IPA Extensions"], "_"),
             (UNICODE_BLOCKS["Spacing Modifier Letters"], "_"),
@@ -308,10 +322,12 @@ class TestSanitizeIdentifierName:
             (UNICODE_BLOCKS["Phonetic Extensions Supplement"], "_"),
             (
                 UNICODE_BLOCKS["Latin Extended Additional"],
-                "AaBbBbBbCcDdDdDdDdDdEeEeEeEeEeFfGgHhHhHhHhHhIiIiKkKkKkLlLlLlLlMmMmMm"
-                "NnNnNnNnOoOoOoOoPpPpRrRrRrRrSsSsSsSsSsTtTtTtTtUuUuUuUuUuVvVvWwWwWwWwWw"
-                "XxXxYyZzZzZzhtwy_AaAaAaAaAaAaAaAaAaAaAaAaEeEeEeEeEeEeEeEeIiIi"
-                "OoOoOoOoOoOoOoOoOoOoOoOoUuUuUuUuUuUuUuYyYyYyYy_",
+                (
+                    "AaBbBbBbCcDdDdDdDdDdEeEeEeEeEeFfGgHhHhHhHhHhIiIiKkKkKkLlLlLlLlMmMmMm"
+                    "NnNnNnNnOoOoOoOoPpPpRrRrRrRrSsSsSsSsSsTtTtTtTtUuUuUuUuUuVvVv"
+                    "WwWwWwWwWwXxXxYyZzZzZzhtwy_AaAaAaAaAaAaAaAaAaAaAaAaEeEeEeEeEeEeEeEe"
+                    "IiIiOoOoOoOoOoOoOoOoOoOoOoOoUuUuUuUuUuUuUuYyYyYyYy_"
+                ),
             ),
             (UNICODE_BLOCKS["Superscripts and Subscripts"], "_"),
             (UNICODE_BLOCKS["Currency Symbols"], "_"),

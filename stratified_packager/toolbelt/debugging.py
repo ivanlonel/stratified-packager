@@ -109,7 +109,7 @@ def start_debug_server(host: str | None = None, port: int | None = None) -> bool
                 QCoreApplication.translate("Debugging", "Waiting for a debugger to attach...")
             )
             debugpy.wait_for_client()
-    except Exception:  # noqa: BLE001  # the debugger must never break plugin loading
+    except Exception:  # the debugger must never break plugin loading
         log.warning(
             QCoreApplication.translate("Debugging", "Could not start the debugpy server."),
             exc_info=True,

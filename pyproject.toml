@@ -37,15 +37,15 @@ dev = [
   "flake8-cognitive-complexity~=0.1.0",
   "flake8-qgis~=2.1.0",
   "flake8-rst-docstrings~=0.4.0",
-  "prek~=0.4.10",
+  "prek~=0.4.11",
   "pydoclint[flake8]~=0.9.1",
   "pylint~=4.0.6",
-  "ruff~=0.15.22",
+  "ruff~=0.16.0",
   { include-group = "test" },
   { include-group = "type" },
 ]
 test = [
-  "hypothesis~=6.156.9",
+  "hypothesis~=6.161.5",
   "pytest~=9.1.1",
   "pytest-cov~=7.1.0",
   "pytest-qgis~=4.0.1",
@@ -58,7 +58,7 @@ type = [
   "lxml-stubs~=0.5.1",
   "mypy[faster-cache]~=2.3.0",
   "pyqt6-stubs==20250824",
-  "ty~=0.0.61",
+  "ty~=0.0.63",
   "types-docutils~=0.22.3",
   { include-group = "doc-and-type" },
   { include-group = "test-and-type" },
@@ -66,7 +66,7 @@ type = [
 doc = [
   "myst-parser[linkify]~=5.1.0",
   "sphinx-autobuild~=2025.8.25",
-  "sphinx-autodoc-typehints~=3.12.1",
+  "sphinx-autodoc-typehints~=3.13.0",
   "sphinx-copybutton~=0.5.2",
   "sphinx-rtd-theme~=3.1.0",
   { include-group = "doc-and-type" },
@@ -83,10 +83,10 @@ doc-and-type = [
 hook = [
   "mdformat~=1.0.0",
   "pre-commit-hooks~=6.0.0",
-  "pyproject-fmt~=2.25.3",
+  "pyproject-fmt~=2.25.4",
   "sync-with-uv~=0.6.0",
-  "uv~=0.11.29",
-  "zizmor~=1.27.0",
+  "uv~=0.11.32",
+  "zizmor~=1.28.0",
 ]
 pack = [
   "lxml~=6.1.1",
@@ -113,13 +113,14 @@ required-environments = [
 ]
 
 [tool.ruff]
-required-version = ">=0.15"
+required-version = ">=0.16"
 line-length = 99
 format.docstring-code-line-length = 99
 format.docstring-code-format = true
 lint.select = [ "ALL" ]
 lint.ignore = [
   "COM812", # Trailing comma missing
+  "CPY001", # Missing copyright notice at top of file
   "D203",   # Use a blank line to separate the docstring from the class definition
   "D212",   # Multi-line docstring summary should start at the first line
 ]
