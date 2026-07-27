@@ -95,8 +95,10 @@ class TestSqliteWhereError:
         [
             ("cod_uf_2000::text = '35'", 'unrecognized token: ":"'),
             (
-                "EXISTS (SELECT 1 FROM consultas_e_criticas.cafa_cnefe_prioritarios c"
-                " WHERE c.cod_setor = cod_setor)",
+                (
+                    "EXISTS (SELECT 1 FROM consultas_e_criticas.cafa_cnefe_prioritarios c"
+                    " WHERE c.cod_setor = cod_setor)"
+                ),
                 "no such table",
             ),
             ("lpad(cod_setor, 2, '0') = '35'", "no such function"),

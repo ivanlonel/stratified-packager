@@ -2260,7 +2260,7 @@ doc-and-type = [
 hook = [
     { name = "mdformat", specifier = "~=1.0.0" },
     { name = "pre-commit-hooks", specifier = "~=6.0.0" },
-    { name = "pyproject-fmt", specifier = "~=2.25.3" },
+    { name = "pyproject-fmt", specifier = "~=2.25.4" },
     { name = "sync-with-uv", specifier = "~=0.6.0" },
     { name = "uv", specifier = "~=0.11.32" },
     { name = "zizmor", specifier = "~=1.28.0" },

@@ -205,7 +205,7 @@ def _detach_setup_artifacts(
                     with contextlib.suppress(TypeError):  # raised when nothing is connected
                         render_requested.disconnect()
                 signals.deleteLater()
-        except Exception:  # noqa: BLE001  # cleanup boundary: keep detaching the rest
+        except Exception:  # cleanup boundary: keep detaching the rest
             logger.warning("Failed to dispose logging handler %r.", handler, exc_info=True)
 
     for log_filter in list(logger.filters):
@@ -674,7 +674,7 @@ class QgisLoggerWrapper:
 
         See :meth:`QgisLoggerWrapper.log` for details on parameters.
         """
-        self._logger.exception(
+        self._logger.exception(  # noqa: LOG004  # method is meant to be called from except block
             msg,
             *args,
             exc_info=exc_info,
