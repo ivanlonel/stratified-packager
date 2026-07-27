@@ -4,12 +4,12 @@
 <context>
   <name>Building</name>
   <message>
-    <location filename="../../processing/building.py" line="245" />
+    <location filename="../../processing/building.py" line="243" />
     <source>Writing template layer {}/{}: {}</source>
     <translation>Escribiendo capa de plantilla {}/{}: {}</translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/building.py" line="259" />
+    <location filename="../../processing/building.py" line="257" />
     <source>template gpkg holds %n layer(s)</source>
     <translation>
       <numerusform>el gpkg de plantilla contiene %n capa</numerusform>
@@ -17,53 +17,53 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="328" />
+    <location filename="../../processing/building.py" line="326" />
     <source>{} — layer {}/{}: {}</source>
     <translation>{} — capa {}/{}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="366" />
-    <location filename="../../processing/building.py" line="358" />
+    <location filename="../../processing/building.py" line="364" />
+    <location filename="../../processing/building.py" line="356" />
     <source>Failed to remove partial gpkg {} after error: {}</source>
     <translation>Error al eliminar el gpkg parcial {} tras el error: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="393" />
+    <location filename="../../processing/building.py" line="389" />
     <source>{}: {:.1f}s writing layers; slowest {}</source>
     <translation>{}: {:.1f}s escribiendo capas; más lentas {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="427" />
+    <location filename="../../processing/building.py" line="418" />
     <source>warm start used for {}</source>
     <translation>inicio en caliente usado para {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="644" />
+    <location filename="../../processing/building.py" line="635" />
     <source>spatial matching needs a stratification layer</source>
     <translation>la coincidencia espacial requiere una capa de estratificación</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="694" />
+    <location filename="../../processing/building.py" line="685" />
     <source>Staging {}: matching stratum {}/{}</source>
     <translation>Preparando {}: coincidencia con el estrato {}/{}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="710" />
+    <location filename="../../processing/building.py" line="701" />
     <source>Staging {}: writing the staged copy</source>
     <translation>Preparando {}: escribiendo la copia preparada</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="769" />
+    <location filename="../../processing/building.py" line="760" />
     <source>writing table {} canceled</source>
     <translation>escritura de la tabla {} cancelada</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="772" />
+    <location filename="../../processing/building.py" line="763" />
     <source>writing table {} failed: {}</source>
     <translation>error al escribir la tabla {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="877" />
+    <location filename="../../processing/building.py" line="868" />
     <source>WAL checkpoint incomplete; not snapshotting a stale warm cache</source>
     <translation>Checkpoint WAL incompleto; no se toma una instantánea de una caché caliente obsoleta</translation>
   </message>
@@ -214,72 +214,77 @@
 </context><context>
   <name>ProjectBuilder</name>
   <message>
-    <location filename="../../processing/project_builder.py" line="174" />
+    <location filename="../../processing/project_builder.py" line="185" />
     <source>Failed to remove project file {}</source>
     <translation>No se pudo eliminar el archivo de proyecto {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="179" />
+    <location filename="../../processing/project_builder.py" line="190" />
     <source>Writing the embedded project for stratum {} failed ({}): {}</source>
     <translation>error al escribir el proyecto incrustado del estrato {} ({}): {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="411" />
+    <location filename="../../processing/project_builder.py" line="216" />
+    <source>Stratum {}: {:.1f}s in embedded-project steps; slowest {}</source>
+    <translation>Estrato {}: {:.1f}s en las etapas del proyecto incorporado; más lentas {}</translation>
+  </message>
+  <message>
+    <location filename="../../processing/project_builder.py" line="451" />
     <source>Embedded project: table {} for layer {} did not open; dropped.</source>
     <translation>Proyecto incrustado: la tabla {} para la capa {} no se abrió; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="429" />
+    <location filename="../../processing/project_builder.py" line="471" />
     <source>Embedded project: payload {} for layer {} did not open; dropped.</source>
     <translation>Proyecto incrustado: el archivo de datos {} para la capa {} no se abrió; descartado.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="595" />
+    <location filename="../../processing/project_builder.py" line="640" />
     <source>Embedded project: virtual layer {} source {} has no table in this stratum; dropped.</source>
     <translation>Proyecto incrustado: la capa virtual {} tiene la fuente {} sin tabla en este estrato; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="622" />
+    <location filename="../../processing/project_builder.py" line="674" />
     <source>Embedded project: virtual layer {} did not re-open against the stratum gpkg; dropped.</source>
     <translation>Proyecto incrustado: la capa virtual {} no se reabrió en el gpkg del estrato; descartada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="635" />
+    <location filename="../../processing/project_builder.py" line="694" />
     <source>Embedded project: style for virtual layer {} not applied: {}</source>
     <translation>Proyecto incrustado: el estilo de la capa virtual {} no se aplicó: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="712" />
+    <location filename="../../processing/project_builder.py" line="771" />
     <source>Embedded project: no layer tree available.</source>
     <translation>Proyecto incrustado: no hay árbol de capas disponible.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="737" />
+    <location filename="../../processing/project_builder.py" line="796" />
     <source>Embedded project: layer {} was rejected.</source>
     <translation>Proyecto incrustado: la capa {} fue rechazada.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="788" />
+    <location filename="../../processing/project_builder.py" line="847" />
     <source>Embedded project: style for layer {} did not parse.</source>
     <translation>Proyecto incrustado: el estilo de la capa {} no se pudo analizar.</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="796" />
+    <location filename="../../processing/project_builder.py" line="855" />
     <source>Embedded project: style for layer {} not applied: {}</source>
     <translation>Proyecto incrustado: el estilo de la capa {} no se aplicó: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="813" />
+    <location filename="../../processing/project_builder.py" line="872" />
     <source>Embedded project: layer {}'s subset is not valid SQLite ({}), so the packaged project may show no features for it. This layer shares its table with others, so the subset is what separates them — rewrite it in SQL the GeoPackage understands. Subset: {}</source>
     <translation>Proyecto incrustado: el subconjunto de la capa {} no es SQLite válido ({}), por lo que el proyecto empaquetado puede no mostrar ninguna entidad de ella. Esta capa comparte su tabla con otras, y es el subconjunto lo que las separa — reescríbalo en SQL que el GeoPackage entienda. Subconjunto: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="823" />
+    <location filename="../../processing/project_builder.py" line="882" />
     <source>Embedded project: subset for layer {} was not accepted: {}</source>
     <translation>Proyecto incrustado: el subconjunto de la capa {} no se aceptó: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/project_builder.py" line="878" />
+    <location filename="../../processing/project_builder.py" line="937" />
     <source>Embedded project: relation {} could not be remapped: {}</source>
     <translation>Proyecto incrustado: no se pudo reasignar la relación {}: {}</translation>
   </message>
@@ -822,7 +827,7 @@
     <translation>La tabla compartida {} está marcada en caliente a través de {}; todos los miembros del grupo de deduplicación la siguen.</translation>
   </message>
   <message>
-    <location filename="../../processing/material.py" line="238" />
+    <location filename="../../processing/material.py" line="242" />
     <source>layer {}: warm_marked variable {}</source>
     <translation>capa {}: variable warm_marked {}</translation>
   </message>
