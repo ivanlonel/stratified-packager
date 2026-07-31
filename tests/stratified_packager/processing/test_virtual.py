@@ -17,6 +17,8 @@ pytest.importorskip("qgis", reason="Virtual-layer routing drives the QGIS provid
 # Imported only after the importorskip guard above confirms QGIS is available.
 from qgis.core import (
     QgsExpressionContextUtils,
+    QgsFeature,
+    QgsGeometry,
     QgsMapLayer,
     QgsProcessingFeedback,
     QgsProject,
@@ -32,24 +34,32 @@ pytestmark = pytest.mark.qgis
 """Marks the whole module as requiring a QGIS runtime."""
 
 
-def _setup(project: QgsProject) -> tuple[QgsVectorLayer, QgsVectorLayer]:
-    """Add a memory layer + a by-id virtual layer over it; return both."""
+def _setup(project: QgsProject, *, lazy: bool = False) -> tuple[QgsVectorLayer, QgsVectorLayer]:
+    """Add a one-feature memory layer + a by-id virtual layer over it; return both."""
     cities = QgsVectorLayer("Point?crs=EPSG:4326&field=cid:integer", "cities", "memory")
     assert cities.isValid()
+    feature = QgsFeature(cities.fields())
+    feature.setAttribute("cid", 1)
+    feature.setGeometry(QgsGeometry.fromWkt("POINT(0 0)"))
+    provider = cities.dataProvider()
+    assert provider is not None
+    assert provider.addFeature(feature)
     assert project.addMapLayer(cities, addToLegend=False)
     definition = QgsVirtualLayerDefinition()
     definition.addSource("c", cities.id())
     definition.setQuery('SELECT * FROM "c"')
+    definition.setLazy(lazy)
     vlayer = QgsVectorLayer(definition.toString(), "v_cities", "virtual")
     return cities, vlayer
 
 
 class _RecordingFeedback(QgsProcessingFeedback):
-    """Feedback sink that keeps the warnings pushed to it."""
+    """Feedback sink that keeps the warnings and debug lines pushed to it."""
 
     def __init__(self) -> None:
         super().__init__()
         self.warnings: list[str] = []
+        self.debug: list[str] = []
 
     @override
     def pushWarning(self, warning: str | None) -> None:
@@ -59,6 +69,15 @@ class _RecordingFeedback(QgsProcessingFeedback):
         :param warning: The warning text.
         """
         self.warnings.append(warning or "")
+
+    @override
+    def pushDebugInfo(self, info: str | None) -> None:
+        """
+        Record a debug line instead of routing it to the log.
+
+        :param info: The debug text.
+        """
+        self.debug.append(info or "")
 
 
 class TestVirtualShouldMaterialize:
@@ -133,6 +152,48 @@ class TestRouteVirtualLayers:
         )
         assert not vectors
         assert not embedded
+
+
+class TestLoadLazyVirtual:
+    """Loading a lazy virtual layer before anything reads its features (SPEC §4/§13)."""
+
+    def test_lazy_layer_reads_nothing_until_loaded(self, qgis_new_project: QgsProject) -> None:
+        """A lazy definition opens valid but bare; the helper runs the deferred query."""
+        _cities, vlayer = _setup(qgis_new_project, lazy=True)
+        assert vlayer.isValid()
+        assert vlayer.fields().count() == 0
+        assert vlayer.featureCount() == 0
+        feedback = _RecordingFeedback()
+        virtual.load_lazy_virtual(vlayer, feedback)
+        assert vlayer.fields().count() > 0
+        assert vlayer.featureCount() == 1
+        assert len(feedback.debug) == 1
+        assert "v_cities" in feedback.debug[0]
+
+    def test_the_lazy_flag_survives_a_clone(self, qgis_new_project: QgsProject) -> None:
+        """A clone is rebuilt from the provider uri, so it inherits `lazy` — hence the helper."""
+        _cities, vlayer = _setup(qgis_new_project, lazy=True)
+        clone = vlayer.clone()
+        assert clone is not None
+        assert clone.featureCount() == 0
+        virtual.load_lazy_virtual(clone, _RecordingFeedback())
+        assert clone.featureCount() == 1
+
+    def test_eager_virtual_layer_is_left_alone(self, qgis_new_project: QgsProject) -> None:
+        """An already-loaded virtual layer keeps its features and is not re-queried."""
+        _cities, vlayer = _setup(qgis_new_project)
+        feedback = _RecordingFeedback()
+        virtual.load_lazy_virtual(vlayer, feedback)
+        assert vlayer.featureCount() == 1
+        assert not feedback.debug
+
+    def test_non_virtual_layer_is_a_no_op(self, qgis_new_project: QgsProject) -> None:
+        """A layer on any other provider is ignored, so callers need not check the type."""
+        cities, _vlayer = _setup(qgis_new_project)
+        feedback = _RecordingFeedback()
+        virtual.load_lazy_virtual(cities, feedback)
+        assert cities.featureCount() == 1
+        assert not feedback.debug
 
 
 class TestRemoteSourceWarning:

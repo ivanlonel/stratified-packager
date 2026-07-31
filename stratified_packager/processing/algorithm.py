@@ -135,7 +135,7 @@ from .strata import (
     evaluate_layer_display_name,
     resolve_strata,
 )
-from .virtual import route_virtual_layers
+from .virtual import load_lazy_virtual, route_virtual_layers
 from .workers import ZipJob, ZipOutcome, run_prefetch, run_zip
 
 if TYPE_CHECKING:
@@ -1252,7 +1252,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         """
         excluded = self._excluded_fields(layer)
         qml, sld = self._style_documents(layer, inputs, feedback)
-        read_layer = self._clone(layer)
+        read_layer = self._clone(layer, feedback)
         kept = tuple(
             name
             for name in (field.name() for field in read_layer.fields().toList())
@@ -1603,7 +1603,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         """
         staging_gpkg = staging_dir / f"__hop_{index}.gpkg"
         staging_gpkg.parent.mkdir(parents=True, exist_ok=True)
-        clone = self._clone(layer)
+        clone = self._clone(layer, feedback)
         clone.removeSelection()
         write_vector_table(
             staging_gpkg,
@@ -1631,18 +1631,34 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-    def _clone(self, layer: QgsVectorLayer) -> QgsVectorLayer:
+    def _clone(self, layer: QgsVectorLayer, feedback: QgsProcessingFeedback) -> QgsVectorLayer:
         """
         Clone *layer* into a standalone read layer (its subset string rides along, §8.2).
 
+        A lazy virtual clone is loaded before the validity check
+        (:func:`~.virtual.load_lazy_virtual`), both so its features can be read at all and so a
+        query that fails surfaces here rather than as an empty table. A read source exposing no
+        fields is the signature of a provider that never loaded its data, which no packaged layer
+        does on purpose — it is warned about rather than silently written out empty.
+
         :param layer: The user's layer (never mutated).
+        :param feedback: Execution feedback channel.
         :return: An independent clone whose selection may be freely changed.
         :raise QgsProcessingException: If the clone is invalid.
         """
         clone = layer.clone()
+        if clone is not None:
+            load_lazy_virtual(clone, feedback)
         if clone is None or not clone.isValid():
             raise QgsProcessingException(
                 self.tr("Layer {} could not be cloned.").format(layer.name())
+            )
+        if clone.fields().count() == 0:
+            feedback.pushWarning(
+                self.tr(
+                    "Layer {} exposes no fields to read; it will be packaged as an empty table."
+                    " Its data provider ({}) most likely did not load its data."
+                ).format(layer.name(), layer.providerType())
             )
         return clone
 
