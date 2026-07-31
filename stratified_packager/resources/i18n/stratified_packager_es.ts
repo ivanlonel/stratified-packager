@@ -38,32 +38,32 @@
     <translation>inicio en caliente usado para {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="635" />
+    <location filename="../../processing/building.py" line="630" />
     <source>spatial matching needs a stratification layer</source>
     <translation>la coincidencia espacial requiere una capa de estratificación</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="685" />
+    <location filename="../../processing/building.py" line="735" />
     <source>Staging {}: matching stratum {}/{}</source>
     <translation>Preparando {}: coincidencia con el estrato {}/{}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="701" />
+    <location filename="../../processing/building.py" line="766" />
     <source>Staging {}: writing the staged copy</source>
     <translation>Preparando {}: escribiendo la copia preparada</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="760" />
+    <location filename="../../processing/building.py" line="825" />
     <source>writing table {} canceled</source>
     <translation>escritura de la tabla {} cancelada</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="763" />
+    <location filename="../../processing/building.py" line="828" />
     <source>writing table {} failed: {}</source>
     <translation>error al escribir la tabla {}: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="868" />
+    <location filename="../../processing/building.py" line="933" />
     <source>WAL checkpoint incomplete; not snapshotting a stale warm cache</source>
     <translation>Checkpoint WAL incompleto; no se toma una instantánea de una caché caliente obsoleta</translation>
   </message>
