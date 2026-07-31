@@ -1377,6 +1377,7 @@ class TestWorkdirCleanup:
             preps=[object()],
             payloads=[object()],
             warm_prefetch={"A": object()},
+            chain_context=SimpleNamespace(hop_layers={"L1": object()}),
             inputs=SimpleNamespace(use_temp_folder=True),
         )
         feedback = QgsProcessingFeedback()
@@ -1388,6 +1389,7 @@ class TestWorkdirCleanup:
         assert material.preps == []  # read-layer handles released before removal
         assert material.payloads == []
         assert material.warm_prefetch == {}
+        assert material.chain_context.hop_layers == {}  # §8.2 staged hop copies too
 
     def test_discard_workdir_reports_residue(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1400,6 +1402,7 @@ class TestWorkdirCleanup:
             preps=[],
             payloads=[],
             warm_prefetch={},
+            chain_context=SimpleNamespace(hop_layers={}),
             inputs=SimpleNamespace(use_temp_folder=False),
         )
         feedback = QgsProcessingFeedback()

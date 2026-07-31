@@ -986,7 +986,8 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         Release the run's workdir-backed layer handles, then remove the build directory (§10).
 
         The preps' read layers sit over GeoPackages inside the workdir (staging copies,
-        the whole-export template); while those layers are alive GDAL holds the files
+        the whole-export template), as do the chain context's staged hop copies (§8.2);
+        while those layers are alive GDAL holds the files
         open and Windows refuses to delete them. Dropping the references (plus a GC pass
         for cycles) releases the handles so the removal can succeed. Residue surviving
         the retries — e.g. a handle a failed run's traceback still pins — is reported
@@ -999,6 +1000,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         material.preps.clear()
         material.payloads.clear()
         material.warm_prefetch.clear()
+        material.chain_context.hop_layers.clear()
         gc.collect()
         if remove_tree(workdir):
             return
