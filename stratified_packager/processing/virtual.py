@@ -23,7 +23,7 @@ from .dedup import normalized_source_key, source_group_key
 if TYPE_CHECKING:
     from qgis.core import QgsMapLayer, QgsProcessingFeedback, QgsProject, QgsVectorLayer
 
-__all__: list[str] = ["route_virtual_layers"]
+__all__: list[str] = ["load_lazy_virtual", "route_virtual_layers"]
 
 _LOCAL_PROVIDERS: Final[frozenset[str]] = frozenset(
     {"ogr", "gdal", "gpkg", "spatialite", "memory", "delimitedtext", "gpx", "mdal"}
@@ -68,6 +68,36 @@ def route_virtual_layers(
             vectors.append(layer)
         else:
             embedded.append(layer)
+
+
+def load_lazy_virtual(layer: QgsVectorLayer, feedback: QgsProcessingFeedback) -> None:
+    """
+    Run a lazy virtual layer's query so it reads its rows rather than nothing (§4/§13).
+
+    A ``lazy`` definition tells the virtual provider to skip the query at construction: the layer
+    opens valid — its CRS and geometry type come from the definition itself — but with no fields
+    and no features until something reloads it. The flag is an authoring convenience that must not
+    reach a package, and it survives :meth:`~qgis.core.QgsVectorLayer.clone` because the clone is
+    rebuilt from the provider's uri. Left alone, a materialized lazy layer would be written as an
+    empty table into every stratum. The live route sheds the flag by rebuilding the definition
+    eagerly instead (§13).
+
+    No-op for any other layer, so callers need not know what they hold.
+
+    :param layer: The layer to load — typically a freshly cloned read source, never the user's.
+    :param feedback: Execution feedback channel.
+    """
+    if layer.providerType() != "virtual":
+        return
+    if not QgsVirtualLayerDefinition.fromUrl(QUrl(layer.source())).isLazy():
+        return
+    layer.reload()
+    feedback.pushDebugInfo(
+        QCoreApplication.translate(
+            "StratifiedPackagerAlgorithm",
+            "Virtual layer {} is defined as lazy; ran its query so its features can be read.",
+        ).format(layer.name())
+    )
 
 
 def _warn_remote_sources(

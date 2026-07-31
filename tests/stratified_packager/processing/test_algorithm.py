@@ -1344,6 +1344,27 @@ class TestFinalizeMembers:
         assert not gpkg.exists()  # the failed member's partial is cleaned (§17)
 
 
+class TestCloneReadSource:
+    """`_clone` builds the read source and vets what the writer will be handed (SPEC §8.2)."""
+
+    def test_a_field_less_read_source_warns(self) -> None:
+        """No fields is the signature of a provider that never loaded; it must not stay silent."""
+        layer = QgsVectorLayer("Point?crs=EPSG:4326", "bare", "memory")
+        assert layer.isValid()
+        feedback = _RecordingFeedback()
+        clone = StratifiedPackagerAlgorithm()._clone(layer, feedback)
+        assert clone.fields().count() == 0
+        assert any("bare" in warning for warning in feedback.warnings)
+
+    def test_a_normal_read_source_is_silent(self) -> None:
+        """A layer exposing fields clones without comment."""
+        layer = QgsVectorLayer("Point?crs=EPSG:4326&field=cid:integer", "cities", "memory")
+        assert layer.isValid()
+        feedback = _RecordingFeedback()
+        assert StratifiedPackagerAlgorithm()._clone(layer, feedback).fields().count() == 1
+        assert not feedback.warnings
+
+
 class TestWorkdirCleanup:
     """The §10 build-directory lifecycle: end-of-run removal and stale-sibling sweep."""
 
