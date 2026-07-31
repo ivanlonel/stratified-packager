@@ -134,13 +134,18 @@ background pool never holds more than one active zip — packaging is a single D
 finishes within the next bundle's build time — so the pool is a fixed two threads (§8.4): one
 effectively for packaging, one overlapping the §11 warm prefetch with Phase A.
 
-`FULL_PACKAGE_PATH` is the full package's zip path (extensionless), bound by the §6.5 zip
-rules: relative, resolving inside `OUTPUT_DIRECTORY` (absolutes rejected). Its in-zip
-GeoPackage path is **not** derived from `FULL_PACKAGE_PATH` — it follows `GPKG_PATH_EXPRESSION`
-(evaluated feature-less for the `<full>` pseudo-stratum, seeing `@stratum_name` /
-`@stratum_name_sanitized` but no feature fields), defaulting to the zip basename when the
-expression is empty. The `EXTRA_DIR` and `WARM_START_DIR` folders resolve relative to
-`OUTPUT_DIRECTORY`; absolute paths are honored as-is.
+`FULL_PACKAGE_PATH` is the full package's zip path (extensionless). Relative, it is bound by
+the §6.5 zip rules and resolves inside `OUTPUT_DIRECTORY`; **absolute, it is honored as-is**
+(like `EXTRA_DIR` / `WARM_START_DIR`) with only its basename validated against the §6.5
+filename rules — the parent directories are the filesystem's business. An absolute path
+resolving inside `OUTPUT_DIRECTORY` is normalized back to the relative form, so §6.6 bundling
+identity and the collision checks always compare one namespace. It is the **only** zip path
+that may leave `OUTPUT_DIRECTORY`: `ZIP_PATH_EXPRESSION` results stay relative (§6.5). Its
+in-zip GeoPackage path is **not** derived from `FULL_PACKAGE_PATH` — it follows
+`GPKG_PATH_EXPRESSION` (evaluated feature-less for the `<full>` pseudo-stratum, seeing
+`@stratum_name` / `@stratum_name_sanitized` but no feature fields), defaulting to the zip
+basename when the expression is empty. The `EXTRA_DIR` and `WARM_START_DIR` folders resolve
+relative to `OUTPUT_DIRECTORY`; absolute paths are honored as-is.
 
 Enum values are persisted in settings/variables as the canonical string tokens (not indices,
 and not the translated labels the §19 defaults combos display), so stored config survives enum
@@ -275,8 +280,8 @@ Resolution chain per input: **input > project variable > plugin setting > builti
    component MUST be a valid filename under the sanitizer's rules (illegal characters, reserved
    device names, trailing dots/spaces) — expression results are validated, never silently
    sanitized; `.gpkg` is appended to the result. The zip path MAY contain subdirectories but
-   MUST resolve inside `OUTPUT_DIRECTORY` (no absolute paths, no `..` escape). Violations →
-   validation error.
+   MUST resolve inside `OUTPUT_DIRECTORY` (no absolute paths, no `..` escape) — the sole
+   exception is `FULL_PACKAGE_PATH`, which MAY be absolute (§3). Violations → validation error.
 1. **Zip bundling**: several strata MAY map to one zip path (deliberate feature) — bundling
    identity is the **exact** evaluated zip path; two *distinct* zip paths that collide only
    case-insensitively are a validation error (on Windows they would silently overwrite each
@@ -852,6 +857,10 @@ Edge-case catalog (behavior MUST be tested):
 - Gpkg paths: subdirectory components validated as filenames; `..` / absolute → error;
   identical basenames in different subdirs of one bundled zip are valid; full-path collisions
   (case-insensitive) abort (§6.5–6.6).
+- Absolute `FULL_PACKAGE_PATH` (§3): outside `OUTPUT_DIRECTORY` the zip publishes there, and
+  its `.part`, `.sha256` and `OVERWRITE_MODE` existence check follow it (the temp build copy
+  stays in the run's build directory); inside it, the path folds to the relative form and
+  bundles with a stratum zip of the same path exactly as the relative spelling would.
 - Warm gpkg holding an extra (no-longer-marked) table → cold fallback, never a duplicate
   append (§11).
 - A `whole_export` layer in the middle of another layer's relation chain → the chain works

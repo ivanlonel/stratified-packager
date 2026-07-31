@@ -66,6 +66,7 @@ from stratified_packager.toolbelt.utils import (
     sanitize_filename,
 )
 from stratified_packager.toolbelt.zipping import (
+    filename_component_error,
     iter_file_members,
     remove_stale_parts,
     split_archive_path,
@@ -182,6 +183,35 @@ def _report_chain_memo(chain_context: ChainContext, feedback: QgsProcessingFeedb
             f"relation-chain hop memo: {chain_context.hits} hit(s), "
             f"{chain_context.misses} miss(es)"
         )
+
+
+def _full_package_zip_rel(base: str, output_dir: Path) -> str:
+    """
+    Resolve ``FULL_PACKAGE_PATH`` to the ``<full>`` bundle's zip key (SPEC §3).
+
+    A relative path keeps the §6.5 archive-path rules. An absolute one is honored as-is —
+    like ``EXTRA_DIR`` / ``WARM_START_DIR`` — but one resolving inside *output_dir* folds
+    back to the relative form so bundling identity and the §6.6 collision checks keep
+    seeing a single namespace. Only the basename of an outside-the-output-directory path is
+    validated: its parent directories are the filesystem's business and may legitimately
+    already exist under names the strict filename rules reject.
+
+    :param base: The raw ``FULL_PACKAGE_PATH`` value (never empty; extensionless).
+    :param output_dir: The run's ``OUTPUT_DIRECTORY``.
+    :return: The zip key: a ``/``-joined relative path, or an absolute posix path.
+    :raise ValueError: On a §6.5 shape violation; the message names the violation.
+    """
+    candidate = Path(base)
+    if not candidate.is_absolute():
+        return "/".join(split_archive_path(base))
+    resolved = candidate.resolve()
+    root = output_dir.resolve()
+    if resolved.is_relative_to(root):
+        return "/".join(split_archive_path(str(resolved.relative_to(root))))
+    if reason := filename_component_error(resolved.name):
+        msg = f"invalid archive path {base!r}: {reason}"
+        raise ValueError(msg)
+    return resolved.as_posix()
 
 
 _POOL_WIDTH: Final = 2
@@ -770,7 +800,8 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         """
         Append the ``<full>`` pseudo-stratum when ``EXPORT_FULL_PACKAGE`` is on (§3).
 
-        ``FULL_PACKAGE_PATH`` is the full package's (extensionless) zip path; its in-zip gpkg
+        ``FULL_PACKAGE_PATH`` is the full package's (extensionless) zip path, relative to
+        ``OUTPUT_DIRECTORY`` or absolute (§3, :func:`_full_package_zip_rel`); its in-zip gpkg
         path follows ``GPKG_PATH_EXPRESSION`` (empty ⇒ the zip basename), evaluated feature-less
         for ``<full>`` — never derived from ``FULL_PACKAGE_PATH`` itself.
 
@@ -789,7 +820,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             sanitize_filename(project.baseName() or "project") + "_full"
         )
         try:
-            components = split_archive_path(base)
+            zip_rel = _full_package_zip_rel(base, inputs.output_dir)
         except ValueError as err:
             raise QgsProcessingException(
                 self.tr("Invalid FULL_PACKAGE_PATH: {}").format(err)
@@ -801,9 +832,12 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             # FULL_PACKAGE_PATH is the zip path; the in-zip gpkg path follows
             # GPKG_PATH_EXPRESSION (empty => the zip basename), like every real stratum (SPEC 3).
             gpkg_rel=evaluate_full_package_gpkg_path(
-                inputs.strat_layer, project, inputs.gpkg_expression, default=components[-1]
+                inputs.strat_layer,
+                project,
+                inputs.gpkg_expression,
+                default=zip_rel.rsplit("/", 1)[-1],
             ),
-            zip_rel="/".join(components),
+            zip_rel=zip_rel,
         )
         # Re-bundle instead of hand-merging: bundling with an identical zip path is
         # legitimate, but the merged bundle must pass the same §6.6 gpkg-uniqueness
@@ -2431,7 +2465,10 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         return ZipJob(
             zip_rel=zip_rel,
             members=tuple(members),
-            build_path=workdir / "zips" / f"{zip_rel}.zip",
+            # Keyed by the build root's name, never by zip_rel: an absolute FULL_PACKAGE_PATH
+            # (§3) would otherwise send the temp build copy straight to its final location.
+            build_path=workdir / "zips" / f"{material.zip_roots[zip_rel].name}.zip",
+            # An absolute zip_rel wins this join by design — how it leaves OUTPUT_DIRECTORY.
             final_path=material.inputs.output_dir / f"{zip_rel}.zip",
             compression_level=material.inputs.compression_level,
             write_checksum=material.inputs.write_checksums,
