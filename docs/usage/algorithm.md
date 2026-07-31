@@ -64,7 +64,7 @@ Advanced parameters are collapsed in the GUI by default.
 | `KEEP_EMPTY_LAYERS`                            | Keep zero-feature layers as empty tables.                                                                |
 | `DEDUPLICATE_SHARED_SOURCES`                   | Write layers sharing a source as one table.                                                              |
 | `STAGE_PROVIDERS`                              | Stage every layer of these data providers into a fast local copy first (see the `stage` layer variable). |
-| `EXPORT_FULL_PACKAGE` / `FULL_PACKAGE_PATH`    | Also emit the unpartitioned dataset.                                                                     |
+| `EXPORT_FULL_PACKAGE` / `FULL_PACKAGE_PATH`    | Also emit the unpartitioned dataset; its path is relative to `OUTPUT_DIRECTORY`, or absolute.            |
 | `REPORT`                                       | Run report output: an in-memory table layer when no path is given, else a file.                          |
 | `GENERATE_REPORT`                              | Also write a `report.csv` into each published zip.                                                       |
 | `EXTRA_DIR`                                    | Extra files copied into every zip root.                                                                  |

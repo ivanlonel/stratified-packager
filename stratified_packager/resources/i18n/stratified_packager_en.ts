@@ -446,68 +446,68 @@
 </context><context>
   <name>StratifiedPackagerAlgorithm</name>
   <message>
-    <location filename="../../processing/algorithm.py" line="360" />
+    <location filename="../../processing/algorithm.py" line="390" />
     <source>{} does not parse: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="389" />
+    <location filename="../../processing/algorithm.py" line="419" />
     <source>This algorithm requires an open project (use --project_path).</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1882" />
-    <location filename="../../processing/algorithm.py" line="1523" />
-    <location filename="../../processing/algorithm.py" line="1375" />
-    <location filename="../../processing/algorithm.py" line="1025" />
-    <location filename="../../processing/algorithm.py" line="398" />
+    <location filename="../../processing/algorithm.py" line="1916" />
+    <location filename="../../processing/algorithm.py" line="1557" />
+    <location filename="../../processing/algorithm.py" line="1409" />
+    <location filename="../../processing/algorithm.py" line="1059" />
+    <location filename="../../processing/algorithm.py" line="428" />
     <source>Operation was canceled.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="487" />
+    <location filename="../../processing/algorithm.py" line="517" />
     <source>OUTPUT_DIRECTORY is required.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="574" />
+    <location filename="../../processing/algorithm.py" line="604" />
     <source>Cannot determine eligible layers: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="598" />
+    <location filename="../../processing/algorithm.py" line="628" />
     <source>Plugin layers cannot be packaged; excluded: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="604" />
+    <location filename="../../processing/algorithm.py" line="634" />
     <source>Layers riding only in the embedded project (remote/annotation/live virtual): {}</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="639" />
+    <location filename="../../processing/algorithm.py" line="669" />
     <source>LAYERS resolved %n entry(s) onto a layer already selected: {}. Layers sharing a data source are indistinguishable when selected by source; select them by layer id (or leave LAYERS empty) to package each one.</source>
     <translation type="unfinished">
       <numerusform />
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="694" />
+    <location filename="../../processing/algorithm.py" line="724" />
     <source>STRATIFICATION_LAYER is required unless EXPORT_FULL_PACKAGE is enabled (then only the full package is built).</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="708" />
+    <location filename="../../processing/algorithm.py" line="738" />
     <source>The stratification layer yielded no strata.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="711" />
+    <location filename="../../processing/algorithm.py" line="741" />
     <source>No strata to package (the stratification layer is empty).</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="714" />
+    <location filename="../../processing/algorithm.py" line="744" />
     <source>Resolved %n strata </source>
     <translation>
       <numerusform>Resolved %n stratum </numerusform>
@@ -515,7 +515,7 @@
     </translation>
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="715" />
+    <location filename="../../processing/algorithm.py" line="745" />
     <source>into %n zip(s).</source>
     <translation>
       <numerusform>into %n zip.</numerusform>
@@ -523,77 +523,77 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="731" />
+    <location filename="../../processing/algorithm.py" line="761" />
     <source>WARM_START_DIR is required when warm start is enabled.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="735" />
+    <location filename="../../processing/algorithm.py" line="765" />
     <source>Warm start is enabled but no packaged layer is warm_marked — a warm run with nothing warm is always a misconfiguration.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="760" />
+    <location filename="../../processing/algorithm.py" line="790" />
     <source>Custom layer name expression for layer {} does not parse: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="795" />
+    <location filename="../../processing/algorithm.py" line="826" />
     <source>Invalid FULL_PACKAGE_PATH: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="844" />
+    <location filename="../../processing/algorithm.py" line="878" />
     <source>Existing outputs (OVERWRITE_MODE = error): {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="865" />
+    <location filename="../../processing/algorithm.py" line="899" />
     <source>Skipping existing output {}.zip</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="886" />
+    <location filename="../../processing/algorithm.py" line="920" />
     <source>EXTRA_DIR does not exist or is not a directory: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="903" />
+    <location filename="../../processing/algorithm.py" line="937" />
     <source>EXTRA_DIR entries collide with reserved zip content: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="946" />
+    <location filename="../../processing/algorithm.py" line="980" />
     <source>Removed stale build directory: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="971" />
+    <location filename="../../processing/algorithm.py" line="1005" />
     <source>Could not fully remove the build directory: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1015" />
+    <location filename="../../processing/algorithm.py" line="1049" />
     <source>Duplicate layer name; table renamed to {} for layer {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1027" />
+    <location filename="../../processing/algorithm.py" line="1061" />
     <source>Preparing layer {}/{}: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1054" />
+    <location filename="../../processing/algorithm.py" line="1088" />
     <source>Layer {}: its copied source file also backs other layers ({}) — the copy drags the whole container.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1108" />
+    <location filename="../../processing/algorithm.py" line="1142" />
     <source>The project has no relation manager.</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1284" />
+    <location filename="../../processing/algorithm.py" line="1318" />
     <source>Warm cache unusable for %n stratum(s) ({}) — staging proceeds so cold fallbacks read local copies.</source>
     <translation>
       <numerusform>Warm cache unusable for %n stratum ({}) — staging proceeds so cold fallbacks read local copies.</numerusform>
@@ -601,12 +601,12 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1308" />
+    <location filename="../../processing/algorithm.py" line="1342" />
     <source>layer {}: stage variable {}</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1361" />
+    <location filename="../../processing/algorithm.py" line="1395" />
     <source>Skipping staging for %n warm-seeded group(s) — the warm cache covers every stratum.</source>
     <translation>
       <numerusform>Skipping staging for %n warm-seeded group — the warm cache covers every stratum.</numerusform>
@@ -614,55 +614,55 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1378" />
+    <location filename="../../processing/algorithm.py" line="1412" />
     <source>Staging layer {}/{}: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1587" />
-    <location filename="../../processing/algorithm.py" line="1459" />
+    <location filename="../../processing/algorithm.py" line="1621" />
+    <location filename="../../processing/algorithm.py" line="1493" />
     <source>could not index staged key fields for {}: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1528" />
+    <location filename="../../processing/algorithm.py" line="1562" />
     <source>Staging relation-chain layer: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1542" />
+    <location filename="../../processing/algorithm.py" line="1576" />
     <source>Could not stage relation-chain layer {} ({}); its hops will be queried from the project instead.</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1595" />
+    <location filename="../../processing/algorithm.py" line="1629" />
     <source>Staged relation-chain layer {}: %n feature(s) copied.</source>
     <translation type="unfinished">
       <numerusform />
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1611" />
+    <location filename="../../processing/algorithm.py" line="1645" />
     <source>Layer {} could not be cloned.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1628" />
+    <location filename="../../processing/algorithm.py" line="1662" />
     <source>Staged copy of layer {} cannot be re-opened.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1741" />
+    <location filename="../../processing/algorithm.py" line="1775" />
     <source>layer {}: excluded_fields is not a JSON list: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1747" />
+    <location filename="../../processing/algorithm.py" line="1781" />
     <source>layer {}: excluded_fields must be a JSON list of names</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1879" />
+    <location filename="../../processing/algorithm.py" line="1913" />
     <source>Building %n strata.</source>
     <translation>
       <numerusform>Building %n stratum.</numerusform>
@@ -670,12 +670,12 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1899" />
+    <location filename="../../processing/algorithm.py" line="1933" />
     <source>Run finished with failures — strata: [{}]; zips: [{}]; warm caches: [{}]</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/algorithm.py" line="1953" />
+    <location filename="../../processing/algorithm.py" line="1987" />
     <source>Updating %n warm cache(s) before the deliverables.</source>
     <translation>
       <numerusform>Updating %n warm cache before the deliverables.</numerusform>
@@ -683,123 +683,123 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1958" />
+    <location filename="../../processing/algorithm.py" line="1992" />
     <source>Warm cache {}/{}: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1976" />
+    <location filename="../../processing/algorithm.py" line="2010" />
     <source>Failed to remove workdir copy of warm geopackage {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="1987" />
+    <location filename="../../processing/algorithm.py" line="2021" />
     <source>Stratum {}/{}: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2052" />
+    <location filename="../../processing/algorithm.py" line="2086" />
     <source>Stratum {}: cold fallback ({}).</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2223" />
-    <location filename="../../processing/algorithm.py" line="2059" />
+    <location filename="../../processing/algorithm.py" line="2257" />
+    <location filename="../../processing/algorithm.py" line="2093" />
     <source>Stratum {} failed: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2091" />
+    <location filename="../../processing/algorithm.py" line="2125" />
     <source>warm cache not written: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2095" />
+    <location filename="../../processing/algorithm.py" line="2129" />
     <source>Stratum {}: warm cache not written ({}).</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2120" />
+    <location filename="../../processing/algorithm.py" line="2154" />
     <source>Published {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2124" />
+    <location filename="../../processing/algorithm.py" line="2158" />
     <source>Zip {} failed: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2163" />
+    <location filename="../../processing/algorithm.py" line="2197" />
     <source>Zip {} skipped: every member stratum failed.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2172" />
+    <location filename="../../processing/algorithm.py" line="2206" />
     <source>Stratum {}: WAL checkpoint incomplete before zipping.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2182" />
+    <location filename="../../processing/algorithm.py" line="2216" />
     <source>Zipping {}.zip in the background.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2211" />
+    <location filename="../../processing/algorithm.py" line="2245" />
     <source>Stratum {}: writing embedded project.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2221" />
+    <location filename="../../processing/algorithm.py" line="2255" />
     <source>Failed to remove gpkg of failed stratum {}.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2234" />
+    <location filename="../../processing/algorithm.py" line="2268" />
     <source>Stratum {}: could not pre-enable WAL journaling.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2242" />
+    <location filename="../../processing/algorithm.py" line="2276" />
     <source>Stratum {}: {:.1f}s writing the embedded project.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2253" />
+    <location filename="../../processing/algorithm.py" line="2287" />
     <source>Stratum {}: embedded project not written; shipping data without it ({}).</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2546" />
+    <location filename="../../processing/algorithm.py" line="2583" />
     <source>Could not create the run report output.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2551" />
+    <location filename="../../processing/algorithm.py" line="2588" />
     <source>Could not write a run report row.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2552" />
+    <location filename="../../processing/algorithm.py" line="2589" />
     <source>Run report written to {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2567" />
+    <location filename="../../processing/algorithm.py" line="2604" />
     <source>Package project</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2572" />
+    <location filename="../../processing/algorithm.py" line="2609" />
     <source>Partitions the project's layers against a stratification layer and emits one zipped GeoPackage per stratum.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2585" />
+    <location filename="../../processing/algorithm.py" line="2622" />
     <source>&lt;p&gt;Partitions the open project's layers against a &lt;b&gt;stratification layer&lt;/b&gt; (one stratum per feature) and writes &lt;b&gt;one zipped GeoPackage per stratum&lt;/b&gt; into the output directory. Each layer's features are matched to strata either by &lt;b&gt;attribute&lt;/b&gt; (following chains of project relations) or &lt;b&gt;spatially&lt;/b&gt; (one or more predicates, including raw DE-9IM patterns, combined with OR), chosen per layer.&lt;/p&gt;&lt;h3&gt;Key parameters&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;b&gt;Layers to package&lt;/b&gt; — leave empty to package every eligible layer not marked with the &lt;code&gt;stratified_packager_exclude&lt;/code&gt; variable.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Stratification layer&lt;/b&gt; and &lt;b&gt;Stratum name expression&lt;/b&gt; — the partition source and how each stratum is named (empty = feature id). Naming and path expressions can use &lt;code&gt;@stratum_name&lt;/code&gt;, &lt;code&gt;@stratum_name_sanitized&lt;/code&gt;, &lt;code&gt;@gpkg_path&lt;/code&gt; and &lt;code&gt;@gpkg_name&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Output directory&lt;/b&gt; — where zips are published (atomic .part rename).&lt;/li&gt;&lt;li&gt;&lt;b&gt;Existing outputs&lt;/b&gt; — overwrite, error, or skip-existing.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Embed a project per stratum&lt;/b&gt; — none, gpkg (stored inside the package), or qgz (beside it); styles, metadata, relations and auxiliary files are bundled.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Also export the full package&lt;/b&gt; — additionally emit the unpartitioned dataset as a pseudo-stratum.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Dry run&lt;/b&gt; — validate and report without writing any packages.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Per-layer variables&lt;/h3&gt;&lt;p&gt;Edit under &lt;i&gt;Layer Properties &amp;gt; Variables&lt;/i&gt;, the per-layer plugin page, or the plugin's &lt;i&gt;Configure layers for packaging&lt;/i&gt; dialog:&lt;/p&gt;</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/algorithm.py" line="2616" />
+    <location filename="../../processing/algorithm.py" line="2653" />
     <source>&lt;h3&gt;Defaults and precedence&lt;/h3&gt;&lt;p&gt;Every omitted parameter resolves through &lt;b&gt;explicit input &amp;gt; project variable (&lt;code&gt;stratified_packager_&amp;lt;param&amp;gt;&lt;/code&gt;) &amp;gt; plugin setting &amp;gt; builtin default&lt;/b&gt;. Project- and layer-scope values are editable from the plugin's Options page, the Project Properties page and the per-layer page.&lt;/p&gt;&lt;h3&gt;Warm cache&lt;/h3&gt;&lt;p&gt;With a warm-cache directory, &lt;b&gt;Use warm start&lt;/b&gt; begins each stratum GeoPackage from a cached copy and appends only non-warm-marked layers; &lt;b&gt;Update warm cache&lt;/b&gt; first writes every stratum's cache file, then builds the deliverables seeded from that fresh cache — an interrupted run still leaves a complete, reusable cache. A cached file that no longer matches its warm-marked tables falls back to a cold build for that stratum (reported as cold-fallback).&lt;/p&gt;&lt;h3&gt;Running headless (qgis_process)&lt;/h3&gt;&lt;p&gt;Pass &lt;code&gt;--project_path&lt;/code&gt;: the algorithm requires a project. The Processing framework re-instantiates the algorithm after the project loads, so project-variable and plugin-setting defaults resolve correctly without a GUI. &lt;code&gt;QgsSettings&lt;/code&gt; is per-profile, so qgis_process uses the default profile unless overridden.&lt;/p&gt;</source>
     <translation type="unfinished" />
   </message>

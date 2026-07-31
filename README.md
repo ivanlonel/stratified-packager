@@ -62,7 +62,7 @@ variable → plugin setting → builtin default**.
 | `DEDUPLICATE_SHARED_SOURCES` | Write layers that share one data source as a single table (their styles all ride along).                            | `true`                |      ✓      |    ✓    |
 | `STAGE_PROVIDERS`            | Stage every layer of these data providers (e.g. `postgres`) into a fast local copy before the per-stratum writes.   | none                  |      ✓      |    ✓    |
 | `EXPORT_FULL_PACKAGE`        | Additionally emit the whole, unpartitioned dataset as a pseudo-stratum.                                             | `false`               |      ✓      |    ✓    |
-| `FULL_PACKAGE_PATH`          | Path of that full package.                                                                                          | `<project name>_full` |      ✓      |         |
+| `FULL_PACKAGE_PATH`          | Path of that full package: relative to `OUTPUT_DIRECTORY`, or absolute to publish it elsewhere.                     | `<project name>_full` |      ✓      |         |
 | `GENERATE_REPORT`            | Write a `report.csv` into each published zip.                                                                       | `true`                |      ✓      |    ✓    |
 | `REPORT`                     | The run-level report output: an in-memory table layer when no path is given, else a file.                           | in-memory layer       |             |         |
 | `EXTRA_DIR`                  | A directory whose contents are copied into every zip root (readme files, terms of use, …).                          | —                     |      ✓      |         |

@@ -1452,6 +1452,59 @@ class TestAuditRegressionFixes:
         assert "pkg.gpkg" in names  # gpkg default = the zip basename
         assert "sub/dir/pkg.gpkg" not in names  # ...never the whole FULL_PACKAGE_PATH
 
+    def test_full_package_path_accepts_an_absolute_path(
+        self, scenario: Scenario, tmp_path: Path
+    ) -> None:
+        """SPEC (3): an absolute FULL_PACKAGE_PATH publishes outside OUTPUT_DIRECTORY."""
+        elsewhere = tmp_path / "elsewhere" / "pkg"
+        results = _run(
+            scenario, {p.EXPORT_FULL_PACKAGE: True, p.FULL_PACKAGE_PATH: str(elsewhere)}
+        )
+        assert results[p.ZIP_COUNT] == 3
+        full_zip = elsewhere.with_suffix(".zip")
+        assert full_zip.is_file()  # published where asked, not under OUTPUT_DIRECTORY
+        assert str(full_zip) in json.loads(results[p.ZIP_PATHS])
+        assert {path.name for path in scenario.out_dir.glob("*.zip")} == {"A.zip", "B.zip"}
+        assert not list(full_zip.parent.glob("*.part"))  # published atomically, nothing left over
+        with zipfile.ZipFile(full_zip) as archive:
+            assert "pkg.gpkg" in archive.namelist()  # gpkg default = the zip basename
+
+    def test_absolute_full_package_path_inside_the_output_dir_bundles(
+        self, scenario: Scenario
+    ) -> None:
+        """An absolute path resolving inside OUTPUT_DIRECTORY folds back to the relative form."""
+        results = _run(
+            scenario,
+            {
+                p.EXPORT_FULL_PACKAGE: True,
+                p.FULL_PACKAGE_PATH: str(scenario.out_dir / "A"),  # == the relative "A"
+                p.GPKG_PATH_EXPRESSION: "@stratum_name_sanitized",
+            },
+        )
+        assert results[p.ZIP_COUNT] == 2  # bundled into stratum A's zip, never a second A.zip
+        with zipfile.ZipFile(scenario.out_dir / "A.zip") as archive:
+            assert {"A.gpkg", "full.gpkg"} <= set(archive.namelist())
+
+    def test_absolute_full_package_path_inside_the_output_dir_still_collides(
+        self, scenario: Scenario
+    ) -> None:
+        """Folding keeps the §6.6 gpkg-collision check applicable to an absolute path."""
+        with pytest.raises(QgsProcessingException, match="collide"):
+            _run(
+                scenario,
+                {p.EXPORT_FULL_PACKAGE: True, p.FULL_PACKAGE_PATH: str(scenario.out_dir / "A")},
+            )
+
+    def test_absolute_full_package_path_with_an_invalid_basename_aborts(
+        self, scenario: Scenario, tmp_path: Path
+    ) -> None:
+        """The basename of an absolute path is still bound by the §6.5 filename rules."""
+        with pytest.raises(QgsProcessingException, match="Invalid FULL_PACKAGE_PATH"):
+            _run(
+                scenario,
+                {p.EXPORT_FULL_PACKAGE: True, p.FULL_PACKAGE_PATH: str(tmp_path / "CON")},
+            )
+
     def test_full_package_gpkg_path_follows_gpkg_path_expression(self, scenario: Scenario) -> None:
         """The full package's gpkg path follows GPKG_PATH_EXPRESSION, not the zip path."""
         results = _run(

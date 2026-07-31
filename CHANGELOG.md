@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
+## Unreleased - 2026-07-31
+
+- Processing: **`FULL_PACKAGE_PATH` now accepts an absolute path**, so the unpartitioned package can be published somewhere other than `OUTPUT_DIRECTORY` — a different drive or share than the per-stratum zips. It was the only one of the three path inputs still forced relative; `EXTRA_DIR` and `WARM_START_DIR` have always honored absolutes. A relative value behaves exactly as before, and an absolute one that happens to point inside `OUTPUT_DIRECTORY` is normalized back to the relative form, so it still bundles with a stratum zip of the same path instead of racing it. Only the basename of an absolute path is validated against the strict filename rules — the parent directories already exist and are the filesystem's business. Per-stratum zip paths (`ZIP_PATH_EXPRESSION`) are unchanged: they stay inside `OUTPUT_DIRECTORY`.
+
 ## 0.3.0 - 2026-07-27
 
 - Translations: **fixed the "Strata resolved" algorithm output staying English in every language.** The label was authored with `QT_TRANSLATE_NOOP`, which marks a string for extraction and hands back the source text — correct for a table built at import time, wrong here, because the outputs are declared from `initAlgorithm` and so are already past the point where the plugin translator is installed. Its three sibling outputs translate at that call and were unaffected. The Portuguese and Spanish translations existed and were finished all along; nothing ever looked them up, which is what makes this class of bug read as a missing translation. The output now translates like its siblings, and a test pins all four against a stubbed translator, since English output cannot tell a translated label from an untranslated one.
