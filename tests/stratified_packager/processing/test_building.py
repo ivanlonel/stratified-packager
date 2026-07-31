@@ -26,6 +26,7 @@ from qgis.core import (
     QgsVectorLayer,
 )
 
+from stratified_packager.processing import building
 from stratified_packager.processing.building import (
     LayerWrite,
     StratumBuild,
@@ -38,12 +39,13 @@ from stratified_packager.processing.building import (
     write_template,
     write_vector_table,
 )
-from stratified_packager.processing.matching import LayerMatchPlan
+from stratified_packager.processing.matching import LayerMatchPlan, in_filter_expressions
 from stratified_packager.processing.params import MatchingMethod
 from stratified_packager.toolbelt import gpkg
+from stratified_packager.toolbelt.relations import RelationEdge, RelationHop
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
     from pathlib import Path
 
 pytestmark = pytest.mark.qgis
@@ -90,6 +92,50 @@ def _stratum() -> tuple[QgsVectorLayer, QgsFeature]:
     layer.updateExtents()
     feature = next(iter(cast("Iterable[QgsFeature]", layer.getFeatures())))
     return layer, feature
+
+
+def _strata(count: int) -> tuple[QgsVectorLayer, list[QgsFeature]]:
+    """
+    Build a stratification layer of *count* features whose ``sid`` runs ``10 … 10 + count``.
+
+    :param count: How many strata to create.
+    :return: ``(layer, its features)``.
+    """
+    layer = QgsVectorLayer("Polygon?crs=EPSG:4326&field=sid:integer", "strata", "memory")
+    provider = layer.dataProvider()
+    assert provider is not None
+    features = []
+    for offset in range(count):
+        feature = QgsFeature(layer.fields())
+        feature.setAttributes([10 + offset])
+        feature.setGeometry(QgsGeometry.fromWkt(f"POLYGON((0 0,0 5,{5 + offset} 5,5 0,0 0))"))
+        features.append(feature)
+    assert provider.addFeatures(features)
+    layer.updateExtents()
+    return layer, list(cast("Iterable[QgsFeature]", layer.getFeatures()))
+
+
+def _attribute_plan(strat: QgsVectorLayer, layer: QgsVectorLayer) -> LayerMatchPlan:
+    """
+    Return a one-hop attribute plan matching *strat*'s ``sid`` against *layer*'s ``pid``.
+
+    :param strat: The stratification layer (the hop's near side).
+    :param layer: The packaged layer (the hop's far side; its keys are the condition).
+    :return: The plan.
+    """
+    edge = RelationEdge(
+        relation_id="r_pts_strata",
+        name="pts ← strata",
+        referencing_layer_id=layer.id(),
+        referenced_layer_id=strat.id(),
+        referencing_fields=("pid",),
+        referenced_fields=("sid",),
+    )
+    return LayerMatchPlan(
+        layer_id=layer.id(),
+        method=MatchingMethod.ATTRIBUTE,
+        chain=(RelationHop(edge, strat.id(), layer.id()),),
+    )
 
 
 def _spatial_plan(layer: QgsVectorLayer) -> LayerMatchPlan:
@@ -487,6 +533,53 @@ def test_stage_union_holds_only_matched(
     )
     # Only the two points inside the stratum are staged; the orphan (12) is not.
     assert gpkg.feature_count(staging, "pts") == 2
+
+
+def test_stage_union_source_selects_do_not_scale_with_strata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    feedback: QgsProcessingFeedback,
+    qgis_new_project: QgsProject,
+) -> None:
+    """
+    Staging pools the strata's keys into one source select instead of one per stratum.
+
+    Selecting per stratum made a partitioned run cost ``len(strata)`` slow-source selects to
+    build the staged copy that exists to avoid them — hours where ``EXPORT_FULL_PACKAGE``,
+    which copies the whole layer once, took minutes.
+    """
+    points = _points("pts", [(10, 1, 1), (11, 2, 2), (12, 7, 7)])
+    assert qgis_new_project.addMapLayer(points, addToLegend=False)
+    selects: list[int] = []
+
+    def counting(fields: Sequence[str], keys: Iterable[tuple[object, ...]]) -> list[str]:
+        """Record how many source selects the expressions this call yields will cost."""
+        expressions = in_filter_expressions(fields, keys)
+        selects.append(len(expressions))
+        return expressions
+
+    monkeypatch.setattr(building, "in_filter_expressions", counting)
+
+    staged: list[int] = []
+    for count in (2, 8):
+        selects.clear()
+        strat, features = _strata(count)
+        staging = tmp_path / f"pts_{count}.gpkg"
+        stage_union(
+            staging,
+            _clone(points),
+            "pts",
+            (_attribute_plan(strat, points),),
+            features,
+            project=qgis_new_project,
+            strat_layer=strat,
+            feedback=feedback,
+        )
+        staged.append(sum(selects))
+        # The union grows with the strata (sid 10.., of which pids 10/11/12 exist)…
+        assert gpkg.feature_count(staging, "pts") == min(count, 3)
+
+    assert staged == [1, 1]  # …while the source is selected against exactly once either way.
 
 
 def test_discard_swallows_the_oserror_a_locked_gpkg_raises(tmp_path: Path) -> None:

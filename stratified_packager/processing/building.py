@@ -58,7 +58,7 @@ if TYPE_CHECKING:
         QgsVectorLayer,
     )
 
-    from .matching import ChainContext, LayerMatchPlan
+    from .matching import ChainContext, LayerMatchPlan, MatchCondition
 
 __all__: list[str] = [
     "LayerWrite",
@@ -591,6 +591,52 @@ def _apply_membership(
     return True, frozenset(read.selectedFeatureIds())
 
 
+def _member_condition(
+    read_layer: QgsVectorLayer,
+    member: LayerMatchPlan,
+    stratum_feature: QgsFeature,
+    *,
+    project: QgsProject,
+    strat_layer: QgsVectorLayer | None,
+    stratum_name: str,
+    feedback: QgsProcessingFeedback,
+    chain_context: ChainContext | None = None,
+) -> MatchCondition:
+    """
+    Resolve one member's match set for one stratum, without touching the selection (SPEC §7).
+
+    Attribute matching propagates the stratum's keys along the relation chain; spatial matching
+    materializes the fids matched against this stratum's geometry. Kept selection-free so callers
+    that union many strata can accumulate the conditions and query the source once
+    (:func:`stage_union`) instead of once per stratum.
+
+    :param read_layer: The standalone read layer the condition is resolved against.
+    :param member: The member's resolved match plan (never ``whole_export``).
+    :param stratum_feature: The stratum feature (membership source).
+    :param project: The run's project (relation-chain intermediates).
+    :param strat_layer: The stratification layer (spatial transforms).
+    :param stratum_name: The stratum name (feedback only).
+    :param feedback: Execution feedback channel.
+    :param chain_context: The run's relation-chain context (staged hops + memo, §7.1).
+    :return: The membership condition — key tuples, or fids when ``by_fid``.
+    :raise QgsProcessingException: On a missing stratification layer or transform failure.
+    """
+    if member.method is MatchingMethod.ATTRIBUTE:
+        return attribute_keys_for_stratum(
+            member, stratum_feature, stratum_name, project, feedback, chain_context=chain_context
+        )
+    if strat_layer is None:
+        raise QgsProcessingException(
+            QCoreApplication.translate("Building", "spatial matching needs a stratification layer")
+        )
+    geometry = stratum_geometry_in_layer_crs(
+        stratum_feature.geometry(), strat_layer, read_layer, project, feedback
+    )
+    return spatial_fids_for_stratum(
+        read_layer, geometry, stratum_name, member.predicates, feedback
+    )
+
+
 def _select_member(
     read_layer: QgsVectorLayer,
     member: LayerMatchPlan,
@@ -620,27 +666,21 @@ def _select_member(
     :param chain_context: The run's relation-chain context (staged hops + memo, §7.1).
     :raise QgsProcessingException: On a missing stratification layer or transform failure.
     """
-    if member.method is MatchingMethod.ATTRIBUTE:
-        condition = attribute_keys_for_stratum(
-            member, stratum_feature, stratum_name, project, feedback, chain_context=chain_context
-        )
-        if condition.by_fid:
-            read_layer.selectByIds(list(condition.fids), Qgis.SelectBehavior.AddToSelection)
-        else:
-            for expression in in_filter_expressions(condition.key_fields, condition.keys):
-                read_layer.selectByExpression(expression, Qgis.SelectBehavior.AddToSelection)
+    condition = _member_condition(
+        read_layer,
+        member,
+        stratum_feature,
+        project=project,
+        strat_layer=strat_layer,
+        stratum_name=stratum_name,
+        feedback=feedback,
+        chain_context=chain_context,
+    )
+    if condition.by_fid:
+        read_layer.selectByIds(list(condition.fids), Qgis.SelectBehavior.AddToSelection)
         return
-    if strat_layer is None:
-        raise QgsProcessingException(
-            QCoreApplication.translate("Building", "spatial matching needs a stratification layer")
-        )
-    geometry = stratum_geometry_in_layer_crs(
-        stratum_feature.geometry(), strat_layer, read_layer, project, feedback
-    )
-    condition = spatial_fids_for_stratum(
-        read_layer, geometry, stratum_name, member.predicates, feedback
-    )
-    read_layer.selectByIds(list(condition.fids), Qgis.SelectBehavior.AddToSelection)
+    for expression in in_filter_expressions(condition.key_fields, condition.keys):
+        read_layer.selectByExpression(expression, Qgis.SelectBehavior.AddToSelection)
 
 
 def stage_union(
@@ -664,6 +704,14 @@ def stage_union(
     computed against the source here; per-stratum reads then re-match against the staged copy
     (its own fids/keys, so spatial matching survives the FID renumbering).
 
+    The strata sweep only *collects* each member's condition; the source is then selected against
+    **once per distinct key-field set**, not once per stratum. Selecting per stratum would pay the
+    slow-source attribute select §8.2 exists to avoid, once for every stratum, just to build the
+    copy that avoids it — making a partitioned run cost more than the single whole-layer copy
+    ``EXPORT_FULL_PACKAGE`` takes, which it never may. Pooling changes nothing about the result:
+    set union is order-independent, and an ``IN`` over the pooled keys matches exactly what the
+    per-stratum filters matched between them.
+
     :param staging_gpkg: The per-layer staging GeoPackage.
     :param read_layer: A standalone clone of the source layer (its selection is replaced).
     :param table: The staged table name.
@@ -678,6 +726,8 @@ def stage_union(
     :raise QgsProcessingException: On a writer or transform failure.
     """
     read_layer.removeSelection()
+    fids: set[int] = set()
+    keys_by_fields: dict[tuple[str, ...], set[tuple[object, ...]]] = {}
     for index, feature in enumerate(stratum_features, start=1):
         if feedback.isCanceled():
             return
@@ -687,7 +737,7 @@ def stage_union(
             )
         )
         for member in members:
-            _select_member(
+            condition = _member_condition(
                 read_layer,
                 member,
                 feature,
@@ -697,6 +747,21 @@ def stage_union(
                 feedback=feedback,
                 chain_context=chain_context,
             )
+            if condition.by_fid:
+                fids.update(condition.fids)
+            else:
+                keys_by_fields.setdefault(condition.key_fields, set()).update(condition.keys)
+    if fids:
+        read_layer.selectByIds(sorted(fids), Qgis.SelectBehavior.AddToSelection)
+    # ponytail: one source scan per key chunk, so a union spanning more than one chunk of
+    # distinct keys on an unindexed remote column can still cost more than one whole-layer copy.
+    # If that shows up, collect the fids in a single attribute-only pass over the source instead.
+    for expression in [
+        expression
+        for fields, keys in keys_by_fields.items()
+        for expression in in_filter_expressions(fields, sorted(keys, key=repr))
+    ]:
+        read_layer.selectByExpression(expression, Qgis.SelectBehavior.AddToSelection)
     feedback.setProgressText(
         QCoreApplication.translate("Building", "Staging {}: writing the staged copy").format(table)
     )

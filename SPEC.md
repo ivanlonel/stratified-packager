@@ -422,7 +422,17 @@ is skipped (§11), and the template excludes them — the staged copy would be w
 nothing (a mixed warm/non-warm group still stages; its non-warm members read per stratum). The staging gpkg is built by `stage_union` over **every member's
 match plan** — the union of every stratum's matches (or **all** features when
 `EXPORT_FULL_PACKAGE` is on, since the `<full>` stratum reads the whole staged copy and would
-otherwise drop every feature matching no stratum), retaining each member's matching-key fields
+otherwise drop every feature matching no stratum). The strata sweep only **collects** each
+member's condition; the source is then queried **once per distinct key-field set** (`IN` over the
+pooled keys, chunked as in §7.1), plus one selection by id for the spatial and same-layer members
+whose fids the sweep materialized. Querying per stratum instead would pay the slow-source
+attribute select this section measures at ~100× a staged one `len(strata)` times over, to build
+the very copy that exists to avoid it — making a partitioned run cost *more* than the single
+whole-layer copy `EXPORT_FULL_PACKAGE` takes, which it never may. Spatial members are still
+resolved per stratum: each is bounded by the provider's spatial index to its stratum bbox (§7.2),
+whereas a unioned geometry would degrade to a full scan and, for predicates not implying
+intersection, would not even be a sound superset. The staged copy retains each member's
+matching-key fields
 even when `excluded_fields` drops them from output (so matching survives, §7.1) and dropping
 geometry-typed attribute columns GeoPackage cannot store. For attribute-matched members an
 **attribute index** is created per distinct key-field set, so the N per-stratum key filters are
