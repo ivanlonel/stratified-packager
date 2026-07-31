@@ -21,6 +21,7 @@ failures into one final exception. Cancellation is observed through the feedback
 
 from __future__ import annotations
 
+import itertools
 import shutil
 import time
 from dataclasses import dataclass, field
@@ -756,11 +757,11 @@ def stage_union(
     # ponytail: one source scan per key chunk, so a union spanning more than one chunk of
     # distinct keys on an unindexed remote column can still cost more than one whole-layer copy.
     # If that shows up, collect the fids in a single attribute-only pass over the source instead.
-    for expression in [
-        expression
+    chunked = itertools.chain.from_iterable(
+        in_filter_expressions(fields, sorted(keys, key=repr))
         for fields, keys in keys_by_fields.items()
-        for expression in in_filter_expressions(fields, sorted(keys, key=repr))
-    ]:
+    )
+    for expression in chunked:
         read_layer.selectByExpression(expression, Qgis.SelectBehavior.AddToSelection)
     feedback.setProgressText(
         QCoreApplication.translate("Building", "Staging {}: writing the staged copy").format(table)

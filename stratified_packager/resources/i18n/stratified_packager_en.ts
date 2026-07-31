@@ -4,12 +4,12 @@
 <context>
   <name>Building</name>
   <message>
-    <location filename="../../processing/building.py" line="243" />
+    <location filename="../../processing/building.py" line="244" />
     <source>Writing template layer {}/{}: {}</source>
     <translation type="unfinished" />
   </message>
   <message numerus="yes">
-    <location filename="../../processing/building.py" line="257" />
+    <location filename="../../processing/building.py" line="258" />
     <source>template gpkg holds %n layer(s)</source>
     <translation>
       <numerusform>template gpkg holds %n layer</numerusform>
@@ -17,53 +17,53 @@
     </translation>
   </message>
   <message>
-    <location filename="../../processing/building.py" line="326" />
+    <location filename="../../processing/building.py" line="327" />
     <source>{} — layer {}/{}: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="364" />
-    <location filename="../../processing/building.py" line="356" />
+    <location filename="../../processing/building.py" line="365" />
+    <location filename="../../processing/building.py" line="357" />
     <source>Failed to remove partial gpkg {} after error: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="389" />
+    <location filename="../../processing/building.py" line="390" />
     <source>{}: {:.1f}s writing layers; slowest {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="418" />
+    <location filename="../../processing/building.py" line="419" />
     <source>warm start used for {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="630" />
+    <location filename="../../processing/building.py" line="631" />
     <source>spatial matching needs a stratification layer</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="735" />
+    <location filename="../../processing/building.py" line="736" />
     <source>Staging {}: matching stratum {}/{}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="766" />
+    <location filename="../../processing/building.py" line="767" />
     <source>Staging {}: writing the staged copy</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="825" />
+    <location filename="../../processing/building.py" line="826" />
     <source>writing table {} canceled</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="828" />
+    <location filename="../../processing/building.py" line="829" />
     <source>writing table {} failed: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/building.py" line="933" />
+    <location filename="../../processing/building.py" line="934" />
     <source>WAL checkpoint incomplete; not snapshotting a stale warm cache</source>
     <translation type="unfinished" />
   </message>
