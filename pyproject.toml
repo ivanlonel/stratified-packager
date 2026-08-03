@@ -40,12 +40,12 @@ dev = [
   "prek~=0.4.11",
   "pydoclint[flake8]~=0.9.1",
   "pylint~=4.0.6",
-  "ruff~=0.16.0",
+  "ruff~=0.16.1",
   { include-group = "test" },
   { include-group = "type" },
 ]
 test = [
-  "hypothesis~=6.161.5",
+  "hypothesis~=6.165.0",
   "pytest~=9.1.1",
   "pytest-cov~=7.1.0",
   "pytest-qgis~=4.0.1",
@@ -58,7 +58,7 @@ type = [
   "lxml-stubs~=0.5.1",
   "mypy[faster-cache]~=2.3.0",
   "pyqt6-stubs==20250824",
-  "ty~=0.0.63",
+  "ty~=0.0.65",
   "types-docutils~=0.22.3",
   { include-group = "doc-and-type" },
   { include-group = "test-and-type" },
@@ -83,10 +83,10 @@ doc-and-type = [
 hook = [
   "mdformat~=1.0.0",
   "pre-commit-hooks~=6.0.0",
-  "pyproject-fmt~=2.25.4",
+  "pyproject-fmt~=2.26.0",
   "sync-with-uv~=0.6.0",
-  "uv~=0.11.32",
-  "zizmor~=1.28.0",
+  "uv~=0.12.1",
+  "zizmor~=1.29.0",
 ]
 pack = [
   "lxml~=6.1.1",
