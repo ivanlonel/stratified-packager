@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
-## Unreleased - 2026-07-31
+## 0.4.0 - 2026-08-04
 
 - Virtual layers: **fixed a materialized virtual layer shipping empty in every package.** A virtual layer's definition can carry a `lazy` flag, which tells the provider to skip the query when the layer is opened — an authoring convenience, so that adding such a layer to a project does not immediately run its join against every source it touches. The flag rides along into the copy the packaging reads from, and a layer that has never run its query reports no fields and no features while still looking perfectly valid, so each stratum got a table with nothing in it. Nothing said so either: the layer was recorded as legitimately empty, and the check that reports features matching no stratum compares two numbers that are both zero. Such a layer is now loaded before its features are read, which is what the live route has always done by rebuilding the definition eagerly; the project file is untouched, and a layer left live is unaffected. Independently of `lazy`, a layer whose data provider exposes no fields at all now warns, naming the layer and its provider, instead of being written out empty in silence.
 
