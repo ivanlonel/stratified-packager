@@ -14,6 +14,7 @@ from __future__ import annotations
 import pytest
 
 from stratified_packager.toolbelt.sql import (
+    equality_operands,
     quote_identifier,
     safe_table_name,
     sqlite_where_error,
@@ -64,6 +65,51 @@ class TestQuoting:
         :param expected: Quoted form.
         """
         assert quote_identifier(name) == expected
+
+
+class TestEqualityOperands:
+    """Tests for :func:`equality_operands`."""
+
+    @pytest.mark.parametrize(
+        ("query", "expected"),
+        [
+            (
+                (
+                    "SELECT a.fid, b.geometry AS geom FROM especies a"
+                    " LEFT JOIN enderecos b ON a.cod_unico_endereco = b.cod_unico_endereco"
+                ),
+                {"cod_unico_endereco"},
+            ),
+            ("SELECT * FROM t a JOIN u b ON a . cod = b . ref", {"cod", "ref"}),
+            ("SELECT * FROM t WHERE x <= 5 AND y >= 2 AND z != 3 AND w <> 4", set()),
+            ("SELECT * FROM t JOIN u USING (col)", set()),
+            ("SELECT * FROM t WHERE cod IN (SELECT cod FROM u)", set()),
+            ("SELECT * FROM t WHERE n = 42", {"n", "42"}),
+            ("SELECT * FROM t WHERE name = 'abc'", set()),
+            ("", set()),
+        ],
+        ids=[
+            "join",
+            "spaced-qualifiers",
+            "range-operators",
+            "using",
+            "in-subquery",
+            "numeric-literal",
+            "quoted-literal",
+            "empty",
+        ],
+    )
+    def test_operands(self, query: str, expected: set[str]) -> None:
+        """
+        Only bare-operand ``=`` comparisons are reported, with the table qualifier dropped.
+
+        The numeric-literal case documents deliberate over-matching: the caller intersects the
+        result with a table's real columns, where ``42`` has nothing to match.
+
+        :param query: The SQL text to scan.
+        :param expected: The identifiers it should yield.
+        """
+        assert equality_operands(query) == expected
 
 
 class TestSqliteWhereError:

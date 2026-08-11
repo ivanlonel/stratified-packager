@@ -737,11 +737,23 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
 - **Live virtual layers** (`materialize_virtual_layer=false` with every queried source packaged,
   §4) are carried into the project with their query, subset, uid and geometry preserved and each
   source re-pointed at this stratum's gpkg table; style and attribute-form config ride along (the
-  layer is cloned and only its data source swapped). The re-pointed layer is left **without a
-  computed extent**: deriving one runs the query over the stratum gpkg, where the writer leaves
-  the queried columns unindexed, so a join scans nested-loop and costs more than linearly in the
-  stratum's size — paid once per stratum for a value the package never reads. Unset, it is simply
-  absent from the written project and the recipient's QGIS derives it on demand, locally, once.
+  layer is cloned and only its data source swapped). **The columns the query compares with `=`
+  are indexed** in the stratum gpkg, one single-column index per column, on every source table
+  holding them. Such a layer re-runs its whole query for every feature count and every render — a
+  canvas extent filter wraps the query rather than entering it — and QGIS pushes each equality
+  down as one filtered request *per outer row*; against the columns `QgsVectorFileWriter` leaves
+  unindexed, each of those is a full scan of the inner table, so the recipient pays a nested-loop
+  join every time the layer is drawn. Single-column, not composite: QGIS stops at the first usable
+  constraint, so only ever one column is pushed down and a composite index would serve only its
+  leading column. The columns are found by scanning the query text for `=` between two bare
+  operands, so a join written as `USING (col)`, `IN (…)` or through a function is not detected and
+  stays unindexed; indexing is best effort either way — a failure is warned about and the stratum
+  ships regardless. This makes such a layer linear rather than cheap: the per-row request overhead
+  remains, so a layer over millions of rows is still better materialized (§4) or pushed into its
+  source as a view. The re-pointed layer is left **without a computed extent**: deriving one runs
+  the query over the stratum gpkg once per stratum, for a value the package never reads. Unset, it
+  is simply absent from the written project and the recipient's QGIS derives it on demand,
+  locally, once.
   The definition's `lazy` flag is deliberately *not* carried over: it would defer the provider's
   load, and a layer that populates only after a manual reload is not a delivered layer. Neither
   route keeps it — the materialized one loads its clone before reading features (§4), this one

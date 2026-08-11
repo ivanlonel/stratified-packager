@@ -9,6 +9,7 @@ helpers stay usable from background threads, ``scripts/`` and osgeo-free tests. 
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from contextlib import closing
 from typing import TYPE_CHECKING, Final
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 __all__: list[str] = [
+    "equality_operands",
     "quote_identifier",
     "safe_table_name",
     "sqlite_where_error",
@@ -51,6 +53,34 @@ def quote_identifier(name: str, /) -> str:
     """
     escaped = name.replace('"', '""')
     return f'"{escaped}"'
+
+
+_EQUALITY_OPERAND: Final = re.compile(r"(?:\w+\s*\.\s*)?(\w+)\s*=\s*(?:\w+\s*\.\s*)?(\w+)")
+"""Both operands of an ``=`` comparison, with any ``table.``/``alias.`` qualifier dropped.
+
+A word character never precedes the ``=`` of ``<=``, ``>=``, ``!=`` or ``<>``, so none of those
+operators can match."""
+
+
+def equality_operands(query: str, /) -> frozenset[str]:
+    """
+    Collect the identifiers an SQL query compares with ``=``, table qualifier dropped.
+
+    Answers "which columns could an index serve here?" for a caller that intersects the result
+    with a table's real column names. That intersection is what lets this stay a scan rather
+    than a parser: an operand that is a literal, a function name or a table alias has no
+    matching column and drops out, so over-matching costs nothing.
+
+    :param query: SQL text, in any dialect.
+    :return: The identifiers on both sides of every ``=`` whose two operands are bare words.
+    """
+    # ponytail: `=` between two bare operands, which is the join form an index actually serves
+    # through a provider's constraint pushdown. USING (col), IN (...), function-wrapped columns
+    # and comparisons against a quoted literal are not detected; widen the pattern if a query
+    # needing them shows up.
+    return frozenset(
+        name for match in _EQUALITY_OPERAND.finditer(query) for name in match.groups()
+    )
 
 
 def sqlite_where_error(columns: Iterable[str], where: str, /) -> str | None:
