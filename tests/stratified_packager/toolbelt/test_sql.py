@@ -81,6 +81,13 @@ class TestEqualityOperands:
                 {"cod_unico_endereco"},
             ),
             ("SELECT * FROM t a JOIN u b ON a . cod = b . ref", {"cod", "ref"}),
+            (
+                (
+                    "SELECT * FROM a JOIN b ON a.cod = b.cod AND a.uf = b.uf"
+                    " WHERE a.n >= 5 AND a.mun = b.mun"
+                ),
+                {"cod", "uf", "mun"},
+            ),
             ("SELECT * FROM t WHERE x <= 5 AND y >= 2 AND z != 3 AND w <> 4", set()),
             ("SELECT * FROM t JOIN u USING (col)", set()),
             ("SELECT * FROM t WHERE cod IN (SELECT cod FROM u)", set()),
@@ -91,6 +98,7 @@ class TestEqualityOperands:
         ids=[
             "join",
             "spaced-qualifiers",
+            "multiple-equalities",
             "range-operators",
             "using",
             "in-subquery",
