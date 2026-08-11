@@ -1294,7 +1294,11 @@ class TestFinalizeMembers:
         feedback = QgsProcessingFeedback()
 
         algo = StratifiedPackagerAlgorithm()
-        monkeypatch.setattr(algo, "_project_plan", lambda *_a, **_k: object())
+        # A plan with no embedded-only layers: nothing for the join-column indexing to do, so
+        # this exercises the embedded *write* failure on its own.
+        monkeypatch.setattr(
+            algo, "_project_plan", lambda *_a, **_k: SimpleNamespace(embedded_only=())
+        )
         algo._finalize_members(
             cast("Any", material), cast("Any", members), cast("Any", state), feedback
         )

@@ -49,6 +49,7 @@ from stratified_packager.processing.project_builder import (
     StratumProjectPlan,
     _rebuild_virtual_layer,
     build_stratum_project,
+    index_virtual_join_columns,
     read_saved_view_extent,
     resolve_initial_view,
     snapshot_embedded_layers,
@@ -459,6 +460,85 @@ class TestLiveVirtualLayer:
         assert any(
             name in timings[0] for name in ("cities", "states", "v_cities", "<project write>")
         )
+
+
+class TestIndexVirtualJoinColumns:
+    """A live virtual layer's queried columns are indexed in the stratum gpkg (SPEC §13)."""
+
+    JOIN_QUERY = 'SELECT a.cid FROM "c" a LEFT JOIN "s" b ON a.state_code = b.code'
+
+    @staticmethod
+    def _add_join_virtual(built: Built, cities_ref: str, states_ref: str, query: str) -> str:
+        """Add a two-source virtual layer to the source project and return its id."""
+        definition = QgsVirtualLayerDefinition()
+        definition.addSource("c", cities_ref)
+        definition.addSource("s", states_ref)
+        definition.setQuery(query)
+        vlayer = QgsVectorLayer(definition.toString(), "v_join", "virtual")
+        assert built.project.addMapLayer(vlayer, addToLegend=False)
+        return vlayer.id()
+
+    @staticmethod
+    def _indexes(gpkg: Path, table: str) -> set[str]:
+        """Name every index standing on *table*."""
+        with sqlite3.connect(f"file:{gpkg.as_posix()}?mode=ro", uri=True) as conn:
+            return {
+                name
+                for (name,) in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ?",
+                    (table,),
+                )
+            }
+
+    def test_join_columns_indexed(self, built: Built) -> None:
+        """Each side of the join predicate is indexed on the table that actually holds it."""
+        layer_id = self._add_join_virtual(
+            built, built.cities.id(), built.states.id(), self.JOIN_QUERY
+        )
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (layer_id,)
+        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+
+        # Only the column each table owns: `code` is not a cities column, `state_code` not a
+        # states one, so the intersection with the real columns keeps them apart.
+        assert self._indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
+        assert self._indexes(built.gpkg, "states") == {"idx_states_code"}
+
+    def test_source_without_a_stratum_table_is_skipped(self, built: Built) -> None:
+        """An unpackaged source indexes nothing and does not disturb the packaged one (§13)."""
+        layer_id = self._add_join_virtual(
+            built, built.cities.id(), "no_such_layer_id", self.JOIN_QUERY
+        )
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (layer_id,)
+        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+
+        assert self._indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
+        assert self._indexes(built.gpkg, "states") == set()
+
+    def test_nothing_to_index_leaves_the_gpkg_alone(self, built: Built) -> None:
+        """A query with no equality, and a non-virtual embedded layer, both index nothing."""
+        layer_id = self._add_join_virtual(
+            built, built.cities.id(), built.states.id(), 'SELECT * FROM "c"'
+        )
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (layer_id, built.raster.id())
+        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+
+        assert self._indexes(built.gpkg, "cities") == set()
+        assert self._indexes(built.gpkg, "states") == set()
+
+    def test_repeated_runs_are_idempotent(self, built: Built) -> None:
+        """A warm gpkg arriving with the index already on it is re-indexed without error."""
+        layer_id = self._add_join_virtual(
+            built, built.cities.id(), built.states.id(), self.JOIN_QUERY
+        )
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (layer_id,)
+        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+
+        assert self._indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
 
 
 class TestEmbeddedOnlyLayers:

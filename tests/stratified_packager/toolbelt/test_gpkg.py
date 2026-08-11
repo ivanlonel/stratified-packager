@@ -28,6 +28,7 @@ osr.UseExceptions()
 
 from stratified_packager.toolbelt.gpkg import (  # noqa: E402  # must follow the importorskip guard
     checkpoint_wal,
+    column_names,
     create_attribute_index,
     drop_table,
     feature_count,
@@ -65,6 +66,9 @@ class TestIntrospection:
         assert not table_exists(source_gpkg, "missing")
         assert geometry_column_of(source_gpkg, "alpha") == "geom"
         assert feature_count(source_gpkg, "alpha") >= 1
+        assert {"a", "b", "geom"} <= column_names(source_gpkg, "alpha")
+        assert column_names(source_gpkg, "missing") == frozenset()
+        assert column_names(source_gpkg.with_name("absent.gpkg"), "alpha") == frozenset()
 
     def test_drop_table(self, source_gpkg: Path) -> None:
         """``drop_table`` removes a layer and its registrations; a missing table reports False."""

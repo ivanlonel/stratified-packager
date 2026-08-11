@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import sqlite3
 import time
 import zipfile
 from dataclasses import dataclass, field
@@ -44,7 +45,8 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication, QUrl
 from qgis.PyQt.QtXml import QDomDocument, QDomElement
 
-from stratified_packager.toolbelt.sql import sqlite_where_error
+from stratified_packager.toolbelt import gpkg
+from stratified_packager.toolbelt.sql import equality_operands, sqlite_where_error
 
 from .material import slowest_summary
 from .params import ProjectInclusion
@@ -57,6 +59,7 @@ if TYPE_CHECKING:
 __all__: list[str] = [
     "StratumProjectPlan",
     "build_stratum_project",
+    "index_virtual_join_columns",
     "read_saved_view_extent",
     "resolve_initial_view",
     "snapshot_embedded_layers",
@@ -697,6 +700,88 @@ def _rebuild_virtual_layer(
             ).format(original.name(), message)
         )
     return rebuilt_layer
+
+
+def index_virtual_join_columns(
+    source: QgsProject, plan: StratumProjectPlan, feedback: QgsProcessingFeedback
+) -> None:
+    """
+    Index the columns this stratum's live virtual layers join on, in its gpkg (SPEC §13).
+
+    A live virtual layer re-runs its whole query for every feature count and every render — the
+    canvas extent filter wraps the query rather than entering it — and QGIS pushes each
+    equality in that query down as one filtered request *per outer row*. Against the columns
+    :class:`~qgis.core.QgsVectorFileWriter` leaves unindexed, every one of those requests is a
+    full scan of the inner table, so the recipient pays a nested-loop join each time the layer
+    is drawn. An index turns each request into a b-tree seek: measured 35x end to end on a
+    73k x 61k join (a feature count of 446s down to 13s), for indexes built in hundredths of a
+    second and about one percent of the GeoPackage's size.
+
+    One single-column index per column rather than one composite: QGIS stops at the first usable
+    constraint, so only ever one column is pushed down and a composite index would serve only
+    its leading column.
+
+    Best effort by design — an index that cannot be created costs the recipient speed, never
+    correctness, so a failure is reported and the stratum ships regardless.
+
+    :param source: The open project being packaged.
+    :param plan: The stratum's project plan, whose gpkg is already written.
+    :param feedback: Execution feedback channel.
+    """
+    for layer_id in plan.embedded_only:
+        layer = source.mapLayer(layer_id)
+        if layer is None or layer.providerType() != "virtual":
+            continue
+        definition = QgsVirtualLayerDefinition.fromUrl(QUrl(layer.source()))
+        candidates = equality_operands(definition.query())
+        if not candidates:
+            continue
+        for src in definition.sourceLayers():
+            table = _resolve_virtual_source_table(src, source, plan)
+            if table is not None:
+                _index_source_table(plan.gpkg_path, table, candidates, layer.name(), feedback)
+
+
+def _index_source_table(
+    gpkg_path: Path,
+    table: str,
+    candidates: frozenset[str],
+    layer_name: str,
+    feedback: QgsProcessingFeedback,
+) -> None:
+    """
+    Index the *candidates* that are real columns of *table* (SPEC §13).
+
+    The intersection with the table's own columns is what keeps
+    :func:`~stratified_packager.toolbelt.sql.equality_operands` a scan instead of a parser: a
+    literal or alias it also matched has no column here and is dropped.
+
+    :param gpkg_path: The stratum GeoPackage.
+    :param table: The table backing one virtual-layer source.
+    :param candidates: Identifiers the virtual layer's query compares with ``=``.
+    :param layer_name: The virtual layer's name, for messages.
+    :param feedback: Execution feedback channel.
+    """
+    try:
+        columns = sorted(candidates & gpkg.column_names(gpkg_path, table))
+        for column in columns:
+            gpkg.create_attribute_index(gpkg_path, table, [column])
+    except (sqlite3.Error, OSError) as err:
+        feedback.pushWarning(
+            QCoreApplication.translate(
+                "ProjectBuilder",
+                "Embedded project: could not index table {} for virtual layer {}: {}. It ships"
+                " unindexed, so the layer will be slow to draw.",
+            ).format(table, layer_name, err)
+        )
+    else:
+        if columns:
+            feedback.pushDebugInfo(
+                QCoreApplication.translate(
+                    "ProjectBuilder",
+                    "Embedded project: indexed {} on table {} for virtual layer {}.",
+                ).format(", ".join(columns), table, layer_name)
+            )
 
 
 def _resolve_virtual_source_table(

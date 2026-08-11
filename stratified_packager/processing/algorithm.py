@@ -114,6 +114,7 @@ from .params import (
 from .project_builder import (
     StratumProjectPlan,
     build_stratum_project,
+    index_virtual_join_columns,
     resolve_initial_view,
     snapshot_embedded_layers,
 )
@@ -2274,6 +2275,10 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     )
                 feedback.reportError(self.tr("Stratum {} failed: {}").format(member.name, err))
                 continue
+            # Before the WAL session, not inside it: the data gpkg is complete and nothing has
+            # it open yet in this phase, so the indexes go in without a second writer joining
+            # the build's pooled OGR reads (§13).
+            index_virtual_join_columns(material.project, plan, feedback)
             # Hold the gpkg in WAL with a live -wal sidecar for the whole build, so every
             # pooled open detects it and retries without nolock instead of breaking
             # mid-statement when a later write materializes the sidecar (§13); the

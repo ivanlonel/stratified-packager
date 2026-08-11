@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 __all__: list[str] = [
     "checkpoint_wal",
+    "column_names",
     "create_attribute_index",
     "drop_table",
     "feature_count",
@@ -86,6 +87,22 @@ def table_exists(gpkg: Path, table: str, /) -> bool:
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)
         ).fetchone()
     return row is not None
+
+
+def column_names(gpkg: Path, table: str, /) -> frozenset[str]:
+    """
+    List the column names of *table*.
+
+    :param gpkg: GeoPackage path.
+    :param table: Table name.
+    :return: The column names, empty when the file or the table is absent.
+    """
+    if not gpkg.is_file():
+        return frozenset()
+    with contextlib.closing(_connect_readonly(gpkg)) as conn:
+        # PRAGMA takes an identifier where a parameter is not accepted; quote_identifier guards it.
+        rows = conn.execute(f"PRAGMA table_info({quote_identifier(table)})").fetchall()
+    return frozenset(row[1] for row in rows)
 
 
 def geometry_column_of(gpkg: Path, table: str, /) -> str:
