@@ -86,7 +86,7 @@ Each layer carries QGIS **layer variables** that tune its participation. Edit th
 | Variable                                        | Type       | Default | Meaning                                                                                                                        |
 | ----------------------------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `stratified_packager_exclude`                   | bool       | `false` | Skip this layer when `LAYERS` is empty.                                                                                        |
-| `stratified_packager_matching_method`           | enum       | `auto`  | `auto` \| `attribute` \| `spatial` \| `whole_export`.                                                                          |
+| `stratified_packager_matching_method`           | enum       | `auto`  | `auto` \| `attribute` \| `spatial` \| `whole_export` \| `project_only`.                                                        |
 | `stratified_packager_spatial_predicate`         | list       | `auto`  | Comma-separated named predicates and/or 9-char DE-9IM patterns, combined with OR (invalid patterns are rejected at run-start). |
 | `stratified_packager_relation_path`             | JSON list  | unset   | Pin an ambiguous attribute chain.                                                                                              |
 | `stratified_packager_excluded_fields`           | JSON list  | `[]`    | Fields dropped from the export.                                                                                                |
@@ -99,6 +99,14 @@ With `matching_method = auto`: if a relation path to the stratification layer ex
 matches by **attribute**; otherwise, if both the layer and the stratification layer have
 geometry, it matches **spatially**; otherwise the run aborts naming the layer and the remedies.
 `auto` never resolves to `whole_export` — whole export is always an explicit choice.
+
+`project_only` takes the layer out of packaging altogether: it is never read (so its source need
+not even exist), gets no GeoPackage table, and rides in the embedded per-stratum project alone,
+with everything before the first `|` of its data source replaced by that stratum's GeoPackage and
+every uri option after it — notably a `|subset=` holding a whole `SELECT` — kept verbatim. It is
+how you ship a layer defined *over the package*: a join across the packaged tables, styled in the
+source project, resolving on the recipient's machine. The layer's provider must be `ogr` and every
+table its query reads must be one the run creates; both are checked at run start.
 
 For spatial matching, `spatial_predicate` accepts several predicates at once — a comma-separated
 list of named predicates (`intersects`, `contains`, `within`, `overlaps`, `crosses`, `touches`)

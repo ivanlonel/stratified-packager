@@ -123,6 +123,9 @@ MATCHING_METHOD_LABELS: Final[dict[str, str]] = {
     MatchingMethod.WHOLE_EXPORT.value: QCoreApplication.translate(
         "StratifiedPackagerWidgets", "Whole export"
     ),
+    MatchingMethod.PROJECT_ONLY.value: QCoreApplication.translate(
+        "StratifiedPackagerWidgets", "Embedded project only"
+    ),
 }
 """Per-layer matching-method combo labels keyed by SPEC §4 token (``auto`` is the sentinel,
 not a selectable option)."""

@@ -9,9 +9,9 @@ warnings flow through the feedback.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
-from qgis.core import Qgis
+from qgis.core import Qgis, QgsVectorLayer
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import params
@@ -20,6 +20,7 @@ from .report import (
     STATUS_EMPTY_SKIPPED,
     STATUS_FAILED,
     STATUS_OK,
+    STATUS_PROJECT_ONLY,
     UNMATCHED_KEY,
     RunReportRow,
     ZipReportRow,
@@ -28,18 +29,40 @@ from .report import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from qgis.core import QgsProcessingFeedback
+    from qgis.core import QgsMapLayer, QgsProcessingFeedback
 
     from .building import LayerWriteResult
     from .material import _BuildState, _LayerPrep, _Material
     from .strata import StratumSpec
 
 __all__: list[str] = [
+    "LAYER_TYPE_TOKENS",
     "account_orphans",
     "collect_report_rows",
     "outcome_for",
     "zip_report_rows",
 ]
+
+
+LAYER_TYPE_TOKENS: Final[dict[Qgis.LayerType, str]] = {
+    Qgis.LayerType.Vector: "vector",
+    Qgis.LayerType.Raster: "raster",
+    Qgis.LayerType.Mesh: "mesh",
+    Qgis.LayerType.PointCloud: "point-cloud",
+}
+"""§9.2 ``layer_type`` tokens, per QGIS layer type (a type absent here reports empty)."""
+
+
+def _geometry_token(layer: QgsMapLayer) -> str:
+    """
+    Report a layer's §9.2 ``geometry_type``, or empty when it has no geometry to name.
+
+    :param layer: Any layer (only a spatial vector layer answers).
+    :return: The :class:`~qgis.core.Qgis.GeometryType` name, or an empty string.
+    """
+    if not isinstance(layer, QgsVectorLayer) or not layer.isSpatial():
+        return ""
+    return Qgis.GeometryType(layer.geometryType()).name
 
 
 def outcome_for(
@@ -65,7 +88,7 @@ def zip_report_rows(
     state: _BuildState,
 ) -> list[ZipReportRow]:
     """
-    Build the §9.2 rows of one bundle (vector tables + payload entries).
+    Build the §9.2 rows of one bundle (vector tables, payload entries, embedded-only layers).
 
     :param material: The run material.
     :param members: The bundle's successful members.
@@ -83,11 +106,7 @@ def zip_report_rows(
                     gpkg_table=outcome.table if outcome else "",
                     path_in_zip=f"{member.gpkg_rel}.gpkg" if outcome else "",
                     layer_type="vector",
-                    geometry_type=(
-                        Qgis.GeometryType(prep.layer.geometryType()).name
-                        if prep.layer.isSpatial()
-                        else ""
-                    ),
+                    geometry_type=_geometry_token(prep.layer),
                     feature_count=outcome.feature_count if outcome else None,
                     field_count=len(prep.kept_fields),
                     excluded_fields=";".join(prep.excluded_fields),
@@ -111,6 +130,24 @@ def zip_report_rows(
                 source_crs=payload.layer.crs().authid(),
             )
             for payload in material.payloads
+        )
+        # Layers riding only in the embedded project (§13): no table and no payload, so an
+        # empty path_in_zip, but a row — the package does carry them (SPEC §9.2).
+        rows.extend(
+            ZipReportRow(
+                stratum=member.name,
+                layer_name=layer.name(),
+                layer_type=LAYER_TYPE_TOKENS.get(layer.type(), ""),
+                geometry_type=_geometry_token(layer),
+                matching_method=(
+                    params.MatchingMethod.PROJECT_ONLY.value
+                    if layer.id() in material.project_only_ids
+                    else ""
+                ),
+                source_crs=layer.crs().authid(),
+                status=STATUS_PROJECT_ONLY,
+            )
+            for layer in material.inputs.embedded_layers
         )
     return rows
 
@@ -170,6 +207,15 @@ def collect_report_rows(
                 detail=state.failed.get(stratum.name, ""),
             )
             for payload in material.payloads
+        )
+        report_rows.extend(
+            RunReportRow(
+                stratum=stratum.name,
+                layer=layer.name(),
+                status=(STATUS_FAILED if stratum.name in state.failed else STATUS_PROJECT_ONLY),
+                detail=state.failed.get(stratum.name, ""),
+            )
+            for layer in material.inputs.embedded_layers
         )
 
 

@@ -41,6 +41,7 @@ from stratified_packager.processing.params import (
     declare_parameters,
     eligible_layer_ids,
     is_omitted,
+    is_project_only,
     resolve_default,
     variable_name,
 )
@@ -166,6 +167,7 @@ class TestNamingAndContracts:
             "attribute",
             "spatial",
             "whole_export",
+            "project_only",
         ]
 
 
@@ -407,6 +409,43 @@ class TestEligibleLayers:
         QgsExpressionContextUtils.setLayerVariable(layer, "stratified_packager_exclude", "maybe")
         with pytest.raises(ValueError, match="exclude variable"):
             eligible_layer_ids(project)
+
+
+class TestIsProjectOnly:
+    """Tests for :func:`is_project_only`."""
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, False),
+            ("project_only", True),
+            ("  Project_Only  ", True),
+            ("whole_export", False),
+            ("", False),
+            ("sideways", False),
+        ],
+        ids=["unset", "token", "padded-and-cased", "other-token", "empty", "invalid"],
+    )
+    def test_token_recognition(
+        self, project: QgsProject, value: str | None, expected: bool
+    ) -> None:
+        """
+        Only the ``project_only`` token routes a layer out of packaging.
+
+        The invalid case is deliberate: an unrecognized token reads as "not project-only" here
+        and is left to fail in the matching engine, which owns this variable's validation.
+
+        :param project: The test project.
+        :param value: The stored ``matching_method`` value.
+        :param expected: Whether the layer is project-only.
+        """
+        layer = QgsVectorLayer("Point?crs=EPSG:4326", "layer", "memory")
+        assert project.addMapLayer(layer, addToLegend=False)
+        if value is not None:
+            QgsExpressionContextUtils.setLayerVariable(
+                layer, params.LAYER_VAR_MATCHING_METHOD, value
+            )
+        assert is_project_only(layer) is expected
 
 
 class TestDeclaration:

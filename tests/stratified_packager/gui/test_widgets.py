@@ -51,6 +51,7 @@ from stratified_packager.processing.params import (
     PARAM_SPECS,
     STYLE_CATEGORY_OPTIONS,
     VARIABLE_PREFIX,
+    MatchingMethod,
 )
 from stratified_packager.settings import StratifiedPackagerSettings
 
@@ -444,6 +445,15 @@ def test_project_only_fields_are_variable_only_params() -> None:
         assert spec.setting is None
         assert spec.variable == VARIABLE_PREFIX + field.key
         assert not hasattr(StratifiedPackagerSettings, field.key)
+
+
+def test_matching_method_choices_cover_every_non_auto_token() -> None:
+    """The combo offers a labelled item per SPEC §4 token, ``auto`` excepted (the sentinel)."""
+    spec = next(field for field in layer_fields() if field.key == "matching_method")
+    assert [token for _label, token in spec.labeled_choices] == [
+        member.value for member in MatchingMethod if member is not MatchingMethod.AUTO
+    ]
+    assert all(label and label != token for label, token in spec.labeled_choices)
 
 
 def test_layer_fields_are_suffix_keyed_variables() -> None:

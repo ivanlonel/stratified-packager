@@ -114,9 +114,10 @@ from .params import (
 from .project_builder import (
     StratumProjectPlan,
     build_stratum_project,
-    index_virtual_join_columns,
+    index_join_columns,
     resolve_initial_view,
     snapshot_embedded_layers,
+    validate_repointed_sources,
 )
 from .report import (
     STATUS_DRY_RUN,
@@ -125,7 +126,13 @@ from .report import (
     RunReportRow,
     write_zip_report,
 )
-from .reporting import account_orphans, collect_report_rows, outcome_for, zip_report_rows
+from .reporting import (
+    LAYER_TYPE_TOKENS,
+    account_orphans,
+    collect_report_rows,
+    outcome_for,
+    zip_report_rows,
+)
 from .staging import effective_stage, staged_layer_uri
 from .strata import (
     FULL_PACKAGE_KEY,
@@ -154,12 +161,10 @@ __all__: list[str] = [
 _RESERVED_EXTRA_ROOTS: tuple[str, ...] = ("data", "resources")
 """Zip-root directory names reserved for the packager's own payloads (SPEC §10)."""
 
-_LAYER_TYPE_TOKENS: dict[Qgis.LayerType, str] = {
-    Qgis.LayerType.Raster: "raster",
-    Qgis.LayerType.Mesh: "mesh",
-    Qgis.LayerType.PointCloud: "point-cloud",
-}
-"""§9.2 ``layer_type`` tokens of the payload-capable layer types."""
+_PAYLOAD_LAYER_TYPES: Final[frozenset[Qgis.LayerType]] = frozenset(
+    {Qgis.LayerType.Raster, Qgis.LayerType.Mesh, Qgis.LayerType.PointCloud}
+)
+"""Layer types packaged as a ``data/`` payload copy when their source is local (SPEC §14)."""
 
 _SQLITE_SIDECAR_SUFFIXES: tuple[str, ...] = ("-wal", "-shm", "-journal")
 """SQLite sidecar suffixes excluded from zips (checkpointed away beforehand, SPEC §10)."""
@@ -586,7 +591,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         :param project: The run's project.
         :param feedback: Execution feedback channel.
         :return: ``(vector, payload (local raster/mesh/point-cloud), embedded-only
-            (remote/annotation/live virtual))`` layers.
+            (remote/annotation/live virtual/project-only))`` layers.
         :raise QgsProcessingException: If a layer's ``exclude`` variable cannot be coerced
             to bool while resolving an empty ``LAYERS`` (§5 strict regime).
         """
@@ -614,12 +619,17 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         virtuals: list[QgsVectorLayer] = []
         for layer in raw_layers:
             if isinstance(layer, QgsVectorLayer):
-                # Virtual layers are resolved in a second pass: their live/materialize
-                # decision depends on which other layers are packaged (SPEC §4/§13).
-                (virtuals if layer.providerType() == "virtual" else vectors).append(layer)
+                if params.is_project_only(layer):
+                    # Tested before the virtual split so a virtual layer can be marked too:
+                    # project_only means "never read this layer" whatever its provider (§4).
+                    embedded.append(layer)
+                else:
+                    # Virtual layers are resolved in a second pass: their live/materialize
+                    # decision depends on which other layers are packaged (SPEC §4/§13).
+                    (virtuals if layer.providerType() == "virtual" else vectors).append(layer)
             elif layer.type() == Qgis.LayerType.Plugin:
                 excluded.append(layer)
-            elif layer.type() in _LAYER_TYPE_TOKENS and local_source_path(layer) is not None:
+            elif layer.type() in _PAYLOAD_LAYER_TYPES and local_source_path(layer) is not None:
                 payloads.append(layer)
             else:
                 embedded.append(layer)
@@ -634,7 +644,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             feedback.pushInfo(
                 self.tr(
                     "Layers riding only in the embedded project (remote/annotation/live"
-                    " virtual): {}"
+                    " virtual/project-only): {}"
                 ).format(", ".join(layer.name() for layer in embedded))
             )
         return vectors, payloads, embedded
@@ -886,7 +896,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             if zip_rel not in existing
         }
         for zip_rel in existing:
-            # One row per (stratum, packaged layer) pair, like every other §9.1 path.
+            # One row per (stratum, included layer) pair, like every other §9.1 path.
             report_rows.extend(
                 RunReportRow(
                     stratum=member.name,
@@ -895,7 +905,11 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     detail=f"{zip_rel}.zip exists",
                 )
                 for member in resolution.bundles[zip_rel]
-                for layer in (*inputs.layers, *inputs.payload_layers)
+                for layer in (
+                    *inputs.layers,
+                    *inputs.payload_layers,
+                    *inputs.embedded_layers,
+                )
             )
             feedback.pushInfo(self.tr("Skipping existing output {}.zip").format(zip_rel))
         return surviving
@@ -1054,6 +1068,12 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     )
                 )
 
+        # After the table names are minted — the §4 project_only sources are written against
+        # them — and before any read or write, so a mismatch aborts nothing half-built.
+        repointed = [layer for layer in inputs.embedded_layers if params.is_project_only(layer)]
+        material.project_only_ids = {layer.id() for layer in repointed}
+        validate_repointed_sources(repointed, frozenset(tables))
+
         real_features = [
             features_by_name[stratum.name] for stratum in strata if stratum.feature_id >= 0
         ]
@@ -1098,7 +1118,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     layer=layer,
                     table=table,
                     members=tuple(members),
-                    layer_type=_LAYER_TYPE_TOKENS.get(layer.type(), "raster"),
+                    layer_type=LAYER_TYPE_TOKENS.get(layer.type(), "raster"),
                     project_source=payload_source_arcname(layer, table),
                 )
             )
@@ -2278,7 +2298,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             # Before the WAL session, not inside it: the data gpkg is complete and nothing has
             # it open yet in this phase, so the indexes go in without a second writer joining
             # the build's pooled OGR reads (§13).
-            index_virtual_join_columns(material.project, plan, feedback)
+            index_join_columns(material.project, plan, feedback)
             # Hold the gpkg in WAL with a live -wal sidecar for the whole build, so every
             # pooled open detects it and retries without nolock instead of breaking
             # mid-statement when a later write materializes the sidecar (§13); the
@@ -2365,6 +2385,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             vector_tables=vector_tables,
             data_sources=data_sources,
             embedded_only=tuple(layer.id() for layer in material.inputs.embedded_layers),
+            repointed=frozenset(material.project_only_ids),
             embedded_xml=material.embedded_xml,
             styles_qml=styles,
             # Only a §12 group member needs its subset back: its table holds the union of every
@@ -2541,10 +2562,13 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             report_rows.extend(
                 RunReportRow(
                     stratum=stratum.name,
-                    layer=payload.layer.name(),
+                    layer=layer.name(),
                     status=STATUS_DRY_RUN,
                 )
-                for payload in material.payloads
+                for layer in (
+                    *(payload.layer for payload in material.payloads),
+                    *inputs.embedded_layers,
+                )
             )
         # Phase B/C (which creates the output dir) is skipped on a dry run, so ensure it
         # exists for a file-backed REPORT sink (a memory destination ignores it).

@@ -14,7 +14,7 @@ import re
 import sqlite3
 import zipfile
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, cast, override
 
 import pytest
 
@@ -48,16 +48,20 @@ from stratified_packager.processing.params import ProjectInclusion
 from stratified_packager.processing.project_builder import (
     StratumProjectPlan,
     _rebuild_virtual_layer,
+    _repoint_layer_source,
     build_stratum_project,
-    index_virtual_join_columns,
+    index_join_columns,
     read_saved_view_extent,
     resolve_initial_view,
     snapshot_embedded_layers,
+    validate_repointed_sources,
 )
+from stratified_packager.toolbelt import gpkg
 from tests.stratified_packager._qgis_helpers import add_relation
 from tests.stratified_packager.processing.test_bundling import _write_tif
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
 pytestmark = pytest.mark.qgis
@@ -75,6 +79,19 @@ class _InfoRecordingFeedback(QgsProcessingFeedback):
     @override
     def pushInfo(self, info: str | None = None) -> None:  # PyQGIS override
         self.infos.append(info or "")
+
+
+class _WarningRecordingFeedback(QgsProcessingFeedback):
+    """Feedback that keeps every pushed warning, for asserting on the degraded paths."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.warnings: list[str] = []
+        """Every line passed to :meth:`pushWarning`."""
+
+    @override
+    def pushWarning(self, warning: str | None = None) -> None:  # PyQGIS override
+        self.warnings.append(warning or "")
 
 
 @dataclass
@@ -160,6 +177,25 @@ def built(qgis_new_project: QgsProject, tmp_path: Path) -> Built:
         gpkg=gpkg,
         data_tif=data_tif,
     )
+
+
+def _indexes(gpkg_path: Path, table: str) -> set[str]:
+    """Name every index standing on *table*."""
+    with sqlite3.connect(f"file:{gpkg_path.as_posix()}?mode=ro", uri=True) as connection:
+        return {
+            name
+            for (name,) in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ?",
+                (table,),
+            )
+        }
+
+
+def _qgs_document(qgz_path: Path) -> str:
+    """Read the ``.qgs`` document out of a written ``.qgz``."""
+    with zipfile.ZipFile(qgz_path) as archive:
+        name = next(member for member in archive.namelist() if member.endswith(".qgs"))
+        return archive.read(name).decode("utf-8")
 
 
 def _plan(built: Built, mode: ProjectInclusion) -> StratumProjectPlan:
@@ -462,7 +498,175 @@ class TestLiveVirtualLayer:
         )
 
 
-class TestIndexVirtualJoinColumns:
+class TestProjectOnlyLayers:
+    """§4 ``project_only`` layers re-pointed at the stratum gpkg (SPEC §13)."""
+
+    SUBSET = (
+        "|subset=SELECT a.fid, a.cid, b.code, a.geom FROM cities a"
+        " LEFT JOIN states b ON a.state_code = b.code"
+    )
+    """A query over the packaged tables — the shape such a layer is authored in."""
+
+    def _add(self, built: Built, subset: str | None = None) -> QgsVectorLayer:
+        """Add a layer over a gpkg that does not exist, as the source project holds one."""
+        missing = built.gpkg.parent / "never_written.gpkg"
+        layer = QgsVectorLayer(
+            f"{missing.as_posix()}{self.SUBSET if subset is None else subset}", "derived", "ogr"
+        )
+        assert not layer.isValid()  # the premise: it cannot be cloned, staged or read
+        assert built.project.addMapLayer(layer, addToLegend=False)
+        return layer
+
+    @staticmethod
+    def _plan_with(built: Built, layer: QgsVectorLayer) -> StratumProjectPlan:
+        """Return a plan carrying *layer* as the run's only re-pointed layer."""
+        plan = _plan(built, ProjectInclusion.QGZ)
+        plan.embedded_only = (layer.id(),)
+        plan.repointed = frozenset({layer.id()})
+        return plan
+
+    def test_missing_source_is_repointed_and_reads(self, built: Built) -> None:
+        """A layer whose own gpkg never existed resolves against the stratum's."""
+        layer = self._add(built)
+
+        build_stratum_project(
+            built.project, self._plan_with(built, layer), QgsProcessingFeedback()
+        )
+
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        rebuilt = reopened.mapLayersByName("derived")
+        assert len(rebuilt) == 1
+        assert isinstance(rebuilt[0], QgsVectorLayer)
+        assert rebuilt[0].isValid()
+        # The subset rode along verbatim, so the join really ran over the stratum's tables.
+        assert self.SUBSET.removeprefix("|") in rebuilt[0].source()
+        assert rebuilt[0].featureCount() == 1
+        features = cast("Iterable[QgsFeature]", rebuilt[0].getFeatures())
+        assert [feature["code"] for feature in features] == ["A"]
+
+    def test_stored_source_is_relative_to_the_gpkg(self, built: Built) -> None:
+        """Only the path changes, and Qt relativizes it on write (§13)."""
+        layer = self._add(built)
+
+        build_stratum_project(
+            built.project, self._plan_with(built, layer), QgsProcessingFeedback()
+        )
+
+        document = _qgs_document(built.gpkg.with_suffix(".qgz"))
+        assert "./A.gpkg|subset=" in document
+        assert "never_written" not in document
+
+    def test_repointed_layer_carries_no_computed_extent(self, built: Built) -> None:
+        """Deriving the extent runs the subset's join, once per stratum — skip it (§13)."""
+        layer = self._add(built)
+
+        rebuilt = _repoint_layer_source(
+            layer, self._plan_with(built, layer), QgsProcessingFeedback()
+        )
+
+        assert rebuilt is not None
+        assert rebuilt.extent().isNull()
+
+    def test_style_is_carried_from_the_unreadable_original(self, built: Built) -> None:
+        """Symbology comes off the original layer, which cannot be cloned (§13)."""
+        layer = self._add(built)
+        layer.setRenderer(
+            QgsSingleSymbolRenderer(
+                QgsMarkerSymbol.createSimple({"name": "square", "color": "0,0,255,255"})
+            )
+        )
+
+        build_stratum_project(
+            built.project, self._plan_with(built, layer), QgsProcessingFeedback()
+        )
+
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        styled = reopened.mapLayersByName("derived")[0]
+        assert isinstance(styled, QgsVectorLayer)
+        renderer = styled.renderer()
+        assert isinstance(renderer, QgsSingleSymbolRenderer)
+        symbol = renderer.symbol()
+        assert symbol is not None
+        assert symbol.color() == QColor(0, 0, 255)
+
+    def test_unopenable_layer_is_dropped_with_a_warning(self, built: Built) -> None:
+        """A query naming a table this stratum lacks costs the layer, not the stratum (§13)."""
+        layer = self._add(built, subset="|subset=SELECT * FROM absent_table")
+        recorder = _WarningRecordingFeedback()
+
+        build_stratum_project(built.project, self._plan_with(built, layer), recorder)
+
+        reopened = QgsProject()
+        assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
+        assert not reopened.mapLayersByName("derived")
+        assert any("did not re-open" in warning for warning in recorder.warnings)
+
+    def test_build_releases_its_handle_on_the_stratum_gpkg(self, built: Built) -> None:
+        """A held OGR handle would block the §10 pre-zip checkpoint, shipping a stale gpkg."""
+        layer = self._add(built)
+
+        with gpkg.wal_session(built.gpkg) as held:
+            assert held
+            build_stratum_project(
+                built.project, self._plan_with(built, layer), QgsProcessingFeedback()
+            )
+
+        # A `|subset=` SELECT is backed by an OGR ExecuteSQL handle; while one is open,
+        # wal_checkpoint(TRUNCATE) reports busy and the -wal sidecar (never zipped) keeps data.
+        assert gpkg.checkpoint_wal(built.gpkg)
+
+    def test_join_columns_are_indexed(self, built: Built) -> None:
+        """The same §13 index pass covers a re-pointed layer's ``|subset=`` join."""
+        layer = self._add(built)
+
+        index_join_columns(built.project, self._plan_with(built, layer), QgsProcessingFeedback())
+
+        assert _indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
+        assert _indexes(built.gpkg, "states") == {"idx_states_code"}
+
+
+class TestValidateRepointedSources:
+    """The two §4 run-start guards on ``project_only`` layers."""
+
+    @staticmethod
+    def _layer(built: Built, subset: str) -> QgsVectorLayer:
+        """Build (without registering) a layer over a gpkg that is not there."""
+        return QgsVectorLayer(
+            f"{built.gpkg.parent.as_posix()}/gone.gpkg{subset}", "derived", "ogr"
+        )
+
+    def test_accepts_an_ogr_layer_over_packaged_tables(self, built: Built) -> None:
+        """The intended shape passes: a file source, querying tables the run creates."""
+        validate_repointed_sources(
+            [self._layer(built, TestProjectOnlyLayers.SUBSET)], {"cities", "states"}
+        )
+
+    def test_rejects_a_non_file_provider(self, built: Built) -> None:
+        """A source that is not a path would be replaced whole — wrong data, no error."""
+        with pytest.raises(QgsProcessingException, match="file-based"):
+            validate_repointed_sources([built.states], {"cities", "states"})
+
+    def test_rejects_a_table_the_run_does_not_create(self, built: Built) -> None:
+        """A renamed (or ``_2``-suffixed) table breaks the query — loudly, at run start."""
+        with pytest.raises(QgsProcessingException, match="citiez"):
+            validate_repointed_sources(
+                [self._layer(built, "|subset=SELECT * FROM citiez")], {"cities", "states"}
+            )
+
+    def test_table_comparison_folds_case(self, built: Built) -> None:
+        """SQLite folds table-name case, so the check must not out-strict the engine."""
+        validate_repointed_sources(
+            [self._layer(built, "|subset=SELECT * FROM CITIES")], {"cities"}
+        )
+
+    def test_a_layer_without_uri_options_names_no_table(self, built: Built) -> None:
+        """A bare path (no ``|``) has no query to check, so only the provider guard applies."""
+        validate_repointed_sources([self._layer(built, "")], set())
+
+
+class TestIndexJoinColumns:
     """A live virtual layer's queried columns are indexed in the stratum gpkg (SPEC §13)."""
 
     JOIN_QUERY = 'SELECT a.cid FROM "c" a LEFT JOIN "s" b ON a.state_code = b.code'
@@ -478,18 +682,6 @@ class TestIndexVirtualJoinColumns:
         assert built.project.addMapLayer(vlayer, addToLegend=False)
         return vlayer.id()
 
-    @staticmethod
-    def _indexes(gpkg: Path, table: str) -> set[str]:
-        """Name every index standing on *table*."""
-        with sqlite3.connect(f"file:{gpkg.as_posix()}?mode=ro", uri=True) as conn:
-            return {
-                name
-                for (name,) in conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ?",
-                    (table,),
-                )
-            }
-
     def test_join_columns_indexed(self, built: Built) -> None:
         """Each side of the join predicate is indexed on the table that actually holds it."""
         layer_id = self._add_join_virtual(
@@ -497,12 +689,12 @@ class TestIndexVirtualJoinColumns:
         )
         plan = _plan(built, ProjectInclusion.QGZ)
         plan.embedded_only = (layer_id,)
-        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+        index_join_columns(built.project, plan, QgsProcessingFeedback())
 
         # Only the column each table owns: `code` is not a cities column, `state_code` not a
         # states one, so the intersection with the real columns keeps them apart.
-        assert self._indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
-        assert self._indexes(built.gpkg, "states") == {"idx_states_code"}
+        assert _indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
+        assert _indexes(built.gpkg, "states") == {"idx_states_code"}
 
     def test_source_without_a_stratum_table_is_skipped(self, built: Built) -> None:
         """An unpackaged source indexes nothing and does not disturb the packaged one (§13)."""
@@ -511,10 +703,10 @@ class TestIndexVirtualJoinColumns:
         )
         plan = _plan(built, ProjectInclusion.QGZ)
         plan.embedded_only = (layer_id,)
-        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+        index_join_columns(built.project, plan, QgsProcessingFeedback())
 
-        assert self._indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
-        assert self._indexes(built.gpkg, "states") == set()
+        assert _indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
+        assert _indexes(built.gpkg, "states") == set()
 
     def test_nothing_to_index_leaves_the_gpkg_alone(self, built: Built) -> None:
         """A query with no equality, and a non-virtual embedded layer, both index nothing."""
@@ -523,10 +715,10 @@ class TestIndexVirtualJoinColumns:
         )
         plan = _plan(built, ProjectInclusion.QGZ)
         plan.embedded_only = (layer_id, built.raster.id())
-        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+        index_join_columns(built.project, plan, QgsProcessingFeedback())
 
-        assert self._indexes(built.gpkg, "cities") == set()
-        assert self._indexes(built.gpkg, "states") == set()
+        assert _indexes(built.gpkg, "cities") == set()
+        assert _indexes(built.gpkg, "states") == set()
 
     def test_repeated_runs_are_idempotent(self, built: Built) -> None:
         """A warm gpkg arriving with the index already on it is re-indexed without error."""
@@ -535,10 +727,10 @@ class TestIndexVirtualJoinColumns:
         )
         plan = _plan(built, ProjectInclusion.QGZ)
         plan.embedded_only = (layer_id,)
-        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
-        index_virtual_join_columns(built.project, plan, QgsProcessingFeedback())
+        index_join_columns(built.project, plan, QgsProcessingFeedback())
+        index_join_columns(built.project, plan, QgsProcessingFeedback())
 
-        assert self._indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
+        assert _indexes(built.gpkg, "cities") == {"idx_cities_state_code"}
 
 
 class TestEmbeddedOnlyLayers:

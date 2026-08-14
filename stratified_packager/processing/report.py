@@ -40,6 +40,7 @@ STATUS_EMPTY_SKIPPED: Final = "empty-skipped"
 STATUS_FAILED: Final = "failed"
 STATUS_SKIPPED_EXISTING: Final = "skipped-existing"
 STATUS_DRY_RUN: Final = "dry-run"
+STATUS_PROJECT_ONLY: Final = "project-only"
 
 UNMATCHED_KEY: Final = "<unmatched>"
 """Pseudo-stratum of the orphan-accounting rows (SPEC §9.1)."""
@@ -97,7 +98,7 @@ class ZipReportRow:
     """Semicolon-joined excluded field names."""
 
     matching_method: str = ""
-    """``attribute`` | ``spatial`` | ``whole_export`` (as resolved)."""
+    """``attribute`` | ``spatial`` | ``whole_export`` | ``project_only`` (as resolved)."""
 
     match_detail: str = ""
     """Relation-path ids or the spatial predicate used."""
