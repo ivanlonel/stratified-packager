@@ -21,6 +21,7 @@ __all__: list[str] = [
     "equality_operands",
     "quote_identifier",
     "safe_table_name",
+    "source_tables",
     "sqlite_where_error",
 ]
 
@@ -80,6 +81,38 @@ def equality_operands(query: str, /) -> frozenset[str]:
     # needing them shows up.
     return frozenset(
         name for match in _EQUALITY_OPERAND.finditer(query) for name in match.groups()
+    )
+
+
+_SOURCE_TABLE: Final = re.compile(
+    r"""\b(?:from|join)\s+                  # the keyword introducing a table reference
+        (?:"([^"]+)"                        # "quoted"
+          |`([^`]+)`                        # `backquoted`
+          |\[([^]]+)]                       # [bracketed]
+          |(?:\w+\s*\.\s*)?(\w+))           # bare, any schema/db qualifier dropped
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+"""The table name following each ``FROM`` / ``JOIN``, in whichever way it is spelled."""
+
+
+def source_tables(query: str, /) -> frozenset[str]:
+    """
+    Collect the table names an SQL query reads (``FROM`` / ``JOIN``), quoting stripped.
+
+    Answers "which tables does this query expect to exist?" for a caller that checks them
+    against the tables it is about to create.
+
+    :param query: SQL text, in any dialect.
+    :return: The table names, as written (case is preserved; both SQLite and GeoPackage fold
+        it, so a caller comparing against real table names should fold too).
+    """
+    # ponytail: a scan, like equality_operands. A derived table (`FROM (SELECT ...)`) matches
+    # nothing and drops out, which is right; a common table expression's name matches and looks
+    # like a table, which is the one false positive — widen to skip WITH-bound names if one
+    # shows up.
+    return frozenset(
+        name for match in _SOURCE_TABLE.finditer(query) for name in match.groups() if name
     )
 
 

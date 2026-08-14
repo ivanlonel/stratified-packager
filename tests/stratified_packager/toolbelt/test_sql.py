@@ -17,6 +17,7 @@ from stratified_packager.toolbelt.sql import (
     equality_operands,
     quote_identifier,
     safe_table_name,
+    source_tables,
     sqlite_where_error,
 )
 
@@ -65,6 +66,57 @@ class TestQuoting:
         :param expected: Quoted form.
         """
         assert quote_identifier(name) == expected
+
+
+class TestSourceTables:
+    """Tests for :func:`source_tables`."""
+
+    @pytest.mark.parametrize(
+        ("query", "expected"),
+        [
+            (
+                (
+                    "SELECT a.fid, b.geom FROM especies_com_enderecos a"
+                    " LEFT JOIN mv_endereco_ponto_face b"
+                    " ON a.cod_unico_endereco = b.cod_unico_endereco;"
+                ),
+                {"especies_com_enderecos", "mv_endereco_ponto_face"},
+            ),
+            (
+                'SELECT * FROM "quoted tbl" x INNER JOIN [brk] y ON x.a = y.a',
+                {"quoted tbl", "brk"},
+            ),
+            ("SELECT * FROM `back` CROSS JOIN plain", {"back", "plain"}),
+            ("SELECT * FROM basico.mv_z", {"mv_z"}),
+            ("SELECT * FROM (SELECT 1) t", set()),
+            ("SELECT 1", set()),
+            ("", set()),
+        ],
+        ids=[
+            "aliased-left-join",
+            "quoted-and-bracketed",
+            "backquoted-and-cross-join",
+            "schema-qualified",
+            "derived-table",
+            "no-from",
+            "empty",
+        ],
+    )
+    def test_tables(self, query: str, expected: set[str]) -> None:
+        """
+        Every ``FROM`` / ``JOIN`` target is reported, quoting and qualifier stripped.
+
+        The derived-table case pins the documented blind spot: a subquery names no table, so it
+        contributes nothing rather than a bogus one.
+
+        :param query: SQL text.
+        :param expected: Table names the scan should find.
+        """
+        assert source_tables(query) == expected
+
+    def test_keyword_must_stand_alone(self) -> None:
+        """A word merely ending in ``from``/``join`` does not introduce a table."""
+        assert source_tables("SELECT wherefrom FROM t") == {"t"}
 
 
 class TestEqualityOperands:
