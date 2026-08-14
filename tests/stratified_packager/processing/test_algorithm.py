@@ -735,6 +735,119 @@ class TestEmbeddedProjectAndPayloads:
         assert ",raster," in zip_report
 
 
+class TestProjectOnlyLayer:
+    """§4 ``matching_method = project_only``: never read, re-pointed in the project (§13)."""
+
+    SUBSET = (
+        "|subset=SELECT a.fid, a.cid, b.rid, a.geom FROM cities a"
+        " LEFT JOIN roads b ON a.cid = b.rid"
+    )
+    """A join over the packaged tables — what such a layer is authored to be."""
+
+    @staticmethod
+    def _add_derived(scenario: Scenario, tmp_path: Path, subset: str) -> QgsVectorLayer:
+        """Add a project-only layer whose own GeoPackage does not exist."""
+        layer = QgsVectorLayer(
+            f"{(tmp_path / 'absent.gpkg').as_posix()}{subset}", "derived", "ogr"
+        )
+        assert not layer.isValid()  # the premise: cloning it would abort the run
+        assert scenario.project.addMapLayer(layer, addToLegend=False)
+        QgsExpressionContextUtils.setLayerVariable(
+            layer, "stratified_packager_matching_method", "project_only"
+        )
+        return layer
+
+    @staticmethod
+    def _tables(gpkg_path: Path) -> set[str]:
+        """Name every user table in a GeoPackage."""
+        with sqlite3.connect(gpkg_path) as connection:
+            return {name for (name,) in connection.execute("SELECT table_name FROM gpkg_contents")}
+
+    def test_unreadable_layer_packages_and_is_repointed(
+        self, scenario: Scenario, tmp_path: Path
+    ) -> None:
+        """The run completes, writes no table for it, and the qgz resolves it locally."""
+        derived = self._add_derived(scenario, tmp_path, self.SUBSET)
+        results = _run(
+            scenario,
+            {
+                p.LAYERS: [scenario.cities, scenario.plots, scenario.roads, derived],
+                p.PROJECT_INCLUSION: ProjectInclusion.QGZ.value,
+            },
+        )
+
+        assert results[p.ZIP_COUNT] == 2
+        extract_dir = tmp_path / "x"
+        with zipfile.ZipFile(scenario.out_dir / "A.zip") as archive:
+            archive.extractall(extract_dir)
+        assert "derived" not in self._tables(extract_dir / "A.gpkg")
+
+        reopened = QgsProject()
+        assert reopened.read(str(extract_dir / "A.qgz"))
+        rebuilt = reopened.mapLayersByName("derived")
+        assert len(rebuilt) == 1
+        assert isinstance(rebuilt[0], QgsVectorLayer)
+        assert rebuilt[0].isValid()
+        assert "absent.gpkg" not in rebuilt[0].source()
+        assert rebuilt[0].featureCount() == 2  # stratum A's two cities
+
+    def test_join_columns_are_indexed(self, scenario: Scenario, tmp_path: Path) -> None:
+        """Its ``|subset=`` join is indexed like a live virtual layer's query (§13)."""
+        derived = self._add_derived(scenario, tmp_path, self.SUBSET)
+        _run(
+            scenario,
+            {
+                p.LAYERS: [scenario.cities, scenario.plots, scenario.roads, derived],
+                p.PROJECT_INCLUSION: ProjectInclusion.QGZ.value,
+            },
+        )
+
+        gpkg_a = _extract(scenario.out_dir / "A.zip", "A.gpkg", tmp_path / "x_idx")
+        with sqlite3.connect(gpkg_a) as connection:
+            indexed = {
+                (table, name)
+                for name, table in connection.execute(
+                    "SELECT name, tbl_name FROM sqlite_master WHERE type = 'index'"
+                )
+            }
+        assert ("cities", "idx_cities_cid") in indexed
+        assert ("roads", "idx_roads_rid") in indexed
+
+    def test_reported_in_both_levels(self, scenario: Scenario, tmp_path: Path) -> None:
+        """It gets a row per stratum in the run report and in the per-zip CSV (§9)."""
+        derived = self._add_derived(scenario, tmp_path, self.SUBSET)
+        _run(scenario, {p.LAYERS: [scenario.cities, scenario.plots, scenario.roads, derived]})
+
+        run_report = (scenario.out_dir / "report.csv").read_text(encoding="utf-8")
+        assert "A,derived,,project-only" in run_report
+        assert "B,derived,,project-only" in run_report
+        with zipfile.ZipFile(scenario.out_dir / "A.zip") as archive:
+            zip_report = archive.read("report.csv").decode("utf-8")
+        derived_row = next(
+            line for line in zip_report.splitlines() if line.startswith("A,derived,")
+        )
+        assert ",project_only," in derived_row  # the resolved method
+        assert derived_row.endswith("project-only,")  # status, empty detail
+        assert "absent.gpkg" not in derived_row  # no path_in_zip
+
+    def test_non_file_provider_aborts_at_run_start(self, scenario: Scenario) -> None:
+        """A source that is not a path cannot be re-pointed — abort, never guess (§4)."""
+        QgsExpressionContextUtils.setLayerVariable(
+            scenario.plots, "stratified_packager_matching_method", "project_only"
+        )
+        with pytest.raises(QgsProcessingException, match="file-based"):
+            _run(scenario)
+
+    def test_unknown_table_aborts_at_run_start(self, scenario: Scenario, tmp_path: Path) -> None:
+        """A query naming a table the run does not create aborts before anything is built."""
+        derived = self._add_derived(scenario, tmp_path, "|subset=SELECT * FROM citiez")
+        with pytest.raises(QgsProcessingException, match="citiez"):
+            _run(
+                scenario,
+                {p.LAYERS: [scenario.cities, scenario.plots, scenario.roads, derived]},
+            )
+
+
 class TestWarmStart:
     """The §11 warm lifecycle (update, use, fallback, misconfiguration)."""
 

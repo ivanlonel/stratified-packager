@@ -46,23 +46,28 @@ from qgis.PyQt.QtCore import QCoreApplication, QUrl
 from qgis.PyQt.QtXml import QDomDocument, QDomElement
 
 from stratified_packager.toolbelt import gpkg
-from stratified_packager.toolbelt.sql import equality_operands, sqlite_where_error
+from stratified_packager.toolbelt.sql import (
+    equality_operands,
+    source_tables,
+    sqlite_where_error,
+)
 
 from .material import slowest_summary
 from .params import ProjectInclusion
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 
     from qgis.core import QgsLayerTreeNode, QgsProcessingFeedback
 
 __all__: list[str] = [
     "StratumProjectPlan",
     "build_stratum_project",
-    "index_virtual_join_columns",
+    "index_join_columns",
     "read_saved_view_extent",
     "resolve_initial_view",
     "snapshot_embedded_layers",
+    "validate_repointed_sources",
 ]
 
 _WRITE_STEP: Final = "<project write>"
@@ -118,6 +123,11 @@ class StratumProjectPlan:
 
     embedded_only: tuple[str, ...] = ()
     """Source layer ids riding only in the project (remote sources, annotations)."""
+
+    repointed: frozenset[str] = frozenset()
+    """Source layer ids marked ``matching_method = project_only`` (§4) — a subset of
+    :attr:`embedded_only` whose data source is re-pointed at this stratum's gpkg (§13)
+    instead of carried over unchanged."""
 
     embedded_xml: dict[str, str] = field(default_factory=dict)
     """The run's :func:`snapshot_embedded_layers` result: source layer id -> serialized
@@ -176,6 +186,12 @@ def build_stratum_project(
     with _capture_log() as messages:
         written = fresh.write(destination)
     elapsed.append((time.perf_counter() - started, _WRITE_STEP))
+    # Drop the layers as soon as the project is on disk: a §4 project_only layer whose subset
+    # is a SELECT is backed by an OGR ExecuteSQL handle on the stratum gpkg, and a handle that
+    # outlives this call blocks the §10 pre-zip WAL checkpoint — which would ship a gpkg
+    # missing whatever is still in the (never zipped) -wal sidecar. Releasing here does not
+    # wait on when this project object is collected.
+    fresh.removeAllMapLayers()
     _report_slowest_steps(plan.title, elapsed, feedback)
     if not written:
         # A failed QGZ write may leave a partial .qgz; drop it so the zip ships data only.
@@ -499,10 +515,12 @@ def _embedded_replacement(
     """
     Build the embedded-only replacement for one layer.
 
-    Live virtual layers are re-pointed at the stratum gpkg (:func:`_rebuild_virtual_layer`).
-    Everything else is reproduced from the run's :func:`snapshot_embedded_layers` XML, which
-    keeps the original source without reopening it; only a layer type the snapshot cannot
-    reproduce falls back to :meth:`~qgis.core.QgsMapLayer.clone`.
+    A §4 ``project_only`` layer keeps its uri options and only swaps the file path for this
+    stratum's gpkg (:func:`_repoint_layer_source`); a live virtual layer is re-pointed source
+    by source (:func:`_rebuild_virtual_layer`). Everything else is reproduced from the run's
+    :func:`snapshot_embedded_layers` XML, which keeps the original source without reopening
+    it; only a layer type the snapshot cannot reproduce falls back to
+    :meth:`~qgis.core.QgsMapLayer.clone`.
 
     :param original: The source project's embedded-only layer.
     :param source: The open project being packaged.
@@ -510,6 +528,8 @@ def _embedded_replacement(
     :param feedback: Execution feedback channel.
     :return: The replacement layer, or :data:`None` to drop it.
     """
+    if original.id() in plan.repointed:
+        return _repoint_layer_source(original, plan, feedback)
     if original.providerType() == "virtual":
         return _rebuild_virtual_layer(original, source, plan, feedback)
     xml = plan.embedded_xml.get(original.id())
@@ -702,20 +722,134 @@ def _rebuild_virtual_layer(
     return rebuilt_layer
 
 
-def index_virtual_join_columns(
+def _source_options(layer: QgsMapLayer) -> str:
+    """
+    Return *layer*'s uri options: everything from the first ``|`` of its data source on.
+
+    Read from the stored uri text rather than from the provider, so it answers for a layer
+    whose source does not exist on this machine — the normal state of a §4 ``project_only``
+    layer, and the reason it is never opened.
+
+    :param layer: The layer whose data source is inspected.
+    :return: ``|layername=…|subset=…`` and friends, leading separator included; empty when
+        the uri carries no options.
+    """
+    _, separator, tail = layer.source().partition("|")
+    return f"{separator}{tail}"
+
+
+def validate_repointed_sources(layers: Iterable[QgsMapLayer], tables: Collection[str], /) -> None:
+    """
+    Check the §4 ``project_only`` layers can be re-pointed at the stratum gpkg (§13).
+
+    Both guards are fatal at run start rather than at project-build time, where the only
+    remaining move is to drop the layer — which ships a package quietly missing it.
+
+    The provider guard is the load-bearing one: re-pointing replaces everything before the
+    first ``|``, so a source that is not a file path (a database connection string) would be
+    replaced *whole*, leaving a valid layer over the gpkg's first table — wrong data, no
+    error. The table guard catches the drift that makes such a layer stop resolving: it is
+    authored against the names Phase A mints from the layer names, so renaming a packaged
+    layer (or a §12 duplicate earning a ``_2`` suffix) silently breaks it.
+
+    :param layers: The run's ``project_only`` layers.
+    :param tables: The table names Phase A minted for this run.
+    :raise qgis.core.QgsProcessingException: If a layer's provider is not ``ogr``, or its
+        query reads a table this run does not create.
+    """
+    known = {table.lower() for table in tables}
+    for layer in layers:
+        if layer.providerType() != "ogr":
+            raise QgsProcessingException(
+                QCoreApplication.translate(
+                    "ProjectBuilder",
+                    "Layer {}: matching_method = project_only re-points the data source at the"
+                    " stratum GeoPackage, which only a file-based (ogr) source can express;"
+                    " this layer's provider is {}.",
+                ).format(layer.name(), layer.providerType())
+            )
+        unknown = sorted(
+            name for name in source_tables(_source_options(layer)) if name.lower() not in known
+        )
+        if unknown:
+            raise QgsProcessingException(
+                QCoreApplication.translate(
+                    "ProjectBuilder",
+                    "Layer {}: its query reads table(s) this run does not create ({}). A"
+                    " project_only layer is written against the packaged tables, which are:"
+                    " {}.",
+                ).format(layer.name(), ", ".join(unknown), ", ".join(sorted(tables)))
+            )
+
+
+def _repoint_layer_source(
+    original: QgsMapLayer, plan: StratumProjectPlan, feedback: QgsProcessingFeedback
+) -> QgsMapLayer | None:
+    """
+    Re-point a §4 ``project_only`` layer's data source at this stratum's gpkg (§13).
+
+    Only the file path changes: every uri option after it rides along verbatim — including a
+    ``|subset=`` holding a whole ``SELECT``, which is the layer's entire definition. Such a
+    layer is authored against the *package*, naming the tables and columns the run writes, so
+    rewriting anything else would break it. Nothing here reads the original, which is the
+    point: its own source need not exist on the packaging machine.
+
+    :param original: The source project's project-only layer.
+    :param plan: The stratum's project plan.
+    :param feedback: Execution feedback channel.
+    :return: The re-pointed layer, or :data:`None` to drop it.
+    """
+    display = plan.display_names.get(original.id()) or original.name()
+    # as_posix() matches the other re-pointed sources' spelling: one pooled OGR dataset per
+    # member gpkg instead of two (a second connection widens the §13 nolock/WAL window).
+    # Absolute here; Qt relativizes it on write (setFilePathStorage above).
+    replacement = QgsVectorLayer(
+        f"{plan.gpkg_path.as_posix()}{_source_options(original)}",
+        display,
+        original.providerType(),
+        _fast_open(),
+    )
+    if not replacement.isValid():
+        feedback.pushWarning(
+            QCoreApplication.translate(
+                "ProjectBuilder",
+                "Embedded project: layer {} did not re-open against the stratum gpkg; dropped.",
+            ).format(original.name())
+        )
+        return None
+    # Writing the project serializes every layer's extent, and a layer whose subset is a join
+    # over the stratum gpkg derives its own by running that join — once per stratum, for a
+    # value the package never reads. Left unset the element is simply omitted and the
+    # recipient's QGIS derives it on demand, locally, once (as for a live virtual layer).
+    replacement.setExtent(QgsRectangle())
+    # Carry symbology and the attribute-form config (the QML Forms category) from the original.
+    style = QDomDocument()
+    original.exportNamedStyle(style)
+    applied, message = replacement.importNamedStyle(style)
+    if not applied:
+        feedback.pushWarning(
+            QCoreApplication.translate(
+                "ProjectBuilder", "Embedded project: style for layer {} not applied: {}"
+            ).format(original.name(), message)
+        )
+    return replacement
+
+
+def index_join_columns(
     source: QgsProject, plan: StratumProjectPlan, feedback: QgsProcessingFeedback
 ) -> None:
     """
-    Index the columns this stratum's live virtual layers join on, in its gpkg (SPEC §13).
+    Index the columns this stratum's re-pointed layers join on, in its gpkg (SPEC §13).
 
-    A live virtual layer re-runs its whole query for every feature count and every render — the
-    canvas extent filter wraps the query rather than entering it — and QGIS pushes each
-    equality in that query down as one filtered request *per outer row*. Against the columns
-    :class:`~qgis.core.QgsVectorFileWriter` leaves unindexed, every one of those requests is a
-    full scan of the inner table, so the recipient pays a nested-loop join each time the layer
-    is drawn. An index turns each request into a b-tree seek: measured 35x end to end on a
-    73k x 61k join (a feature count of 446s down to 13s), for indexes built in hundredths of a
-    second and about one percent of the GeoPackage's size.
+    Both routes that keep a query live against the package — a live virtual layer and a §4
+    ``project_only`` layer whose ``|subset=`` is a ``SELECT`` — re-run that whole query for
+    every feature count and every render (the canvas extent filter wraps the query rather than
+    entering it), and QGIS pushes each equality in it down as one filtered request *per outer
+    row*. Against the columns :class:`~qgis.core.QgsVectorFileWriter` leaves unindexed, every
+    one of those requests is a full scan of the inner table, so the recipient pays a
+    nested-loop join each time the layer is drawn. An index turns each request into a b-tree
+    seek: measured 35x end to end on a 73k x 61k join (a feature count of 446s down to 13s),
+    for indexes built in hundredths of a second and about one percent of the GeoPackage's size.
 
     One single-column index per column rather than one composite: QGIS stops at the first usable
     constraint, so only ever one column is pushed down and a composite index would serve only
@@ -730,16 +864,24 @@ def index_virtual_join_columns(
     """
     for layer_id in plan.embedded_only:
         layer = source.mapLayer(layer_id)
-        if layer is None or layer.providerType() != "virtual":
+        if layer is None:
             continue
-        definition = QgsVirtualLayerDefinition.fromUrl(QUrl(layer.source()))
-        candidates = equality_operands(definition.query())
-        if not candidates:
-            continue
-        for src in definition.sourceLayers():
-            table = _resolve_virtual_source_table(src, source, plan)
-            if table is not None:
+        if layer_id in plan.repointed:
+            # ponytail: offered every packaged table, not the ones the query names — the
+            # column intersection in _index_source_table drops the rest for one pragma each.
+            # Narrow with sql.source_tables() if that sweep ever shows up in a profile.
+            candidates = equality_operands(_source_options(layer))
+            for table in sorted(set(plan.vector_tables.values())):
                 _index_source_table(plan.gpkg_path, table, candidates, layer.name(), feedback)
+        elif layer.providerType() == "virtual":
+            definition = QgsVirtualLayerDefinition.fromUrl(QUrl(layer.source()))
+            candidates = equality_operands(definition.query())
+            for src in definition.sourceLayers():
+                source_table = _resolve_virtual_source_table(src, source, plan)
+                if source_table is not None:
+                    _index_source_table(
+                        plan.gpkg_path, source_table, candidates, layer.name(), feedback
+                    )
 
 
 def _index_source_table(
@@ -757,9 +899,9 @@ def _index_source_table(
     literal or alias it also matched has no column here and is dropped.
 
     :param gpkg_path: The stratum GeoPackage.
-    :param table: The table backing one virtual-layer source.
-    :param candidates: Identifiers the virtual layer's query compares with ``=``.
-    :param layer_name: The virtual layer's name, for messages.
+    :param table: A table the querying layer reads.
+    :param candidates: Identifiers the querying layer compares with ``=``.
+    :param layer_name: The querying layer's name, for messages.
     :param feedback: Execution feedback channel.
     """
     try:
@@ -770,7 +912,7 @@ def _index_source_table(
         feedback.pushWarning(
             QCoreApplication.translate(
                 "ProjectBuilder",
-                "Embedded project: could not index table {} for virtual layer {}: {}. It ships"
+                "Embedded project: could not index table {} for layer {}: {}. It ships"
                 " unindexed, so the layer will be slow to draw.",
             ).format(table, layer_name, err)
         )
@@ -779,7 +921,7 @@ def _index_source_table(
             feedback.pushDebugInfo(
                 QCoreApplication.translate(
                     "ProjectBuilder",
-                    "Embedded project: indexed {} on table {} for virtual layer {}.",
+                    "Embedded project: indexed {} on table {} for layer {}.",
                 ).format(", ".join(columns), table, layer_name)
             )
 

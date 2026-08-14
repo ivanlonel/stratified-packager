@@ -67,6 +67,9 @@ Identity facts: `name()` = `"package"`, provider id = plugin slug, display name
 - **Whole-export layer** — packaged layer whose `matching_method` resolves to `whole_export`:
   exported complete (never partitioned) into every stratum package. Remains a node of the
   relation graph (§7.1), so it MAY serve as a traversal hop for other layers' chains.
+- **Project-only layer** — layer whose `matching_method` is `project_only`: never read and never
+  packaged, it rides in the embedded project alone, with its data source re-pointed at each
+  stratum's gpkg (§13). Not a packaged layer, so it is out of the relation graph (§7.1).
 - **Dedup group** — packaged vector layers sharing one normalized data source; written once per
   gpkg as a union table (§12).
 - **Staging** — Phase-A copy of a worker-unreadable source into a temp gpkg (§8.2).
@@ -175,7 +178,7 @@ JSON-encoded strings. Accessed through the toolbelt `LayerVariables` proxy.
 | Variable (`stratified_packager_…`) | Type                                                                      | Default | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ---------------------------------- | ------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `exclude`                          | bool                                                                      | `false` | skip this layer when `LAYERS` is empty (= "all"); drops it from the `LAYERS` GUI prefill (§5); strict — an uncoercible value aborts at run start (§6), lenient only in the prefill                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `matching_method`                  | `auto` \| `attribute` \| `spatial` \| `whole_export`                      | `auto`  | see resolution below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `matching_method`                  | `auto` \| `attribute` \| `spatial` \| `whole_export` \| `project_only`    | `auto`  | see resolution below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `spatial_predicate`                | `auto` \| comma-separated list of named predicates and/or DE-9IM patterns | `auto`  | named ∈ {intersects, contains, within, overlaps, crosses, touches}; DE-9IM = 9 chars of `[TF012*]` (T/F case-insensitive); tokens combine with OR; validated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `relation_path`                    | JSON list of relation ids                                                 | unset   | pins the chain when paths are ambiguous                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `excluded_fields`                  | JSON list of field names                                                  | `[]`    | dropped from the exported table                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -191,7 +194,29 @@ naming the layer and the remedies (add a relation, set `matching_method = whole_
 exclude the layer, or give the stratification layer geometry). `auto` never resolves to
 `whole_export` — whole export is always an explicit choice. A `whole_export` layer is exported
 complete into every package and stays in the relation graph (§7.1), so it MAY still serve as a
-traversal hop for other layers' chains.
+traversal hop for other layers' chains. `auto` never resolves to `project_only` either.
+
+**`matching_method = project_only`** takes the layer out of packaging entirely: it is resolved at
+classification (§8.1) rather than by the matching engine, so the layer is never cloned, never
+staged, gets no gpkg table, contributes no progress units, and is not a node of the relation graph
+(§7.1) nor a source a live virtual layer may count as packaged (§13). It rides in the embedded
+project alone, and there its data source is re-pointed at this stratum's gpkg: **everything before
+the first `|` is replaced with the stratum GeoPackage path, every uri option after it kept
+verbatim** — including a `|subset=` holding a whole `SELECT`, which is such a layer's entire
+definition. The intended shape is a layer authored against the *package*: a query over the tables
+the run writes, named as §8.1 mints them and with the `fid`/geometry columns
+`QgsVectorFileWriter` produces. Because only the path is rewritten, the layer's own source need not
+exist on the packaging machine — a broken layer is exactly what this setting is for.
+
+Two run-start guards, both fatal (§6 strict regime), because the alternative surfaces at project
+build time where the only remaining move is to drop the layer and ship a package quietly missing
+it: the layer's provider MUST be `ogr` (a source that is not a file path would be replaced whole,
+leaving a valid layer over the gpkg's first table — wrong data, no error), and every table its
+query reads MUST be one the run creates (renaming a packaged layer, or a §12 duplicate earning a
+`_2` suffix, otherwise breaks it silently). The columns such a query compares with `=` are indexed
+in the stratum gpkg exactly as a live virtual layer's are (§13), and the layer is written without a
+computed extent for the same reason. A layer whose table is absent for a stratum
+(`KEEP_EMPTY_LAYERS=False`) fails to open and is dropped from that stratum with a warning.
 
 **`spatial_predicate`** is a comma-separated list of tokens (named predicate or DE-9IM pattern)
 combined additively with **OR**; the T/F of a DE-9IM pattern is case-insensitive and normalized to
@@ -386,6 +411,10 @@ worker thread nor `qgis_process` provides.
 
 1. Run-start validation (§15 order).
 1. Strata resolution (§6).
+1. Layer classification (§4 fixed-by-type): packaged vectors, `data/` payload copies, and the
+   embedded-only layers — remote sources, annotations, live virtual layers (§13) and the §4
+   `project_only` layers, whose token is read here and never reaches the matching engine. The
+   `project_only` guards (§4) run once the table names are minted, before any read or write.
 1. Per-layer matching-method resolution (§4/§7). The per-stratum membership itself is **not**
    materialized here — it is computed lazily during Phase B against the read source.
 1. Per-layer **read source** (§8.2): a throwaway `clone()` of the user's layer (its subset string
@@ -557,9 +586,12 @@ contract (§9.2, §20). A geometryless table whose columns are:
 stratum, layer, feature_count, status, detail
 ```
 
-- One row per (stratum × packaged layer); `status ∈ {ok, warm, cold-fallback, empty-kept, empty-skipped, failed, skipped-existing, dry-run}`; `detail` carries the error text / note. Warm-marked
-  layers report `warm` on both `WARM_START_MODE=use` **and** `WARM_START_MODE=update` runs (the
-  deliverable pass seeds from the just-written cache, §11).
+- One row per (stratum × included layer); `status ∈ {ok, warm, cold-fallback, empty-kept, empty-skipped, failed, skipped-existing, dry-run, project-only}`; `detail` carries the error text / note.
+  Warm-marked layers report `warm` on both `WARM_START_MODE=use` **and** `WARM_START_MODE=update`
+  runs (the deliverable pass seeds from the just-written cache, §11).
+- Layers riding only in the embedded project (remote, annotation, live virtual, `project_only`)
+  report `project-only` with an empty `feature_count`: the package carries them, so they get a row,
+  but nothing was written for them to count. A failed stratum still overrides them with `failed`.
 - `<unmatched>` pseudo-stratum rows: per partitioned layer, the count of features matching no
   stratum (also `pushWarning` per affected layer); warm-marked layers are excluded on
   `WARM_START_MODE=use` runs (§11 — their matched fids are unknowable from a seed).
@@ -584,12 +616,14 @@ field_count, excluded_fields, matching_method, match_detail, source_crs, status,
   pointing at the shared table); empty for layers without a gpkg table.
 - `path_in_zip` — `<gpkg_path>.gpkg` for vector tables; the `data/<table name>/…` source path
   for raster/mesh/point-cloud payloads (§14); empty for layers riding only in the embedded
-  project (remote, annotation).
-- `layer_type ∈ {vector, raster, mesh, point-cloud}`; `geometry_type` filled for vector layers
-  only.
+  project (remote, annotation, live virtual, `project_only`), which get a row with status
+  `project-only`.
+- `layer_type ∈ {vector, raster, mesh, point-cloud}` (empty for a layer type outside that set);
+  `geometry_type` filled for vector layers only.
 - `feature_count` — features exported into this stratum's table (empty for non-vector);
   `field_count` — exported fields after exclusions; `excluded_fields` — semicolon-joined names.
-- `matching_method` — as resolved (`attribute` | `spatial` | `whole_export`); `match_detail`
+- `matching_method` — as resolved (`attribute` | `spatial` | `whole_export`), `project_only` for a
+  §4 project-only layer and empty for the other embedded-only ones; `match_detail`
   — the relation-path ids or the spatial predicate used; `source_crs` — CRS authid.
 - `status` / `detail` share the run-level vocabulary of §9.1.
 
@@ -732,8 +766,19 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
   never changes and which may not answer at all. Because the layer has no provider to
   re-serialize itself from, the stored document is authoritative on write — so the §4
   `layer_name` override is patched into that XML rather than set on the layer. A layer type
-  that cannot be reproduced this way is re-created as before. Live virtual layers are excluded:
-  they are re-pointed at each stratum's gpkg (below), not reused.
+  that cannot be reproduced this way is re-created as before. Live virtual layers and §4
+  `project_only` layers are excluded: they are re-pointed at each stratum's gpkg (below), not
+  reused.
+- **Project-only layers** (`matching_method = project_only`, §4) are re-pointed by replacing
+  everything before the first `|` of their data source with this stratum's gpkg and keeping every
+  uri option after it verbatim — `|subset=`, `|layername=`, `|geometrytype=`. The uri text is read
+  from the layer, never from its provider, so a source that does not exist on the packaging
+  machine is re-pointed just as well; style and attribute-form config are carried over with
+  `exportNamedStyle`/`importNamedStyle` (such a layer cannot be cloned). Like a live virtual layer
+  it is left **without a computed extent** and has the columns its query compares with `=` indexed
+  (both below), because a `|subset=` joining two packaged tables is the same nested-loop shape. It
+  is dropped from the stratum with a warning if it does not open — which is what a table missing
+  under `KEEP_EMPTY_LAYERS=False` looks like.
 - **Live virtual layers** (`materialize_virtual_layer=false` with every queried source packaged,
   §4) are carried into the project with their query, subset, uid and geometry preserved and each
   source re-pointed at this stratum's gpkg table; style and attribute-form config ride along (the
@@ -741,7 +786,9 @@ Built fresh per stratum on the algorithm thread (never `QgsProject.instance()`);
   are indexed** in the stratum gpkg, one single-column index per column, on every source table
   holding them. Such a layer re-runs its whole query for every feature count and every render — a
   canvas extent filter wraps the query rather than entering it — and QGIS pushes each equality
-  down as one filtered request *per outer row*; against the columns `QgsVectorFileWriter` leaves
+  down as one filtered request *per outer row* (a `project_only` layer whose `|subset=` is a
+  `SELECT` behaves identically and is indexed by the same pass, against every packaged table
+  holding one of the columns); against the columns `QgsVectorFileWriter` leaves
   unindexed, each of those is a full scan of the inner table, so the recipient pays a nested-loop
   join every time the layer is drawn. Single-column, not composite: QGIS stops at the first usable
   constraint, so only ever one column is pushed down and a composite index would serve only its
@@ -1008,7 +1055,7 @@ Tests mirror 1:1 (`tests/...`), per repo convention. Each sub-package carries a 
   back to the plugin default.
 - **Layer scope** — both: (a) per-layer page via `registerMapLayerConfigWidgetFactory`; (b) a
   dedicated **all-layers table dialog** (plugin menu): rows = project layers, columns =
-  include / matching method (incl. `whole_export`) / predicate / excluded fields /
+  include / matching method (incl. `whole_export`, `project_only`) / predicate / excluded fields /
   warm-marked, link
   buttons to the Options and Project Properties pages, and a per-row button opening that
   layer's properties at the plugin's per-layer page (`iface.showLayerProperties(layer, page=…)`).
@@ -1105,7 +1152,10 @@ layer button opens `showLayerProperties(layer, page="wdg_stratified_packager_lay
   report (§9.2 — incl. a bundled multi-stratum zip, dedup rows and `data/` payload rows); gpkg subpaths
   (component validation, `..`/absolute rejection, case-insensitive bundle collisions, `.qgz`
   beside its gpkg, default zip at the output root); `matching_method=whole_export` incl. a
-  whole-export layer as a traversal hop; `LAYERS` prefill refresh on project/layer signals
+  whole-export layer as a traversal hop; `matching_method=project_only` (a layer whose source
+  does not exist packages without failing, gets no table, is re-pointed in the embedded project
+  with its `|subset=` kept, has its join columns indexed, and appears in both reports — plus the
+  two run-start guards: a non-`ogr` provider and a query naming an uncreated table); `LAYERS` prefill refresh on project/layer signals
   (`@pytest.mark.qgis`); zip content assertions via `zipfile`; embedded project re-opened and
   verified (tree/styles/relations/subset strings) under `@pytest.mark.qgis`.
 - `workers.py` and the qgis-free toolbelt modules get plain (non-qgis-marked) tests.

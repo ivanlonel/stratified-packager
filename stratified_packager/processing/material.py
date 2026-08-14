@@ -168,6 +168,11 @@ class _Material:
     warm_marked_ids: set[str] = field(default_factory=set)
     """Layer ids carrying ``warm_marked = true`` (§11)."""
 
+    project_only_ids: set[str] = field(default_factory=set)
+    """Layer ids carrying ``matching_method = project_only`` (§4) — a subset of
+    :attr:`_Inputs.embedded_layers`, whose data source the embedded project re-points at each
+    stratum's gpkg (§13) instead of carrying it over unchanged."""
+
     warm_prefetch: dict[str, Future[bool]] = field(default_factory=dict)
     """Stratum name -> its §11 warm-cache prefetch future (``WARM_START_MODE=use`` runs only):
     ``True`` = the cache already sits at the stratum's build path and the build seeds in

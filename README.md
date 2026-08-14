@@ -80,17 +80,17 @@ Each layer can carry QGIS **layer variables** tuning how it is packaged. Edit th
 *Layer Properties ▸ Variables*, on the plugin's per-layer properties page, or — for all
 layers at once — in the **Configure layers for packaging** dialog (plugin menu).
 
-| Variable (prefix `stratified_packager_`) | Default | What it does                                                                                                                                             |
-| ---------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `exclude`                                | `false` | Skip this layer when `LAYERS` is empty.                                                                                                                  |
-| `matching_method`                        | `auto`  | `auto`, `attribute`, `spatial` or `whole_export`. `auto` prefers a relation path, then spatial; it never picks `whole_export` on its own.                |
-| `spatial_predicate`                      | `auto`  | Comma-separated named predicates (`intersects`, `contains`, `within`, `overlaps`, `crosses`, `touches`) and/or 9-character DE-9IM patterns, OR-combined. |
-| `relation_path`                          | unset   | JSON list of relation ids pinning one attribute chain when several equally short ones exist.                                                             |
-| `excluded_fields`                        | `[]`    | JSON list of field names dropped from the exported table.                                                                                                |
-| `stage`                                  | `auto`  | Force (`true`) or forbid (`false`) staging this layer's data into a fast local copy before the per-stratum writes; `auto` follows `STAGE_PROVIDERS`.     |
-| `warm_marked`                            | `false` | The layer belongs to the warm cache.                                                                                                                     |
-| `layer_name`                             | unset   | Expression giving the layer a custom display name inside each embedded per-stratum project (may use `@stratum_name`).                                    |
-| `materialize_virtual_layer`              | `false` | Write a virtual layer's features into the GeoPackage instead of keeping the layer live (with its query) in the embedded project.                         |
+| Variable (prefix `stratified_packager_`) | Default | What it does                                                                                                                                                                |
+| ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exclude`                                | `false` | Skip this layer when `LAYERS` is empty.                                                                                                                                     |
+| `matching_method`                        | `auto`  | `auto`, `attribute`, `spatial`, `whole_export` or `project_only`. `auto` prefers a relation path, then spatial; it never picks `whole_export` or `project_only` on its own. |
+| `spatial_predicate`                      | `auto`  | Comma-separated named predicates (`intersects`, `contains`, `within`, `overlaps`, `crosses`, `touches`) and/or 9-character DE-9IM patterns, OR-combined.                    |
+| `relation_path`                          | unset   | JSON list of relation ids pinning one attribute chain when several equally short ones exist.                                                                                |
+| `excluded_fields`                        | `[]`    | JSON list of field names dropped from the exported table.                                                                                                                   |
+| `stage`                                  | `auto`  | Force (`true`) or forbid (`false`) staging this layer's data into a fast local copy before the per-stratum writes; `auto` follows `STAGE_PROVIDERS`.                        |
+| `warm_marked`                            | `false` | The layer belongs to the warm cache.                                                                                                                                        |
+| `layer_name`                             | unset   | Expression giving the layer a custom display name inside each embedded per-stratum project (may use `@stratum_name`).                                                       |
+| `materialize_virtual_layer`              | `false` | Write a virtual layer's features into the GeoPackage instead of keeping the layer live (with its query) in the embedded project.                                            |
 
 ## Warm cache
 

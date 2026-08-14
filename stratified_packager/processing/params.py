@@ -171,7 +171,10 @@ LAYER_VAR_SPECS: Final[tuple[LayerVarSpec, ...]] = (
         "auto",
         QT_TRANSLATE_NOOP("StratifiedPackagerWidgets", "Matching method"),
         QT_TRANSLATE_NOOP(
-            "StratifiedPackagerAlgorithm", "— auto, attribute, spatial or whole_export."
+            "StratifiedPackagerAlgorithm",
+            "— auto, attribute, spatial, whole_export, or project_only (never packaged; the"
+            " layer rides in the embedded project with its source re-pointed at the stratum"
+            " GeoPackage).",
         ),
         vector_only=True,
     ),
@@ -281,6 +284,10 @@ class MatchingMethod(Enum):
     ATTRIBUTE = "attribute"
     SPATIAL = "spatial"
     WHOLE_EXPORT = "whole_export"
+    PROJECT_ONLY = "project_only"
+    """Not packaged at all: the layer is never read, and rides only in the embedded project
+    with its source re-pointed at each stratum's gpkg (§4/§13). Resolved at classification
+    time, so it never reaches :class:`~.matching.LayerMatchPlan`."""
 
 
 NAMED_SPATIAL_PREDICATES: Final[tuple[str, ...]] = (
@@ -1044,6 +1051,24 @@ class InputReader:
             fallback = self.fallback(name)
             return [str(item) for item in fallback] if isinstance(fallback, list) else []
         return self._algorithm.parameterAsEnumStrings(self._parameters, name, self._context)
+
+
+def is_project_only(layer: QgsMapLayer, /) -> bool:
+    """
+    Report whether *layer* is marked ``matching_method = project_only`` (SPEC §4).
+
+    Answered by string equality rather than by parsing the variable into a
+    :class:`MatchingMethod`: the token decides classification (§8.1), which runs long before
+    :func:`~.matching.resolve_layer_methods` — the one strict validator of this variable.
+    Parsing here too would either duplicate that validation or move it, and an unrecognized
+    token must keep failing there, with its own message, rather than being silently read as
+    "not project-only".
+
+    :param layer: Any project layer.
+    :return: Whether the layer rides only in the embedded project, re-pointed (§13).
+    """
+    raw = LayerVariables(layer).get(LAYER_VAR_MATCHING_METHOD)
+    return str(raw or "").strip().lower() == MatchingMethod.PROJECT_ONLY.value
 
 
 def eligible_layer_ids(project: QgsProject, /) -> list[str]:
