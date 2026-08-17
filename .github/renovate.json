@@ -52,7 +52,12 @@
         "qgis_variant:\\s*[\"']?(?<depName>[\\w.-]+)[\"']?\\s+qgis_version:\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?"
       ],
       "datasourceTemplate": "nuget",
-      "versioningTemplate": "nuget",
+      // NOT nuget versioning: in NuGet a bare "3.44.12" is the range ">= 3.44.12", so
+      // Renovate resolves currentVersion to the newest release, finds the range already
+      // satisfied and never proposes an update (pinning it the NuGet way, "[3.44.12]", is
+      // not an option -- choco install --version needs the bare string). loose treats the
+      // value as the exact version it is, and tolerates choco's occasional 4-part versions.
+      "versioningTemplate": "loose",
       "registryUrlTemplate": "https://community.chocolatey.org/api/v2/"
     }
   ],
