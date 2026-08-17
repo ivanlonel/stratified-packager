@@ -34,23 +34,27 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          # Persist uv's download cache across runs (rolling restore-keys) so the upgrade
+          # Persist uv's download cache across runs (rolling restore-keys) so the lock
           # resolution below isn't cold on every fresh runner.
           enable-cache: true
 
       # ── Step 1: apply the dependency-update hooks, in the required order ───
-      #   uv lock --upgrade → sync-with-uv (reads uv.lock) → pyproject-fmt.
+      #   uv lock → sync-with-uv (reads uv.lock) → pyproject-fmt.
       #
       # uv-lock runs directly (not via prek): `uv lock` exits 0 even when it rewrites
       # uv.lock, and non-zero only on a genuine resolution failure, so its own exit code
       # is the correctness check — no prek double-run needed.
       #
+      # No --upgrade: the step re-locks only what this PR's pyproject.toml bumps force,
+      # leaving every other pin exactly as uv.lock already has it (`just lock` stays the
+      # deliberate sweep to the latest compatible versions).
+      #
       # sync-with-uv and pyproject-fmt run through prek twice: the first pass does the work
       # and is allowed to fail (prek exits 1 merely when it modifies files); the verify pass
       # confirms the result is stable — exit 0 means the first pass succeeded legitimately,
       # exit 1 again means a real error and the workflow fails.
-      - name: uv lock (upgrade)
-        run: uv lock --upgrade
+      - name: uv lock
+        run: uv lock
 
       - name: prek – sync-with-uv (first pass)
         uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
