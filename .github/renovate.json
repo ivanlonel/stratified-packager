@@ -167,7 +167,7 @@
       // Bump the range even if the new version satisfies the existing range.
       "rangeStrategy": "bump",
       // Don't update uv.lock as an artifact. The update-dependencies workflow
-      // runs `uv lock --upgrade` directly on Renovate PRs.
+      // runs `uv lock` directly on Renovate PRs.
       "skipArtifactsUpdate": true
     }
   ]
