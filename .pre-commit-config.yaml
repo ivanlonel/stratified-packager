@@ -14,7 +14,7 @@ repos:
       - id: check-useless-excludes
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.3
+    rev: 0.12.5
     hooks:
       - id: uv-lock
         name: uv-lock (frozen)
@@ -97,12 +97,12 @@ repos:
           - mdformat-toc~=0.5.0
 
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.27.0
+    rev: v2.28.0
     hooks:
       - id: pyproject-fmt
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.2
+    rev: v0.16.3
     hooks:
       - id: ruff-check
         args:
