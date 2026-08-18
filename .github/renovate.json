@@ -30,8 +30,18 @@
   "pre-commit": {
     "enabled": true
   },
-  // Renovate will rebase only if the branch is conflicted with the base branch.
-  "rebaseWhen": "conflicted",
+  // main's ruleset requires branches to be up to date (strict required status checks), and
+  // GitHub's native auto-merge waits without ever refreshing a stale branch. Rebasing only on
+  // conflict therefore left every PR that a sibling PR overtook blocked until the rebase
+  // checkbox was ticked by hand. Not the "auto" default: that only resolves to
+  // behind-base-branch here through automerge=true, since main is guarded by a ruleset and
+  // Renovate's autodetection reads the classic branch-protection API, which returns 404.
+  "rebaseWhen": "behind-base-branch",
+  // The Post-Renovate Hooks workflow commits the uv lock / sync-with-uv / pyproject-fmt
+  // results onto the pep621 + pre-commit branch with github-actions[bot] as the committer.
+  // Renovate counts a branch carrying a foreign commit author OR committer as modified and
+  // then refuses to rebase it, so without this that PR would still need the manual tick.
+  "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"],
   // Raise PRs for known vulnerabilities from the osv.dev database, independent of the schedule.
   "osvVulnerabilityAlerts": true,
   // Renovate has no Chocolatey datasource, so the QGIS / QGIS-LTR Chocolatey
