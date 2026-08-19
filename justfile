@@ -91,9 +91,15 @@ create-venv qgis_prefix_path="":
 
 [doc('Configure .env with git-ignored environment variables (`just setup-env-vars --help` for details)')]
 [group('Environment setup')]
+[script]
+[positional-arguments]
 setup-env-vars *args:
-    @{{ title }} "Configuring development environment variables..."
-    uv run ./scripts/setup_env_vars.py {{ args }}
+    # $args, not interpolation, so a quoted path keeps its spaces (pass a path as
+    # `--flag VALUE`, not `--flag=C:/x`: a dashed token with a colon splits there).
+    $ErrorActionPreference = 'Stop'  # a missing `uv` must fail, not exit 0
+    {{ title }} "Configuring development environment variables..."
+    uv run ./scripts/setup_env_vars.py @args
+    exit $LASTEXITCODE  # preserve the script's own exit code
 
 [doc('Append to qgis.pth the paths the venv needs to find the processing and GRASS modules')]
 [group('Environment setup')]
@@ -206,9 +212,15 @@ bandit:
 
 [doc('Generate plugins.xml from metadata.txt and command-line options (`just build-xml --help` for details)')]
 [group('Publishing')]
+[script]
+[positional-arguments]
 build-xml *args:
-    @{{ title }} "Generating plugins.xml..."
-    uv run --group pack ./scripts/build_qgis_repo_xml.py --timezone America/Sao_Paulo {{ args }}
+    # $args, not interpolation, so a quoted path keeps its spaces (pass a path as
+    # `--flag VALUE`, not `--flag=C:/x`: a dashed token with a colon splits there).
+    $ErrorActionPreference = 'Stop'  # a missing `uv` must fail, not exit 0
+    {{ title }} "Generating plugins.xml..."
+    uv run --group pack ./scripts/build_qgis_repo_xml.py --timezone America/Sao_Paulo @args
+    exit $LASTEXITCODE  # preserve the script's own exit code
 
 [doc('Package plugin for distribution (`just package --help` for usage details)')]
 [group('Publishing')]
