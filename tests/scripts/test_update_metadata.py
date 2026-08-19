@@ -16,35 +16,53 @@ import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
     from types import ModuleType
 
 
 def _install_fake_qgispluginci(
-    monkeypatch: pytest.MonkeyPatch, latest_version: Callable[[], str]
+    monkeypatch: pytest.MonkeyPatch,
+    latest_version: Callable[[], str],
+    plugin_path: str | Path = "plug_dir",
 ) -> MagicMock:
     """
     Install a fake ``qgispluginci`` package exposing the three consumed submodules.
 
     :param monkeypatch: Fixture used to patch :data:`sys.modules`.
     :param latest_version: Implementation behind ``ChangelogParser().latest_version()``.
+    :param plugin_path: Directory the fake ``Parameters`` reports as the plugin root.
     :return: The ``utils.replace_in_file`` mock to assert on.
     """
     fake = MagicMock()
     fake.changelog.ChangelogParser.return_value.latest_version.side_effect = latest_version
-    fake.parameters.Parameters.make_from.return_value.plugin_path = "plug_dir"
+    fake.parameters.Parameters.make_from.return_value.plugin_path = str(plugin_path)
     # The import system only getattr()s the sys.modules entry, so a mock stands in fine.
     monkeypatch.setitem(sys.modules, "qgispluginci", cast("ModuleType", fake))
     monkeypatch.delitem(sys.modules, "scripts.update_metadata", raising=False)
     return cast("MagicMock", fake.utils.replace_in_file)
 
 
-def test_main_rewrites_the_metadata_version(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_rewrites_the_metadata_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """The changelog's latest version lands on metadata.txt's ``version=`` line."""
-    replace_in_file = _install_fake_qgispluginci(monkeypatch, lambda: "1.2.3")
+    (tmp_path / "metadata.txt").write_bytes(b"[general]\r\nversion=0.0.1\r\n")
+    replace_in_file = _install_fake_qgispluginci(monkeypatch, lambda: "1.2.3", tmp_path)
     runpy.run_module("scripts.update_metadata", run_name="__main__")
     replace_in_file.assert_called_once_with(
-        "plug_dir/metadata.txt", r"^version=.*$", "version=1.2.3"
+        str(tmp_path / "metadata.txt"), r"^version=.*$", "version=1.2.3"
     )
+
+
+def test_main_normalizes_metadata_line_endings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The CRLF qgis-plugin-ci leaves behind is rewritten as LF, content untouched."""
+    metadata = tmp_path / "metadata.txt"
+    metadata.write_bytes(b"[general]\r\nversion=0.0.1\r\n")
+    _install_fake_qgispluginci(monkeypatch, lambda: "1.2.3", tmp_path)
+    runpy.run_module("scripts.update_metadata", run_name="__main__")
+    assert metadata.read_bytes() == b"[general]\nversion=0.0.1\n"
 
 
 def test_main_fails_loudly_when_the_changelog_has_no_version(
