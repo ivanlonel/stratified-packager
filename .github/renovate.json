@@ -170,10 +170,7 @@
       "groupName": "pep621 and pre-commit",
       "groupSlug": "pep621-pre-commit",
       // Bump the range even if the new version satisfies the existing range.
-      "rangeStrategy": "bump",
-      // Don't update uv.lock as an artifact. The update-dependencies workflow
-      // runs `uv lock` directly on Renovate PRs.
-      "skipArtifactsUpdate": true
+      "rangeStrategy": "bump"
     }
   ]
 }
