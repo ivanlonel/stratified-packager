@@ -224,9 +224,15 @@ build-xml *args:
 
 [doc('Package plugin for distribution (`just package --help` for usage details)')]
 [group('Publishing')]
+[script]
+[positional-arguments]
 package *qgis-plugin-ci_args:
-    @{{ title }} "Generating plugin package..."
-    uv run --group pack --exact qgis-plugin-ci package {{ qgis-plugin-ci_args }}
+    # $args, not interpolation, so a quoted path keeps its spaces (pass a path as
+    # `--flag VALUE`, not `--flag=C:/x`: a dashed token with a colon splits there).
+    $ErrorActionPreference = 'Stop'  # a missing `uv` must fail, not exit 0
+    {{ title }} "Generating plugin package..."
+    uv run --group pack --exact qgis-plugin-ci package @args
+    exit $LASTEXITCODE  # preserve qgis-plugin-ci's own exit code
 
 [doc('Print current plugin basic info (parsed from metadata.txt)')]
 [group('Publishing')]
