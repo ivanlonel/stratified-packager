@@ -394,9 +394,16 @@ qgis-process *args:
 
 [doc('Run tests')]
 [group('Testing')]
+[script]
+[positional-arguments]
 test *pytest_args:
-    @{{ title }} "Running tests..."
-    uv run --group test --exact pytest {{ pytest_args }}
+    # A variadic parameter arrives as one space-joined string, so interpolating it would split
+    # `-m "not qgis"` into three pytest arguments; $args keeps the word boundaries. ($args does
+    # split `-name:value` tokens at the colon -- see `qgis-process` -- which pytest never takes.)
+    $ErrorActionPreference = 'Stop'  # a missing `uv` must fail, not exit 0
+    {{ title }} "Running tests..."
+    uv run --group test --exact pytest @args
+    exit $LASTEXITCODE  # preserve pytest's own exit code
 
 [arg('port', pattern='102[4-9]|10[3-9]\d|1[1-9]\d{2}|[2-9]\d{3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5]', help='From 1024 to 65535')]
 [doc('Serve test coverage reports locally (available at http://localhost:PORT)')]
