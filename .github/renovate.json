@@ -149,7 +149,14 @@
       ],
       "addLabels": [
         "chocolatey"
-      ]
+      ],
+      // Give patch its own bucket instead of the default shared "non-major" one, which keeps
+      // only the highest candidate: the 3.40 pin would see 3.44.x (dropped as minor by the
+      // next rule) and never be offered its own 3.40.x patch. It also splits the branch topic
+      // per line (qgis-ltr-3.40.x / -3.44.x), which would otherwise collide on qgis-ltr-3.x.
+      // Must live here and not on the rule below: a rule carrying matchUpdateTypes never
+      // matches before lookup, which is where bucketing happens.
+      "separateMinorPatch": true
     },
     {
       // Only bump the micro (patch) version of the QGIS Chocolatey packages so CI
