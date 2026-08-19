@@ -489,9 +489,11 @@ class TestLiveVirtualLayer:
 
         timings = [line for line in recorder.infos if "in embedded-project steps" in line]
         assert len(timings) == 1, recorder.infos
-        # Every opened layer and the project write are candidates for the slowest few.
+        # Every opened layer and the project write are candidates for the slowest few, and the
+        # write's name carries a space, which a bare \S+ would not match.
         assert re.search(
-            r"Stratum A: \d+\.\ds in embedded-project steps; slowest \S+ \d+\.\ds", timings[0]
+            r"Stratum A: \d+\.\ds in embedded-project steps; slowest (?:<[^>]+>|\S+) \d+\.\ds",
+            timings[0],
         )
         assert any(
             name in timings[0] for name in ("cities", "states", "v_cities", "<project write>")
