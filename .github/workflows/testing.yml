@@ -183,7 +183,7 @@ jobs:
             qgis_version: "3.40.15"
             qgis_line: "3.40"
           - qgis_variant: qgis-ltr
-            qgis_version: "3.44.12"
+            qgis_version: "3.44.13"
             qgis_line: "3.44"
           - qgis_variant: qgis
             qgis_version: "4.2.1"
