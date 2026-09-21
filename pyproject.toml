@@ -24,7 +24,7 @@ dynamic = [
   "version",
 ]
 optional-dependencies.debugpy = [
-  "debugpy~=1.8.21",
+  "debugpy~=1.8.22",
 ]
 optional-dependencies.zlib-ng = [
   "zlib-ng~=1.0.0",
@@ -41,7 +41,7 @@ dev = [
   "prek~=0.5.3",
   "pydoclint[flake8]~=0.9.1",
   "pylint~=4.0.8",
-  "ruff~=0.16.7",
+  "ruff~=0.16.8",
   { include-group = "test" },
   { include-group = "type" },
 ]
@@ -59,7 +59,7 @@ type = [
   "lxml-stubs~=0.5.1",
   "mypy[faster-cache]~=2.3.1",
   "pyqt6-stubs==20250824",
-  "ty~=0.0.80",
+  "ty~=0.0.82",
   "types-docutils~=0.23.0",
   { include-group = "doc-and-type" },
   { include-group = "test-and-type" },
@@ -67,7 +67,7 @@ type = [
 doc = [
   "myst-parser[linkify]~=5.1.0",
   "sphinx-autobuild~=2025.8.25",
-  "sphinx-autodoc-typehints~=3.13.6",
+  "sphinx-autodoc-typehints~=3.13.7",
   "sphinx-copybutton~=0.5.2",
   "sphinx-rtd-theme~=3.1.0",
   { include-group = "doc-and-type" },
@@ -86,7 +86,7 @@ hook = [
   "pre-commit-hooks~=6.0.0",
   "pyproject-fmt~=2.29.4",
   "sync-with-uv~=0.6.0",
-  "uv~=0.12.13",
+  "uv~=0.12.17",
   "zizmor~=1.30.1",
 ]
 pack = [
