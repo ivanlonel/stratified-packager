@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
-## Unreleased - 2026-08-10
+## 0.5.0 - 2026-09-23
 
 - Layer variables: **a layer can now ride in the packaged project without being packaged itself**, through a new `matching_method` value, `project_only`. It is for a layer defined *over the delivered package* rather than over any source data — typically an OGR layer whose `|subset=` is a `SELECT` joining the tables the run writes, styled and configured in the source project. Such a layer points at a GeoPackage that does not exist until the package is built, so it is broken on the packaging machine, and that aborted the whole run: every packaged vector layer is cloned during analysis, and cloning rebuilds a layer from its URI. A `project_only` layer is now never read, never staged and gets no table of its own; in each stratum's embedded project, everything before the first `|` of its data source is replaced with that stratum's GeoPackage and every uri option after it is kept verbatim, so it lands on the recipient's machine pointing at a relative `./<stratum>.gpkg`. The columns its query compares with `=` are indexed just as a live virtual layer's are, and it is written without a computed extent for the same reason — both of those are what keep such a layer from costing minutes per draw. Two guards fail the run up front rather than shipping a package quietly missing the layer: the provider must be `ogr` (replacing a database connection string wholesale would leave a valid layer over the wrong table), and every table the query reads must be one the run creates, which is what a renamed layer would otherwise break in silence.
 
