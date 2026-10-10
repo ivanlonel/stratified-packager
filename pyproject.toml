@@ -34,19 +34,19 @@ urls.Repository = "https://github.com/ivanlonel/stratified-packager"
 [dependency-groups]
 dev = [
   "deptry~=0.25.1",
-  "flake8~=7.3.0",
+  "flake8~=7.4.1",
   "flake8-cognitive-complexity~=0.1.0",
   "flake8-qgis~=2.1.0",
   "flake8-rst-docstrings~=0.4.0",
-  "prek~=0.5.3",
-  "pydoclint[flake8]~=0.9.1",
-  "pylint~=4.0.8",
-  "ruff~=0.16.8",
+  "prek~=0.5.5",
+  "pydoclint[flake8]~=0.11.0",
+  "pylint~=4.1.2",
+  "ruff~=0.16.10",
   { include-group = "test" },
   { include-group = "type" },
 ]
 test = [
-  "hypothesis~=6.168.0",
+  "hypothesis~=6.168.5",
   "pytest~=9.1.1",
   "pytest-cov~=7.1.0",
   "pytest-qgis~=4.1.1",
@@ -57,9 +57,9 @@ test = [
 ]
 type = [
   "lxml-stubs~=0.5.1",
-  "mypy[faster-cache]~=2.3.1",
+  "mypy[faster-cache]~=2.4.0",
   "pyqt6-stubs==20250824",
-  "ty~=0.0.82",
+  "ty~=0.0.85",
   "types-docutils~=0.23.0",
   { include-group = "doc-and-type" },
   { include-group = "test-and-type" },
@@ -67,7 +67,7 @@ type = [
 doc = [
   "myst-parser[linkify]~=5.1.0",
   "sphinx-autobuild~=2025.8.25",
-  "sphinx-autodoc-typehints~=3.13.7",
+  "sphinx-autodoc-typehints~=3.13.9",
   "sphinx-copybutton~=0.5.2",
   "sphinx-rtd-theme~=3.1.0",
   { include-group = "doc-and-type" },
@@ -84,7 +84,7 @@ doc-and-type = [
 hook = [
   "mdformat~=1.0.0",
   "pre-commit-hooks~=6.0.0",
-  "pyproject-fmt~=2.29.4",
+  "pyproject-fmt~=2.30.1",
   "sync-with-uv~=0.6.0",
   "uv~=0.12.17",
   "zizmor~=1.30.1",
@@ -93,10 +93,10 @@ pack = [
   "lxml~=6.1.3",
   "pyqt6~=6.11",                           # For pylupdate. Soon to be replaced by qgis-plugin-ci[qt]~=3.0.0
   "qgis-plugin-ci~=2.10.0",
-  "tzdata>=2026.4; sys_platform=='win32'",
+  "tzdata>=2026.5; sys_platform=='win32'",
 ]
 test-and-type = [
-  "python-dotenv~=1.2.3",
+  "python-dotenv~=1.2.4",
 ]
 
 [tool.setuptools]
