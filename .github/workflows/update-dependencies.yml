@@ -45,25 +45,25 @@ jobs:
       # stable — exit 0 means the first pass succeeded legitimately, exit 1 again means a real
       # error and the workflow fails.
       - name: prek – sync-with-uv (first pass)
-        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
         with:
           extra-args: --all-files --verbose --hook-stage manual sync-with-uv
         continue-on-error: true
 
       - name: prek – sync-with-uv (verify)
-        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
         with:
           extra-args: --all-files --verbose --hook-stage manual sync-with-uv
 
       # Make sure Renovate didn't upset pyproject-fmt by, e.g., misaligning comments.
       - name: prek – pyproject-fmt (first pass)
-        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
         with:
           extra-args: --all-files --verbose --hook-stage manual pyproject-fmt
         continue-on-error: true
 
       - name: prek – pyproject-fmt (verify)
-        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
         with:
           extra-args: --all-files --verbose --hook-stage manual pyproject-fmt
 
