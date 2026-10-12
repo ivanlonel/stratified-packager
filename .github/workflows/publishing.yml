@@ -77,7 +77,7 @@ jobs:
           : "${lrelease:?could not locate lrelease from qt6-l10n-tools}"
           "$lrelease" ${{ env.PROJECT_FOLDER }}/resources/i18n/*.ts
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: translations-build
           path: ${{ env.PROJECT_FOLDER }}/**/*.qm
@@ -141,7 +141,7 @@ jobs:
           --allow-uncommitted-changes
           --plugin-repo-url "$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url')"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ env.PROJECT_FOLDER }}-latest
           path: |
