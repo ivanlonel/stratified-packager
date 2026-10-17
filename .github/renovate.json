@@ -44,6 +44,13 @@
   "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"],
   // Raise PRs for known vulnerabilities from the osv.dev database, independent of the schedule.
   "osvVulnerabilityAlerts": true,
+  // Weekly (its own default schedule: before 4am on Monday) `uv lock --upgrade`, so transitive
+  // dependencies that no other Renovate PR touches stay current instead of piling up as
+  // Dependabot security PRs.
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
   // Renovate has no Chocolatey datasource, so the QGIS / QGIS-LTR Chocolatey
   // packages pinned in the Windows QA matrix (.github/workflows/testing.yml) are tracked
   // by querying the Chocolatey community feed (a NuGet v2 OData API) through the
