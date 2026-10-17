@@ -65,7 +65,7 @@ repos:
       - id: text-unicode-replacement-char
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 44.103.6
+    rev: 44.164.10
     hooks:
       - id: renovate-config-validator
         args:
@@ -97,12 +97,12 @@ repos:
           - mdformat-toc~=0.5.0
 
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.29.4
+    rev: v2.30.3
     hooks:
       - id: pyproject-fmt
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.8
+    rev: v0.17.1
     hooks:
       - id: ruff-check
         args:
@@ -111,7 +111,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.3.0
+    rev: 7.4.1
     hooks:
       - id: flake8
         args:
@@ -121,10 +121,10 @@ repos:
           - flake8-cognitive-complexity~=0.1.0
           - flake8-qgis~=2.1.0
           - flake8-rst-docstrings~=0.4.0
-          - pydoclint[flake8]~=0.9.1
+          - pydoclint[flake8]~=0.11.1
 
   - repo: https://github.com/PyCQA/pylint
-    rev: v4.0.8
+    rev: v4.1.3
     hooks:
       - id: pylint
 
