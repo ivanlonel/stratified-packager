@@ -198,11 +198,13 @@ prek hook="":
         uv run prek run --all-files --verbose --hook-stage manual {{ hook }}
     }
 
-[doc('Run only the pre-commit hooks from the `qgis-venv` group')]
+[doc('Run the pre-commit hooks from the `qgis-venv` group on every file')]
 [group('Pre-commit hooks')]
 prek-qgis:
     {{ title }} "Running pre-commit hooks that require a QGIS-enabled venv..."
-    uv run prek run --group qgis-venv --verbose
+    # --all-files: a CI checkout has nothing staged, and without it the file-filtered
+    # ty-check/mypy hooks were skipped on every run, so no PR was ever type-checked.
+    uv run prek run --group qgis-venv --all-files --verbose
 
 [doc('Run the Bandit security scan that plugins.qgis.org applies to submitted plugins')]
 [group('Publishing')]
