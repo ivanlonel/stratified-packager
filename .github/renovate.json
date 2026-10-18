@@ -56,15 +56,14 @@
   "vulnerabilityAlerts": {
     "rangeStrategy": "bump"
   },
-  // Weekly `uv lock --upgrade`, so transitive dependencies that no other Renovate PR touches
-  // stay current instead of piling up as Dependabot security PRs. Its schedule repeats the
-  // top-level one on purpose: the built-in default ("before 4am on monday") replaces rather
-  // than merges with it, and its 4-hour window can fall between two of Mend's 4-hourly jobs.
-  // (An empty schedule would mean "at any time", not "inherit".)
+  // The weekly `uv lock --upgrade`, which keeps transitive dependencies that no other
+  // Renovate PR touches current instead of piling up as Dependabot security PRs, runs in the
+  // Post-Renovate Hooks workflow on the weekly "pep621 and pre-commit" PR instead. There
+  // sync-with-uv re-pins the hooks to the refreshed lock in the same commit. Renovate's own
+  // maintenance branch is lockfile-only, so it would be rebuilt on every run once that commit
+  // landed (#80), and its pins would lag the lock.
   "lockFileMaintenance": {
-    "enabled": true,
-    "automerge": true,
-    "schedule": ["* 0-7 * * 1"]
+    "enabled": false
   },
   // Renovate has no Chocolatey datasource, so the QGIS / QGIS-LTR Chocolatey
   // packages pinned in the Windows QA matrix (.github/workflows/testing.yml) are tracked
