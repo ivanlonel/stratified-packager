@@ -37,7 +37,6 @@ class LayerOptionsPageWidget(QgsMapLayerConfigWidget, FORM_CLASS):  # type: igno
     lbl_header: QLabel
     form_host: QWidget
 
-    @override
     def __init__(
         self,
         layer: QgsMapLayer,
@@ -92,7 +91,6 @@ class LayerOptionsPageWidget(QgsMapLayerConfigWidget, FORM_CLASS):  # type: igno
 class LayerOptionsPageWidgetFactory(QgsMapLayerConfigWidgetFactory):
     """Factory registering :class:`LayerOptionsPageWidget` in the Layer Properties dialog."""
 
-    @override
     def __init__(self) -> None:
         """Initialize the factory: titled, plugin-iconed, properties-dialog only."""
         super().__init__(__title__, plugin_icon())

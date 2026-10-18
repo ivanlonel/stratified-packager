@@ -22,7 +22,7 @@ from osgeo import gdal
 from .sql import quote_identifier
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Generator, Sequence
     from pathlib import Path
 
 __all__: list[str] = [
@@ -190,7 +190,7 @@ def create_attribute_index(gpkg: Path, table: str, columns: Sequence[str], /) ->
 
 
 @contextlib.contextmanager
-def wal_session(gpkg: Path, /) -> Iterator[bool]:
+def wal_session(gpkg: Path, /) -> Generator[bool]:
     """
     Hold the database in WAL journal mode, with a live ``-wal`` sidecar, for the block.
 

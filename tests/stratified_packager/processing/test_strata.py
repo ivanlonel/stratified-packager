@@ -54,7 +54,8 @@ def _strat_layer(names: list[str], regions: list[str] | None = None) -> QgsVecto
         feature.setAttribute(1, (regions or ["r1"] * len(names))[index])
         feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(index, 0)))
         features.append(feature)
-    assert provider.addFeatures(features)
+    added, _ = provider.addFeatures(features)
+    assert added
     return layer
 
 

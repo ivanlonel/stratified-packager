@@ -278,15 +278,6 @@ class FieldSpec:
 class OverrideLineEdit(QLineEdit):
     """A line edit whose empty state means "inherit"."""
 
-    @override
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """
-        Initialize the editor.
-
-        :param parent: Optional parent widget.
-        """
-        super().__init__(parent)
-
     def scope_value(self) -> str | None:
         """
         Return the explicit value, or :data:`None` when the field inherits.
@@ -316,7 +307,6 @@ class OverrideLineEdit(QLineEdit):
 class OverrideComboBox(QComboBox):
     """A combo whose "inherit" choice (or empty edit text) means inherit."""
 
-    @override
     def __init__(
         self,
         choices: Sequence[tuple[str, str]],
@@ -378,7 +368,6 @@ class OverrideComboBox(QComboBox):
 class OverrideCheckableCombo(QgsCheckableComboBox):
     """A checkable multi-select whose empty (nothing-checked) state means inherit."""
 
-    @override
     def __init__(self, choices: Sequence[tuple[str, str]], parent: QWidget | None = None) -> None:
         """
         Build the checkable combo with *choices* (all unchecked = inherit).
@@ -435,7 +424,6 @@ class OverrideFieldsCombo(OverrideCheckableCombo):
     ``[]`` (exclude nothing), so the empty state simply reads ``inherit``.
     """
 
-    @override
     def __init__(self, field_names: Sequence[str], parent: QWidget | None = None) -> None:
         """
         Build the combo with one checkable item per field name (all unchecked = inherit).
@@ -497,7 +485,6 @@ class OverridePredicateCombo(QgsCheckableComboBox):
     _DE9IM_ROW_PADDING: ClassVar[int] = 48
     """Pixels for the popup row's checkbox indent, item margins and the combo arrow/frame."""
 
-    @override
     def __init__(self, named: Sequence[str], parent: QWidget | None = None) -> None:
         """
         Build the combo with the *named* predicates and the DE-9IM row.
@@ -637,7 +624,6 @@ class OverridePredicateCombo(QgsCheckableComboBox):
 class OverrideSpinBox(QSpinBox):
     """A range-bound integer spin box whose below-range value means "inherit"."""
 
-    @override
     def __init__(self, max_value: int, parent: QWidget | None = None) -> None:
         """
         Build the spin box over ``0..max_value`` with a below-range inherit sentinel.
@@ -694,8 +680,7 @@ class OverrideCheckBox(QCheckBox):
     combo instead, so all three of ``true``/``false``/unset stay distinct.
     """
 
-    @override
-    def __init__(self, default_value: bool = False, parent: QWidget | None = None) -> None:
+    def __init__(self, *, default_value: bool = False, parent: QWidget | None = None) -> None:
         """
         Build the checkbox resting on its builtin default (so an unset field shows that state).
 
@@ -887,7 +872,7 @@ def make_override_editor(
     editor: ScopeEditor
     match spec.kind:
         case FieldKind.BOOL if not inheriting and not spec.tristate:
-            editor = OverrideCheckBox(spec.default_true, parent)
+            editor = OverrideCheckBox(default_value=spec.default_true, parent=parent)
         case FieldKind.BOOL:
             editor = OverrideComboBox(
                 [
