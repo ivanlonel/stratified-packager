@@ -624,7 +624,8 @@ class ProjectEntries(MappingProxy):
         :param key: The entry key.
         :return: A ``(value, present)`` pair.
         """
-        return self._project.readEntry(self._scope, key)
+        value, ok = self._project.readEntry(self._scope, key)
+        return value, bool(ok)  # QGIS >= 4.2.3 stubs type the out-flag ``bool | None``
 
     @override
     def _raw_set(self, key: str, value: object) -> None:
@@ -721,7 +722,7 @@ class ProjectEntries(MappingProxy):
         :return: A ``(value, present)`` pair.
         """
         value: object
-        ok: bool
+        ok: bool | None  # QGIS >= 4.2.3 stubs type every read*Entry out-flag this way
         if cast is bool:
             value, ok = self._project.readBoolEntry(self._scope, key)
         elif cast is int:
@@ -735,7 +736,7 @@ class ProjectEntries(MappingProxy):
         else:
             raw, ok = self._project.readEntry(self._scope, key)
             value = from_storage(raw, cast) if ok else None
-        return value, ok
+        return value, bool(ok)
 
 
 # ---------------------------------------------------------------------------
