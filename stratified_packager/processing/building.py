@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import itertools
 import shutil
+import sqlite3
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -435,7 +436,11 @@ def warm_rejection(warm: Path | None, expected_tables: Collection[str]) -> str |
     Check the §11 cold-fallback triggers against a warm-cache file.
 
     Shared by the seed-time check and the Phase-A pre-scan that decides whether staging of
-    warm-covered groups can be skipped on a ``WARM_START_MODE=use`` run (§8.2/§11).
+    warm-covered groups can be skipped on a ``WARM_START_MODE=use`` run (§8.2/§11). A file
+    whose table list SQLite cannot read (not a database, no ``gpkg_contents``, locked, a
+    failing share) is rejected like a missing one, so it never aborts the run. The reasons
+    stay untranslated: they become the §9.1 report's ``detail``, and report CSV is data
+    (§20); the warnings that quote them translate only their own sentence.
 
     :param warm: The warm-cache gpkg path (:data:`None` counts as missing).
     :param expected_tables: The warm-marked primaries' table names.
@@ -443,7 +448,10 @@ def warm_rejection(warm: Path | None, expected_tables: Collection[str]) -> str |
     """
     if warm is None or not warm.is_file():
         return "warm file is missing"
-    present = set(gpkg.layer_names(warm))
+    try:
+        present = set(gpkg.layer_names(warm))
+    except sqlite3.Error as err:
+        return f"warm file is unreadable: {err}"
     expected = set(expected_tables)
     if missing := expected - present:
         return f"warm file lacks expected table(s): {', '.join(sorted(missing))}"
