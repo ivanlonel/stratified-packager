@@ -37,13 +37,25 @@
   // behind-base-branch here through automerge=true, since main is guarded by a ruleset and
   // Renovate's autodetection reads the classic branch-protection API, which returns 404.
   "rebaseWhen": "behind-base-branch",
-  // The Post-Renovate Hooks workflow commits the uv lock / sync-with-uv / pyproject-fmt
-  // results onto the pep621 + pre-commit branch with github-actions[bot] as the committer.
-  // Renovate counts a branch carrying a foreign commit author OR committer as modified and
-  // then refuses to rebase it, so without this that PR would still need the manual tick.
+  // The Post-Renovate Hooks workflow commits the sync-with-uv / pyproject-fmt results onto
+  // pep621 + pre-commit branches as github-actions[bot] (author and committer). Renovate
+  // counts a branch carrying a foreign commit author OR committer as modified and then refuses
+  // to rebase it, so without this those PRs would still need the manual tick. The flip side:
+  // Renovate is then free to rebuild such a branch, dropping that commit for the workflow to
+  // re-add, so no pep621 update may be lockfile-only (see vulnerabilityAlerts below).
   "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"],
   // Raise PRs for known vulnerabilities from the osv.dev database, independent of the schedule.
   "osvVulnerabilityAlerts": true,
+  // Security PRs default to rangeStrategy "update-lockfile" (a uv.lock-only change), which is
+  // forced over the pep621 rule below. pep621 has no updateLockedDependency, so Renovate can't
+  // tell that such a branch is still current: once the Post-Renovate Hooks commit lands, every
+  // run re-locks against the base branch's uv.lock, sees a change and rebuilds the branch from
+  // main without that commit, which the workflow then re-adds -- an endless force-push loop
+  // (#80). With a bumped range, Renovate finds the bump already on the branch and leaves it
+  // alone, as on every other pep621 PR.
+  "vulnerabilityAlerts": {
+    "rangeStrategy": "bump"
+  },
   // Weekly (its own default schedule: before 4am on Monday) `uv lock --upgrade`, so transitive
   // dependencies that no other Renovate PR touches stay current instead of piling up as
   // Dependabot security PRs.
