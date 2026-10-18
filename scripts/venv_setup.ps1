@@ -174,9 +174,23 @@ function Install-JustOnUnix {
     $installDir = Join-Path -Path $HOME -ChildPath '.local/bin'
     New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 
-    Write-Host "[..] Installing just into '$installDir' via the official installer..."
+    # Left to itself, the installer looks the latest release up on api.github.com,
+    # unauthenticated. GitHub caps that at 60 requests/hour per IP, so CI runners sharing an IP
+    # failed with "curl: (22) ... 403". Resolve the tag through github.com's "latest" redirect
+    # instead (no API, no rate limit, as the CI pwsh install does) and pass it with --tag,
+    # which skips the installer's own lookup.
+    # Bounded: with no timeout, a connection github.com accepts but never answers would hang
+    # here until the CI job's own 60-minute limit.
+    $latest = Invoke-WebRequest -Uri 'https://github.com/casey/just/releases/latest' -Method Head `
+        -TimeoutSec 30
+    $tag = Split-Path -Leaf $latest.BaseResponse.RequestMessage.RequestUri.AbsoluteUri
+    if ($tag -notmatch '^\d+\.\d+\.\d+$') {
+        throw "Could not resolve the latest just release (redirect ended at '$tag')."
+    }
+
+    Write-Host "[..] Installing just $tag into '$installDir' via the official installer..."
     Invoke-Native -Executable 'bash' -Arguments '-c', `
-        "curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to '$installDir'"
+        "curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --tag '$tag' --to '$installDir'"
 
     Add-PathEntry -Directory $installDir
 
