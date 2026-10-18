@@ -116,7 +116,8 @@ def _points(name: str, fields: str, rows: list[tuple[object, ...]]) -> QgsVector
         for column, value in enumerate(row):
             feature.setAttribute(column, value)
         feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(index, 0)))
-        assert provider.addFeatures([feature])
+        added, _ = provider.addFeatures([feature])
+        assert added
     return layer
 
 

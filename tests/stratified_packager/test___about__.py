@@ -65,8 +65,7 @@ def test_metadata_types() -> None:
     assert (not __about__.__uri_tracker__) or validators.url(__about__.__uri_tracker__)
 
     # misc
-    general = __about__.__plugin_md__.get("general")
-    assert general
+    general = __about__.__plugin_md__["general"]
     assert all(isinstance(k, str) for k in general)
     assert all(isinstance(v, str) for v in general.values())
 

@@ -109,7 +109,8 @@ def scenario(qgis_new_project: QgsProject, tmp_path: Path) -> Scenario:
         feature = QgsFeature(states.fields())
         feature.setAttribute(0, code)
         feature.setGeometry(_square(x0, 0.0, 10.0))
-        assert provider.addFeatures([feature])
+        added, _ = provider.addFeatures([feature])
+        assert added
 
     cities_memory = QgsVectorLayer(
         "Point?crs=EPSG:4326&field=cid:integer&field=state_code:string", "cities", "memory"
@@ -121,7 +122,8 @@ def scenario(qgis_new_project: QgsProject, tmp_path: Path) -> Scenario:
         feature.setAttribute(0, cid)
         feature.setAttribute(1, code)
         feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(x, 1.0)))
-        assert provider.addFeatures([feature])
+        added, _ = provider.addFeatures([feature])
+        assert added
     cities_gpkg = tmp_path / "cities_src.gpkg"
     options = QgsVectorFileWriter.SaveVectorOptions()
     options.driverName = "GPKG"
@@ -140,7 +142,8 @@ def scenario(qgis_new_project: QgsProject, tmp_path: Path) -> Scenario:
         feature = QgsFeature(plots.fields())
         feature.setAttribute(0, tag)
         feature.setGeometry(_square(x0, 2.0, 2.0))
-        assert provider.addFeatures([feature])
+        added, _ = provider.addFeatures([feature])
+        assert added
 
     roads = QgsVectorLayer("Point?crs=EPSG:4326&field=rid:integer", "roads", "memory")
     provider = roads.dataProvider()
@@ -149,7 +152,8 @@ def scenario(qgis_new_project: QgsProject, tmp_path: Path) -> Scenario:
         feature = QgsFeature(roads.fields())
         feature.setAttribute(0, rid)
         feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(rid, 5.0)))
-        assert provider.addFeatures([feature])
+        added, _ = provider.addFeatures([feature])
+        assert added
     QgsExpressionContextUtils.setLayerVariable(
         roads, "stratified_packager_matching_method", "whole_export"
     )
@@ -264,7 +268,6 @@ def _extract(zip_path: Path, member: str, target_dir: Path) -> Path:
 class _RecordingFeedback(QgsProcessingFeedback):
     """A feedback double collecting pushed info/warning/error and progress-text lines."""
 
-    @override
     def __init__(self) -> None:
         super().__init__()
         self.infos: list[str] = []
@@ -505,7 +508,8 @@ class TestModesAndEdges:
         empty_state = QgsFeature(scenario.states.fields())
         empty_state.setAttribute(0, "C")
         empty_state.setGeometry(_square(200.0, 200.0, 5.0))
-        assert provider.addFeatures([empty_state])
+        added, _ = provider.addFeatures([empty_state])
+        assert added
 
         _run(scenario, {p.KEEP_EMPTY_LAYERS: True})
         gpkg_c = _extract(scenario.out_dir / "C.zip", "C.gpkg", tmp_path / "xk")
@@ -1097,7 +1101,8 @@ class TestWarmStart:
         feature = QgsFeature(ponds.fields())
         feature.setAttribute(0, 1)
         feature.setGeometry(_square(3.0, 3.0, 1.0))  # inside stratum A only
-        assert provider.addFeatures([feature])
+        added, _ = provider.addFeatures([feature])
+        assert added
         QgsExpressionContextUtils.setLayerVariable(
             ponds, "stratified_packager_warm_marked", "true"
         )

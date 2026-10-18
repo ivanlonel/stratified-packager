@@ -37,7 +37,6 @@ class StratifiedPackagerProvider(QgsProcessingProvider):
     :meth:`~stratified_packager.main.StratifiedPackager.initProcessing`.
     """
 
-    @override
     def __init__(self) -> None:
         """Initialize the provider with no signal hookups (those are GUI-only)."""
         super().__init__()

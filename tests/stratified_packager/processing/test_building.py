@@ -71,7 +71,8 @@ def _points(name: str, points: list[tuple[int, float, float]]) -> QgsVectorLayer
         feature.setAttributes([pid, f"n{pid}"])
         feature.setGeometry(QgsGeometry.fromWkt(f"POINT({x} {y})"))
         features.append(feature)
-    assert provider.addFeatures(features)
+    added, _ = provider.addFeatures(features)
+    assert added
     layer.updateExtents()
     return layer
 
@@ -110,7 +111,8 @@ def _strata(count: int) -> tuple[QgsVectorLayer, list[QgsFeature]]:
         feature.setAttributes([10 + offset])
         feature.setGeometry(QgsGeometry.fromWkt(f"POLYGON((0 0,0 5,{5 + offset} 5,5 0,0 0))"))
         features.append(feature)
-    assert provider.addFeatures(features)
+    added, _ = provider.addFeatures(features)
+    assert added
     layer.updateExtents()
     return layer, list(cast("Iterable[QgsFeature]", layer.getFeatures()))
 
@@ -263,7 +265,6 @@ def test_write_vector_table_drops_excluded_fields(
 class _TextRecordingFeedback(QgsProcessingFeedback):
     """A feedback double collecting the progress-text lines for assertions."""
 
-    @override
     def __init__(self) -> None:
         super().__init__()
         self.texts: list[str] = []
@@ -278,7 +279,6 @@ class _TextRecordingFeedback(QgsProcessingFeedback):
 class _InfoRecordingFeedback(QgsProcessingFeedback):
     """A feedback double collecting the ``pushInfo`` lines for assertions."""
 
-    @override
     def __init__(self) -> None:
         super().__init__()
         self.infos: list[str] = []

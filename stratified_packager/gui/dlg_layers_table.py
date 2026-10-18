@@ -52,7 +52,6 @@ FORM_CLASS, _ = uic.loadUiType(Path(__file__).with_suffix(".ui"))  # type: ignor
 class _NameItem(QTableWidgetItem):
     """A layer-name cell sorted by name (accent-aware) or by layer-tree rank."""
 
-    @override
     def __init__(self, text: str, tree_rank: int) -> None:
         """
         Build the name cell.
@@ -120,7 +119,6 @@ class LayersTableDialog(QDialog, FORM_CLASS):  # type: ignore[misc,valid-type]
     """Field keys whose column is disabled for non-virtual layers; derived from the
     variable table's ``virtual_only`` flags."""
 
-    @override
     def __init__(
         self,
         iface: QgisInterface,

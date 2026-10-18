@@ -94,29 +94,29 @@
 </context><context>
   <name>LayerOptionsPageWidget</name>
   <message>
-    <location filename="../../gui/wdg_layer_options_page.py" line="87" />
+    <location filename="../../gui/wdg_layer_options_page.py" line="86" />
     <source>Could not save the layer variables.</source>
     <translation>Não foi possível salvar as variáveis da camada.</translation>
   </message>
 </context><context>
   <name>LayersTableDialog</name>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="172" />
+    <location filename="../../gui/dlg_layers_table.py" line="170" />
     <source>Layer</source>
     <translation>Camada</translation>
   </message>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="174" />
+    <location filename="../../gui/dlg_layers_table.py" line="172" />
     <source>Properties</source>
     <translation>Propriedades</translation>
   </message>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="225" />
+    <location filename="../../gui/dlg_layers_table.py" line="223" />
     <source>Properties…</source>
     <translation>Propriedades…</translation>
   </message>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="319" />
+    <location filename="../../gui/dlg_layers_table.py" line="317" />
     <source>Could not save the layer settings.</source>
     <translation>Não foi possível salvar as configurações da camada.</translation>
   </message>
@@ -1178,12 +1178,12 @@
 </context><context>
   <name>StratifiedPackagerProvider</name>
   <message>
-    <location filename="../../processing/provider.py" line="57" />
+    <location filename="../../processing/provider.py" line="56" />
     <source>Failed to register the %s algorithm.</source>
     <translation>Falha ao registrar o algoritmo %s.</translation>
   </message>
   <message>
-    <location filename="../../processing/provider.py" line="76" />
+    <location filename="../../processing/provider.py" line="75" />
     <source>No project available; default-refresh signals not connected.</source>
     <translation>Nenhum projeto disponível; sinais de atualização de padrões não conectados.</translation>
   </message>
@@ -1265,47 +1265,47 @@
     <translation>herdar</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="420" />
+    <location filename="../../gui/widgets.py" line="409" />
     <source>all</source>
     <translation>todas</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="518" />
+    <location filename="../../gui/widgets.py" line="505" />
     <source>DE-9IM pattern(s)…</source>
     <translation>Padrão(ões) DE-9IM…</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="525" />
+    <location filename="../../gui/widgets.py" line="512" />
     <source>DE-9IM:</source>
     <translation>DE-9IM:</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="617" />
+    <location filename="../../gui/widgets.py" line="604" />
     <source>Invalid DE-9IM pattern(s): {}</source>
     <translation>Padrão(ões) DE-9IM inválido(s): {}</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="807" />
+    <location filename="../../gui/widgets.py" line="792" />
     <source>not set</source>
     <translation>não definido</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="894" />
+    <location filename="../../gui/widgets.py" line="879" />
     <source>Enabled</source>
     <translation>Ativado</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="895" />
+    <location filename="../../gui/widgets.py" line="880" />
     <source>Disabled</source>
     <translation>Desativado</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="1303" />
+    <location filename="../../gui/widgets.py" line="1288" />
     <source>auto</source>
     <translation>auto</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="1314" />
+    <location filename="../../gui/widgets.py" line="1299" />
     <source>keep original</source>
     <translation>manter original</translation>
   </message>

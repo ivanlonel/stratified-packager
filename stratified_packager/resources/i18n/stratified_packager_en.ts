@@ -94,29 +94,29 @@
 </context><context>
   <name>LayerOptionsPageWidget</name>
   <message>
-    <location filename="../../gui/wdg_layer_options_page.py" line="87" />
+    <location filename="../../gui/wdg_layer_options_page.py" line="86" />
     <source>Could not save the layer variables.</source>
     <translation type="unfinished" />
   </message>
 </context><context>
   <name>LayersTableDialog</name>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="172" />
+    <location filename="../../gui/dlg_layers_table.py" line="170" />
     <source>Layer</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="174" />
+    <location filename="../../gui/dlg_layers_table.py" line="172" />
     <source>Properties</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="225" />
+    <location filename="../../gui/dlg_layers_table.py" line="223" />
     <source>Properties…</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/dlg_layers_table.py" line="319" />
+    <location filename="../../gui/dlg_layers_table.py" line="317" />
     <source>Could not save the layer settings.</source>
     <translation type="unfinished" />
   </message>
@@ -1175,12 +1175,12 @@
 </context><context>
   <name>StratifiedPackagerProvider</name>
   <message>
-    <location filename="../../processing/provider.py" line="57" />
+    <location filename="../../processing/provider.py" line="56" />
     <source>Failed to register the %s algorithm.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/provider.py" line="76" />
+    <location filename="../../processing/provider.py" line="75" />
     <source>No project available; default-refresh signals not connected.</source>
     <translation type="unfinished" />
   </message>
@@ -1262,47 +1262,47 @@
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="420" />
+    <location filename="../../gui/widgets.py" line="409" />
     <source>all</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="518" />
+    <location filename="../../gui/widgets.py" line="505" />
     <source>DE-9IM pattern(s)…</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="525" />
+    <location filename="../../gui/widgets.py" line="512" />
     <source>DE-9IM:</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="617" />
+    <location filename="../../gui/widgets.py" line="604" />
     <source>Invalid DE-9IM pattern(s): {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="807" />
+    <location filename="../../gui/widgets.py" line="792" />
     <source>not set</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="894" />
+    <location filename="../../gui/widgets.py" line="879" />
     <source>Enabled</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="895" />
+    <location filename="../../gui/widgets.py" line="880" />
     <source>Disabled</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="1303" />
+    <location filename="../../gui/widgets.py" line="1288" />
     <source>auto</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="1314" />
+    <location filename="../../gui/widgets.py" line="1299" />
     <source>keep original</source>
     <translation type="unfinished" />
   </message>

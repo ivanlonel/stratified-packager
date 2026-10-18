@@ -56,7 +56,7 @@ from .material import slowest_summary
 from .params import ProjectInclusion
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Generator, Iterable, Mapping, Sequence
 
     from qgis.core import QgsLayerTreeNode, QgsProcessingFeedback
 
@@ -368,7 +368,7 @@ def _primary_map_canvas(document: QDomDocument) -> QDomElement | None:
 
 
 @contextlib.contextmanager
-def _capture_log() -> Iterator[list[str]]:
+def _capture_log() -> Generator[list[str]]:
     """
     Collect :class:`~qgis.core.QgsMessageLog` entries emitted on the current thread.
 

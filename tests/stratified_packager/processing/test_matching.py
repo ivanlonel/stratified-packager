@@ -67,7 +67,8 @@ def _table(name: str, fields: str, rows: list[tuple[object, ...]]) -> QgsVectorL
         for index, value in enumerate(row):
             feature.setAttribute(index, value)
         features.append(feature)
-    assert provider.addFeatures(features)
+    added, _ = provider.addFeatures(features)
+    assert added
     return layer
 
 
@@ -91,7 +92,8 @@ def _squares(
         feature.setAttribute(0, index)
         feature.setGeometry(QgsGeometry.fromRect(QgsRectangle(x0, y0, x0 + side, y0 + side)))
         features.append(feature)
-    assert provider.addFeatures(features)
+    added, _ = provider.addFeatures(features)
+    assert added
     return layer
 
 
@@ -400,7 +402,8 @@ class TestAttributeKeys:
         feature = QgsFeature(network.states.fields())
         feature.setAttribute(0, None)
         feature.setAttribute(1, "X")
-        assert provider.addFeatures([feature])
+        added, _ = provider.addFeatures([feature])
+        assert added
         null_state = next(
             f
             for f in network.states.getFeatures()  # type: ignore[union-attr]  # ty: ignore[not-iterable]  # stubs lag
