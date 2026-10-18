@@ -72,3 +72,8 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
         with:
           commit_message: "chore(deps): apply post-Renovate hooks"
+          # Pin the author (default: github.actor). The run triggered by this job's own push
+          # has the RENOVATE_TOKEN owner as actor; if Renovate force-pushed meanwhile, that run
+          # commits the hooks onto Renovate's new head under the owner's name, which Renovate
+          # doesn't ignore, so it would count the PR as modified and stop rebasing it.
+          commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
