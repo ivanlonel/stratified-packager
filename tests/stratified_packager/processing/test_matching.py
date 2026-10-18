@@ -772,7 +772,9 @@ class TestSpatialFids:
         result = stratum_geometry_in_layer_crs(
             stratum_geometry, strat, grid, qgis_new_project, feedback
         )
-        assert result.equals(stratum_geometry)
+        # WKT, not QgsGeometry.equals: that is deprecated since QGIS 4.2 and its replacement
+        # (isExactlyEqual) doesn't exist on the 3.x lines these tests also run on.
+        assert result.asWkt() == stratum_geometry.asWkt()
 
 
 def test_spatial_scan_aborts_on_cancellation(feedback: QgsProcessingFeedback) -> None:

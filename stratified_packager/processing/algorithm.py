@@ -396,7 +396,9 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                     return False, self.tr("{} does not parse: {}").format(
                         name, expression.parserErrorString()
                     )
-        return super().checkParameterValues(parameters, context)
+        # QGIS >= 4.2.3 stubs type the base's message ``str | None``; keep this ``str``.
+        ok, message = super().checkParameterValues(parameters, context)
+        return ok, message or ""
 
     @override
     def processAlgorithm(
@@ -1871,7 +1873,10 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             sld_doc = layer.exportSldStyleV3(context)
         except AttributeError:
             sld_doc = QDomDocument()
-            layer.exportSldStyleV2(sld_doc, "", context)  # "" = unused errorMsg out-param
+            # V2 runs only below QGIS 3.44, which lacks V3 (the 3.40 floor, SPEC §1.1). Stubs
+            # from 4.2.3 on mark it deprecated and older ones don't, hence unused-ignore too.
+            # "" = unused errorMsg out-param.
+            layer.exportSldStyleV2(sld_doc, "", context)  # type: ignore[deprecated, unused-ignore]
         return sld_doc.toString()
 
     def _metadata_payload(self, layer: QgsMapLayer, inputs: _Inputs) -> str:
