@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import sqlite3
 from typing import TYPE_CHECKING, Final
+from urllib.parse import quote
 
 from osgeo import gdal
 
@@ -49,10 +50,17 @@ def _connect_readonly(gpkg: Path) -> sqlite3.Connection:
     """
     Open a read-only connection (a plain ``connect`` would create a missing file).
 
+    SQLite parses the ``file:`` URI itself, so the path is percent-encoded (a literal ``#``
+    would end it, dropping ``mode=ro``) and an absolute path gets an empty authority:
+    ``file://host/share`` names an authority SQLite rejects, ``file:////host/share`` the UNC
+    path.
+
     :param gpkg: GeoPackage path (must exist).
     :return: The read-only connection.
     """
-    return sqlite3.connect(f"file:{gpkg.as_posix()}?mode=ro", uri=True)
+    path = quote(gpkg.as_posix())
+    authority = "//" if path.startswith("/") else ""
+    return sqlite3.connect(f"file:{authority}{path}?mode=ro", uri=True)
 
 
 def layer_names(gpkg: Path, /) -> list[str]:

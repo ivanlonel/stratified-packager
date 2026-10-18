@@ -13,7 +13,8 @@ QGIS-free, but the introspection, table-drop and style tests need GDAL's Python 
 from __future__ import annotations
 
 import sqlite3
-from typing import TYPE_CHECKING
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -41,10 +42,6 @@ from stratified_packager.toolbelt.gpkg import (  # noqa: E402  # must follow the
 )
 from tests.stratified_packager._qgis_helpers import build_alpha_gpkg  # noqa: E402
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-
 # ---------------------------------------------------------------------------
 # Translation & payload integration (real files)
 # ---------------------------------------------------------------------------
@@ -54,6 +51,15 @@ if TYPE_CHECKING:
 def source_gpkg(tmp_path: Path) -> Path:
     """Build a small source GeoPackage with one point layer ``alpha`` (a, b)."""
     return build_alpha_gpkg(tmp_path / "src.gpkg")
+
+
+def _unc_alias(path: Path) -> Path:
+    """Respell *path* with a leading ``//``: a Windows admin-share UNC, or its POSIX twin."""
+    if sys.platform == "win32":
+        alias = Path(f"//localhost/{path.drive[0]}$/") / path.relative_to(path.anchor)
+    else:
+        alias = Path(f"/{path.as_posix()}")
+    return alias
 
 
 class TestIntrospection:
@@ -69,6 +75,25 @@ class TestIntrospection:
         assert {"a", "b", "geom"} <= column_names(source_gpkg, "alpha")
         assert column_names(source_gpkg, "missing") == frozenset()
         assert column_names(source_gpkg.with_name("absent.gpkg"), "alpha") == frozenset()
+
+    @pytest.mark.parametrize(
+        ("folder", "unc"),
+        [
+            pytest.param("plain", True, id="unc-share"),
+            pytest.param("a #b %41 ç", False, id="uri-special-characters"),
+        ],
+    )
+    def test_read_helpers_open_paths_a_naive_uri_misreads(
+        self, tmp_path: Path, folder: str, unc: bool
+    ) -> None:
+        """A UNC share (``//host`` is a URI authority) and a ``#``/``%HH`` path both open."""
+        (tmp_path / folder).mkdir()
+        gpkg = build_alpha_gpkg(tmp_path / folder / "src.gpkg")
+        if unc:
+            gpkg = _unc_alias(gpkg)
+            if not gpkg.is_file():
+                pytest.skip("the administrative share is unreachable")
+        assert layer_names(gpkg) == ["alpha"]
 
     def test_drop_table(self, source_gpkg: Path) -> None:
         """``drop_table`` removes a layer and its registrations; a missing table reports False."""
