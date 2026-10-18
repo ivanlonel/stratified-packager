@@ -70,6 +70,8 @@ def layer_names(gpkg: Path, /) -> list[str]:
     :param gpkg: GeoPackage path.
     :return: ``gpkg_contents`` table names with ``data_type = 'features'``, sorted;
         empty when the file does not exist.
+    :raise sqlite3.Error: If the file is not a readable SQLite database holding
+        ``gpkg_contents``.
     """
     if not gpkg.is_file():
         return []

@@ -710,10 +710,13 @@ Layout per zip:
 - `WARM_START_MODE` not `off` with no `WARM_START_DIR` → validation error; with **zero
   warm-marked layers** → run-start validation error (a warm run with nothing warm is always a
   misconfiguration).
-- Missing warm gpkg for a stratum, a warm gpkg lacking an expected warm-marked table, or a warm
-  gpkg containing a table **not** in the current warm-marked set (appending onto it would
-  silently duplicate its features) → **per-stratum cold fallback** with `pushWarning` and CSV
-  `status=cold-fallback`.
+- Missing warm gpkg for a stratum, an **unreadable** one (SQLite cannot read its table list:
+  not a database, no `gpkg_contents`, locked, a failing share), a warm gpkg lacking an expected
+  warm-marked table, or a warm gpkg containing a table **not** in the current warm-marked set
+  (appending onto it would silently duplicate its features) → **per-stratum cold fallback**
+  with `pushWarning` and CSV `status=cold-fallback` (`detail` names the trigger). Only the
+  table list is read: damage deeper in a file whose table list reads still surfaces while the
+  stratum builds, failing that stratum under the §17 best-effort policy.
 - Cache staleness (marked-layer data/schema drift) is the user's responsibility; refresh with
   a `WARM_START_MODE=update` run.
 

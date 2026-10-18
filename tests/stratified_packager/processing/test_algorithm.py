@@ -58,6 +58,7 @@ from stratified_packager.processing import params as p
 from stratified_packager.processing.algorithm import StratifiedPackagerAlgorithm
 from stratified_packager.processing.building import StratumWriteResult, write_vector_table
 from stratified_packager.processing.building import stage_union as real_stage_union_import
+from stratified_packager.processing.building import warm_rejection as real_warm_rejection
 from stratified_packager.processing.building import write_stratum as real_write_stratum
 from stratified_packager.processing.params import ProjectInclusion
 from stratified_packager.processing.report import RunReportRow
@@ -929,14 +930,24 @@ class TestWarmStart:
         assert "B,cities,1,warm" in report
         assert "cold-fallback" not in report
 
-    def test_use_run_still_stages_when_a_cache_is_missing(
-        self, scenario: Scenario, tmp_path: Path
+    @pytest.mark.parametrize(
+        ("damage", "reason"),
+        [
+            ("missing", "warm file is missing"),
+            ("corrupt", "warm file is unreadable: file is not a database"),
+        ],
+    )
+    def test_use_run_still_stages_when_a_cache_is_unusable(
+        self, scenario: Scenario, tmp_path: Path, damage: str, reason: str
     ) -> None:
-        """USE + a missing cache file: the pre-scan warns once and staging proceeds."""
+        """USE + a missing or corrupt cache: the pre-scan warns, B alone cold-falls-back."""
         self._mark_cities_warm_staged(scenario)
         warm_dir = tmp_path / "warm"
         _run(scenario, {p.WARM_START_MODE: "update", p.WARM_START_DIR: str(warm_dir)})
-        (warm_dir / "B.gpkg").unlink()
+        if damage == "missing":
+            (warm_dir / "B.gpkg").unlink()
+        else:
+            (warm_dir / "B.gpkg").write_bytes(b"this is not a sqlite database")
 
         feedback = _RecordingFeedback()
         results = _run(
@@ -950,7 +961,31 @@ class TestWarmStart:
         assert not any("Skipping staging" in line for line in feedback.infos)
         report = (scenario.out_dir / "report.csv").read_text(encoding="utf-8")
         assert "A,cities,2,warm" in report
-        assert "B,cities,1,cold-fallback" in report
+        assert f"B,cities,1,cold-fallback,{reason}" in report
+
+    def test_pre_scan_stops_at_cancellation(
+        self, scenario: Scenario, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cancel during the warm pre-scan stops it before the next cache is read."""
+        self._mark_cities_warm_staged(scenario)
+        warm_dir = tmp_path / "warm"
+        _run(scenario, {p.WARM_START_MODE: "update", p.WARM_START_DIR: str(warm_dir)})
+        feedback = QgsProcessingFeedback()
+        checked: list[Path | None] = []
+
+        def cancel_on_check(warm: Path | None, expected: Any) -> str | None:
+            checked.append(warm)
+            feedback.cancel()
+            return real_warm_rejection(warm, expected)
+
+        monkeypatch.setattr(algorithm_module, "warm_rejection", cancel_on_check)
+        with pytest.raises(QgsProcessingException, match="cancel"):
+            _run(
+                scenario,
+                {p.WARM_START_MODE: "use", p.WARM_START_DIR: str(warm_dir)},
+                feedback=feedback,
+            )
+        assert checked == [warm_dir / "A.gpkg"]
 
     def test_update_run_still_stages_warm_groups(self, scenario: Scenario, tmp_path: Path) -> None:
         """UPDATE always stages: its warm pass reads the staged copy once per stratum."""

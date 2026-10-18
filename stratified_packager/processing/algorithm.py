@@ -1315,6 +1315,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         :param strata: The surviving strata (``<full>`` included when it is exported).
         :param feedback: Execution feedback channel.
         :return: Whether every build's warm cache passes the §11 completeness check.
+        :raise QgsProcessingException: If the run is canceled mid-scan.
         """
         inputs = material.inputs
         if not inputs.use_warm or inputs.warm_dir is None:
@@ -1325,16 +1326,13 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             if prep.group_primary_id in (None, prep.layer.id())
             and prep.layer.id() in material.warm_marked_ids
         )
-        rejections = [
-            (spec.name, reason)
-            for spec in strata
-            if (
-                reason := warm_rejection(
-                    inputs.warm_dir / f"{_warm_file_name(spec.name)}.gpkg", expected
-                )
-            )
-            is not None
-        ]
+        rejections: list[tuple[str, str]] = []
+        for spec in strata:
+            if feedback.isCanceled():
+                raise QgsProcessingException(self.tr("Operation was canceled."))
+            warm = inputs.warm_dir / f"{_warm_file_name(spec.name)}.gpkg"
+            if (reason := warm_rejection(warm, expected)) is not None:
+                rejections.append((spec.name, reason))
         if not rejections:
             return True
         feedback.pushWarning(

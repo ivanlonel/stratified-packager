@@ -500,18 +500,26 @@ def test_template_seed_still_writes_warm_marked_whole_export(
 
 
 def test_warm_rejection_names_the_cold_fallback_trigger(tmp_path: Path) -> None:
-    """The §11 completeness check flags a missing file and table drift, else passes."""
+    """The §11 completeness check flags a missing or unreadable file and table drift."""
     feedback = QgsProcessingFeedback()
     warm = tmp_path / "warm.gpkg"
     write_vector_table(
         warm, _points("pts", [(1, 0.0, 0.0)]), "pts", only_selected=False, feedback=feedback
     )
+    garbage = tmp_path / "garbage.gpkg"
+    garbage.write_bytes(b"this is not a sqlite database")
+    empty = tmp_path / "empty.gpkg"
+    empty.touch()  # opens as an empty SQLite database: no gpkg_contents
 
     assert warm_rejection(None, ("pts",)) == "warm file is missing"
     assert warm_rejection(tmp_path / "absent.gpkg", ("pts",)) == "warm file is missing"
     assert warm_rejection(warm, ("pts",)) is None
     assert "lacks expected" in (warm_rejection(warm, ("pts", "more")) or "")
     assert "non-warm-marked" in (warm_rejection(warm, ()) or "")
+    assert warm_rejection(garbage, ("pts",)) == "warm file is unreadable: file is not a database"
+    assert (
+        warm_rejection(empty, ("pts",)) == "warm file is unreadable: no such table: gpkg_contents"
+    )
 
 
 def test_stage_union_holds_only_matched(
