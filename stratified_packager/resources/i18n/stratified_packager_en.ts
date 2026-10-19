@@ -123,78 +123,78 @@
 </context><context>
   <name>MatchingEngine</name>
   <message>
-    <location filename="../../processing/matching.py" line="97" />
+    <location filename="../../processing/matching.py" line="96" />
     <source>Operation was canceled.</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="266" />
+    <location filename="../../processing/matching.py" line="265" />
     <source>Matching cannot be resolved:
 - {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="295" />
+    <location filename="../../processing/matching.py" line="294" />
     <source>layer {}: invalid matching_method {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="313" />
+    <location filename="../../processing/matching.py" line="312" />
     <source>layer {}: no relation path to the stratification layer and no geometry on both sides; add a relation, set matching_method = whole_export, exclude the layer, or give the stratification layer geometry</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="338" />
+    <location filename="../../processing/matching.py" line="337" />
     <source>layer {}: matching_method = spatial requires geometry on both the layer and the stratification layer</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="377" />
+    <location filename="../../processing/matching.py" line="376" />
     <source>layer {}: relation_path is not a JSON list: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="385" />
+    <location filename="../../processing/matching.py" line="384" />
     <source>layer {}: relation_path must be a JSON list of relation ids</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="393" />
+    <location filename="../../processing/matching.py" line="392" />
     <source>layer {}: invalid relation_path pin: {}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="401" />
+    <location filename="../../processing/matching.py" line="400" />
     <source>layer {}: matching_method = attribute but no relation path reaches the stratification layer</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="410" />
+    <location filename="../../processing/matching.py" line="409" />
     <source>layer {}: multiple shortest relation paths ({}); set the layer's relation_path variable to pin one</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="443" />
+    <location filename="../../processing/matching.py" line="442" />
     <source>layer {}: spatial_predicate 'auto' cannot be combined with other predicates</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="457" />
+    <location filename="../../processing/matching.py" line="456" />
     <source>layer {}: invalid spatial_predicate token {!r}</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="575" />
+    <location filename="../../processing/matching.py" line="574" />
     <source>relation chain layer {} is not in the project</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="605" />
+    <location filename="../../processing/matching.py" line="604" />
     <source>relation chain produced no terminal condition</source>
     <translation type="unfinished" />
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="729" />
+    <location filename="../../processing/matching.py" line="728" />
     <source>coordinate transform {} -&gt; {} failed for layer {}</source>
     <translation type="unfinished" />
   </message>
