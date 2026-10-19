@@ -123,79 +123,79 @@
 </context><context>
   <name>MatchingEngine</name>
   <message>
-    <location filename="../../processing/matching.py" line="97" />
+    <location filename="../../processing/matching.py" line="96" />
     <source>Operation was canceled.</source>
     <translation>A operação foi cancelada.</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="266" />
+    <location filename="../../processing/matching.py" line="265" />
     <source>Matching cannot be resolved:
 - {}</source>
     <translation>A correspondência não pôde ser resolvida:
 - {}</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="295" />
+    <location filename="../../processing/matching.py" line="294" />
     <source>layer {}: invalid matching_method {}</source>
     <translation>camada {}: matching_method inválido {}</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="313" />
+    <location filename="../../processing/matching.py" line="312" />
     <source>layer {}: no relation path to the stratification layer and no geometry on both sides; add a relation, set matching_method = whole_export, exclude the layer, or give the stratification layer geometry</source>
     <translation>camada {}: não há caminho de relação até a camada de estratificação nem geometria em ambos os lados; adicione uma relação, defina matching_method = whole_export, exclua a camada ou forneça geometria à camada de estratificação</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="338" />
+    <location filename="../../processing/matching.py" line="337" />
     <source>layer {}: matching_method = spatial requires geometry on both the layer and the stratification layer</source>
     <translation>camada {}: matching_method = spatial requer geometria tanto na camada quanto na camada de estratificação</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="377" />
+    <location filename="../../processing/matching.py" line="376" />
     <source>layer {}: relation_path is not a JSON list: {}</source>
     <translation>camada {}: relation_path não é uma lista JSON: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="385" />
+    <location filename="../../processing/matching.py" line="384" />
     <source>layer {}: relation_path must be a JSON list of relation ids</source>
     <translation>camada {}: relation_path deve ser uma lista JSON de ids de relação</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="393" />
+    <location filename="../../processing/matching.py" line="392" />
     <source>layer {}: invalid relation_path pin: {}</source>
     <translation>camada {}: fixação de relation_path inválida: {}</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="401" />
+    <location filename="../../processing/matching.py" line="400" />
     <source>layer {}: matching_method = attribute but no relation path reaches the stratification layer</source>
     <translation>camada {}: matching_method = attribute, mas nenhum caminho de relação alcança a camada de estratificação</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="410" />
+    <location filename="../../processing/matching.py" line="409" />
     <source>layer {}: multiple shortest relation paths ({}); set the layer's relation_path variable to pin one</source>
     <translation>camada {}: vários caminhos de relação mais curtos ({}); defina a variável relation_path da camada para fixar um</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="443" />
+    <location filename="../../processing/matching.py" line="442" />
     <source>layer {}: spatial_predicate 'auto' cannot be combined with other predicates</source>
     <translation>camada {}: spatial_predicate 'auto' não pode ser combinado com outros predicados</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="457" />
+    <location filename="../../processing/matching.py" line="456" />
     <source>layer {}: invalid spatial_predicate token {!r}</source>
     <translation>camada {}: token de spatial_predicate inválido {!r}</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="575" />
+    <location filename="../../processing/matching.py" line="574" />
     <source>relation chain layer {} is not in the project</source>
     <translation>a camada {} da cadeia de relações não está no projeto</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="605" />
+    <location filename="../../processing/matching.py" line="604" />
     <source>relation chain produced no terminal condition</source>
     <translation>a cadeia de relações não produziu uma condição terminal</translation>
   </message>
   <message>
-    <location filename="../../processing/matching.py" line="729" />
+    <location filename="../../processing/matching.py" line="728" />
     <source>coordinate transform {} -&gt; {} failed for layer {}</source>
     <translation>a transformação de coordenadas {} -&gt; {} falhou para a camada {}</translation>
   </message>

@@ -7,10 +7,13 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, override
 
 import keepachangelog
-from sphinx.ext.autodoc.mock import _MockModule  # type: ignore[attr-defined]  # not re-exported
+from sphinx.ext.autodoc.mock import (  # type: ignore[attr-defined]  # neither is re-exported
+    _MockModule,
+    _MockObject,
+)
 from sphinx.ext.intersphinx import InventoryAdapter
 from sphinx.ext.intersphinx import missing_reference as intersphinx_missing_reference
 
@@ -135,14 +138,43 @@ _qgis_uic.__dict__["loadUiType"] = lambda *_a, **_k: (
     type("FormClass", (), {"__module__": "qgis.PyQt.uic"}),
     object,
 )
+
+
+class _QgisCoreMock(_MockModule):
+    """The autodoc module mock, minus the dunder attributes it would fabricate on demand."""
+
+    @override
+    def __getattr__(self, name: str) -> _MockObject:
+        """
+        Mock the missing attribute *name*, unless it is a dunder (as a real module would).
+
+        :class:`_MockModule` answers every name, ``__wrapped__`` included, with a mock that
+        answers ``__wrapped__`` in turn, so :func:`inspect.unwrap` — hence
+        :func:`inspect.getsource`, which sphinx-autodoc-typehints runs on each module a
+        ``TYPE_CHECKING`` block imports from — chases mocks until it raises
+        :exc:`ValueError`.
+
+        :param name: The attribute looked up.
+        :return: A mock named after *name* under this module's dotted path.
+        :raise AttributeError: When *name* is a dunder.
+        """
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+        return super().__getattr__(name)
+
+
 # qgis.core is otherwise autodoc-mocked, but identity.py runs slugify(__title__) at import,
 # which calls QgsStringUtils.unaccent — a bare mock returns a non-str that breaks the
 # unicodedata.normalize() inside it. Use autodoc's module mock as qgis.core (its names carry
 # the real dotted path, so a base class renders as qgis.core.QgsProcessingAlgorithm rather
-# than a bare MockObject xref) but inject a real passthrough QgsStringUtils.unaccent.
-_qgis_core = _MockModule("qgis.core")
+# than a bare MockObject xref) but inject a real passthrough QgsStringUtils.unaccent. The stub
+# spells out its __module__: conf.py runs without a __name__ global, so type() would leave it
+# moduleless and autodoc would document it as a member of toolbelt/i18n.py, its importer.
+_qgis_core = _QgisCoreMock("qgis.core")
 _qgis_core.__dict__["QgsStringUtils"] = type(
-    "QgsStringUtils", (), {"unaccent": staticmethod(lambda s, /, *_a, **_k: s)}
+    "QgsStringUtils",
+    (),
+    {"__module__": "qgis.core", "unaccent": staticmethod(lambda s, /, *_a, **_k: s)},
 )
 sys.modules["qgis.core"] = _qgis_core
 _qgis.__dict__["core"] = _qgis_core
@@ -177,6 +209,12 @@ nitpick_ignore: list[tuple[str, str]] = [
     ("py:func", "pyqtSignal"),
     # Synthetic class returned by the uic.loadUiType stub (see _qgis_uic above).
     ("py:class", "qgis.PyQt.uic.FormClass"),
+    # TYPE_CHECKING-only Protocol in toolbelt/logging.py that the guarded _FilterType alias
+    # expands to.
+    ("py:class", "stratified_packager.toolbelt.logging._SupportsFilter"),
+    # Target of sphinx-autodoc-typehints' "Overrides" field for MappingProxy.get: Python's
+    # inventory lists Mapping's mixin methods only in a table, not as py:method objects.
+    ("py:meth", "collections.abc.Mapping.get"),
 ]
 
 # Configuration for intersphinx (refer to others docs).

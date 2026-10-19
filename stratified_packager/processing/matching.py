@@ -32,6 +32,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 
 from stratified_packager.toolbelt.relations import (
     RelationGraph,
+    RelationPath,
     all_shortest_paths,
     validate_pinned_path,
 )
@@ -56,8 +57,6 @@ if TYPE_CHECKING:
         QgsProject,
         QgsVectorLayer,
     )
-
-    from stratified_packager.toolbelt.relations import RelationPath
 
 __all__: list[str] = [
     "DE9IM_PATTERN",
