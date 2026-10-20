@@ -91,7 +91,7 @@ hook = [
   "pre-commit-hooks~=6.0.0",
   "pyproject-fmt~=2.30.3",
   "sync-with-uv~=0.6.0",
-  "uv~=0.13.1",
+  "uv~=0.13.4",
   "zizmor~=1.31.1",
 ]
 pack = [
