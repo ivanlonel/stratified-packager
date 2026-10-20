@@ -1548,10 +1548,11 @@ class TestWorkdirCleanup:
         assert material.warm_prefetch == {}
         assert material.chain_context.hop_layers == {}  # §8.2 staged hop copies too
 
-    def test_discard_workdir_reports_residue(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize("use_temp_folder", [True, False])
+    def test_discard_workdir_warns_on_residue(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, use_temp_folder: bool
     ) -> None:
-        """Residue in a user-visible (non-temp) workdir is surfaced as a warning."""
+        """Residue is a warning wherever the workdir sits — a crash skips QGIS's temp cleanup."""
         workdir = tmp_path / ".stratified_build_x"
         workdir.mkdir()
         monkeypatch.setattr(algorithm_module, "remove_tree", lambda *_a, **_k: False)
@@ -1560,14 +1561,15 @@ class TestWorkdirCleanup:
             payloads=[],
             warm_prefetch={},
             chain_context=SimpleNamespace(hop_layers={}),
-            inputs=SimpleNamespace(use_temp_folder=False),
+            inputs=SimpleNamespace(use_temp_folder=use_temp_folder),
         )
-        feedback = QgsProcessingFeedback()
+        feedback = _RecordingFeedback()
 
         algo = StratifiedPackagerAlgorithm()
         algo._discard_workdir(cast("Any", material), workdir, feedback)
 
-        assert workdir.name in feedback.textLog()
+        assert len(feedback.warnings) == 1
+        assert workdir.name in feedback.warnings[0]
 
     def test_sweep_removes_only_stale_build_dirs(self, tmp_path: Path) -> None:
         """Only day-old ``.stratified_build_*`` siblings are swept at run start."""

@@ -662,8 +662,9 @@ Layout per zip:
   (staging copies, the whole-export template) are released first — while they are alive GDAL
   holds their files open and Windows refuses deletion — then the build dir is removed with
   bounded retries. Surviving residue (e.g. a handle a failed run's traceback still pins) is
-  a warning when the workdir sits inside the output directory, a debug note under the
-  Processing temp folder (QGIS removes that folder at exit).
+  a warning wherever the workdir sits — under the Processing temp folder too, since QGIS's
+  exit-time removal of that folder is not guaranteed (it never runs when the process crashes
+  or is killed).
 - `OVERWRITE_MODE`: `overwrite` replaces; `error` aborts at run-start validation listing the
   existing targets; `skip-existing` skips those strata (CSV `skipped-existing`).
 - `WRITE_CHECKSUMS=True`: `<name>.zip.sha256` written next to each published zip.
