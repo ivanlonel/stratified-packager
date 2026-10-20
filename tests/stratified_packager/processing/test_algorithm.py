@@ -1569,7 +1569,7 @@ class TestWorkdirCleanup:
         algo._discard_workdir(cast("Any", material), workdir, feedback)
 
         assert len(feedback.warnings) == 1
-        assert workdir.name in feedback.warnings[0]
+        assert str(workdir) in feedback.warnings[0]  # the full path, so users can find it
 
     def test_sweep_removes_only_stale_build_dirs(self, tmp_path: Path) -> None:
         """Only day-old ``.stratified_build_*`` siblings are swept at run start."""
