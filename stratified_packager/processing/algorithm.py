@@ -967,8 +967,8 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
             output directory when ``USE_TEMP_FOLDER`` is off).
         """
         if inputs.use_temp_folder:
-            # No sweep here: the Processing temp folder is session-scoped (QGIS removes
-            # it at exit), so residue from other sessions is unreachable from this run.
+            # No sweep here: the Processing temp folder is session-scoped, so residue
+            # other sessions left behind (e.g. after a crash) is unreachable from this run.
             return Path(
                 tempfile.mkdtemp(prefix="stratified_", dir=QgsProcessingUtils.tempFolder())
             )
@@ -1007,8 +1007,10 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         while those layers are alive GDAL holds the files
         open and Windows refuses to delete them. Dropping the references (plus a GC pass
         for cycles) releases the handles so the removal can succeed. Residue surviving
-        the retries — e.g. a handle a failed run's traceback still pins — is reported
-        and left behind (best-effort, §17).
+        the retries — e.g. a handle a failed run's traceback still pins — is left behind
+        (best-effort, §17) and warned about wherever the workdir sits: QGIS's exit-time
+        removal of the Processing temp folder is not guaranteed (it never runs when the
+        process crashes or is killed), so residue there can outlive the session too.
 
         :param material: The run material; its layer-holding fields are cleared in place.
         :param workdir: The run's build directory.
@@ -1019,14 +1021,10 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         material.warm_prefetch.clear()
         material.chain_context.hop_layers.clear()
         gc.collect()
-        if remove_tree(workdir):
-            return
-        message = self.tr("Could not fully remove the build directory: {}").format(workdir)
-        if material.inputs.use_temp_folder:
-            # Under the Processing temp folder, which QGIS removes at exit anyway.
-            feedback.pushDebugInfo(message)
-        else:
-            feedback.pushWarning(message)
+        if not remove_tree(workdir):
+            feedback.pushWarning(
+                self.tr("Could not fully remove the build directory: {}").format(workdir)
+            )
 
     # ------------------------------------------------------------------
     # Phase A (§8.1/§8.2 + §7 conditions + §14 bundling)
