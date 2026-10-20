@@ -8,7 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
-## Unreleased - 2026-10-18
+## 1.0.0 - 2026-10-20
+
+First stable release: the plugin is no longer flagged experimental on plugins.qgis.org.
 
 - Warm start: **fixed a `WARM_START_DIR` on a network share aborting the run with `invalid uri authority`.** The GeoPackages the plugin only inspects are opened read-only through a SQLite `file:` URI, and a UNC path (`\\server\share\...`) spelled into one puts the server where the URI's authority goes, which SQLite refuses unless it is empty or `localhost`. The warm pre-scan inspects every cache file before staging, so a warm run against a shared cache failed outright; with `USE_TEMP_FOLDER` off and `OUTPUT_DIRECTORY` on a share, the per-layer checks of every build did too. The same URI also mangled paths holding a `#` or a `%`, both legal in stratum names: SQLite takes a `#` as the end of the URI, so the check opened the truncated path read-write — leaving an empty stray file there — and failed on its missing tables. The path is now percent-encoded and an absolute one gets an empty authority, so both kinds open as written. Writing never went through a URI and was unaffected.
 
