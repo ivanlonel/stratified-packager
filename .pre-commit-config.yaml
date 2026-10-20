@@ -14,7 +14,7 @@ repos:
       - id: check-useless-excludes
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.13.1
+    rev: 0.13.3
     hooks:
       - id: uv-lock
         name: uv-lock (frozen)
@@ -67,7 +67,7 @@ repos:
       - id: text-unicode-replacement-char
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 44.166.0
+    rev: 44.168.2
     hooks:
       - id: renovate-config-validator
         args:
