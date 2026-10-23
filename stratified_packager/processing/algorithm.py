@@ -706,11 +706,9 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         """
         strat_layer = self.parameterAsVectorLayer(parameters, params.STRATIFICATION_LAYER, context)
         if strat_layer is None and params.is_omitted(parameters, params.STRATIFICATION_LAYER):
-            variable_value = str(reader.fallback(params.STRATIFICATION_LAYER) or "")
-            if variable_value:
-                candidate = project.mapLayer(variable_value)
-                if isinstance(candidate, QgsVectorLayer):
-                    strat_layer = candidate
+            strat_layer = params.project_vector_layer(
+                project, reader.fallback(params.STRATIFICATION_LAYER)
+            )
         return strat_layer
 
     # ------------------------------------------------------------------

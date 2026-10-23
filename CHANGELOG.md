@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 -->
 
+## Unreleased - 2026-10-23
+
+- Processing: **the algorithm dialog now opens with the stratification layer set in the project's defaults.** The layer picked on the Project Properties page was saved but never shown: the dialog's Stratification layer combo always opened empty. A run with the combo left empty still used that layer, through the fallback for omitted inputs, but nothing on screen said so, and the Stratum name / GeoPackage / Zip path expression builders listed no fields because they had no layer to read from. The combo is now prefilled with that layer whenever it still exists in the project as a vector layer; a default naming a removed layer prefills nothing. While a project default is set, clearing the combo still falls back to it, so a full-package-only run needs the default unset on the Project Properties page.
+
 ## 1.0.0 - 2026-10-20
 
 First stable release: the plugin is no longer flagged experimental on plugins.qgis.org.

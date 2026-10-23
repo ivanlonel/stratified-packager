@@ -656,6 +656,29 @@ class TestValidationSurface:
         with zipfile.ZipFile(scenario.out_dir / "A.zip") as archive:
             assert {info.compress_type for info in archive.infolist()} == {zipfile.ZIP_STORED}
 
+    @pytest.mark.parametrize("cleared", [False, True], ids=["omitted", "cleared"])
+    def test_strat_layer_variable_fallback(self, scenario: Scenario, cleared: bool) -> None:
+        """
+        An omitted (headless) or cleared (GUI) strat layer resolves to the project default.
+
+        The project variable stores the layer id the Project Properties page wrote (SPEC §5/§19);
+        a cleared combo sends ``None``.
+        """
+        QgsExpressionContextUtils.setProjectVariable(
+            scenario.project, p.variable_name(p.STRATIFICATION_LAYER), scenario.states.id()
+        )
+        parameters = _base_params(scenario)
+        if cleared:
+            parameters[p.STRATIFICATION_LAYER] = None
+        else:
+            del parameters[p.STRATIFICATION_LAYER]
+        algorithm = StratifiedPackagerAlgorithm()
+        algorithm.initAlgorithm()
+        context = QgsProcessingContext()
+        context.setProject(scenario.project)
+        results = algorithm.processAlgorithm(parameters, context, QgsProcessingFeedback())
+        assert results[p.STRATA_COUNT] == 2
+
 
 class TestEmbeddedProjectAndPayloads:
     """Payload bundling, embedded projects, resources (SPEC §13/§14)."""

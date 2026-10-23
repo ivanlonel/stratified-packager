@@ -20,6 +20,7 @@ pytest.importorskip("qgis", reason="Parameter declaration wraps the Processing f
 # Imported only after the importorskip guard above confirms QGIS is available.
 from qgis.core import (
     Qgis,
+    QgsAnnotationLayer,
     QgsExpressionContextUtils,
     QgsMapLayer,
     QgsProcessingAlgorithm,
@@ -494,6 +495,43 @@ class TestDeclaration:
         assert eligible_layer_ids(project)  # the project would have prefilled something
         definitions = {d.name(): d for d in algorithm.parameterDefinitions()}
         assert definitions[params.LAYERS].defaultValue() in ([], None)
+
+    @pytest.mark.parametrize(
+        ("stored", "prefilled"),
+        [("vector", True), ("annotation", False), ("gone_123", False), (None, False)],
+        ids=["vector-layer", "non-vector-layer", "stale-id", "unset"],
+    )
+    def test_strat_layer_prefills_from_project_variable(
+        self,
+        project: QgsProject,
+        fake_settings: StratifiedPackagerSettings,
+        stored: str | None,
+        prefilled: bool,
+    ) -> None:
+        """
+        ``STRATIFICATION_LAYER`` prefills the variable's id only for a live vector layer.
+
+        Regression: the parameter carried no default, so the dialog opened empty even with a
+        project default set. A stale or non-vector id must prefill nothing, since the combo
+        would show it as raw text.
+        """
+        vector = QgsVectorLayer("Point?crs=EPSG:4326", "strata", "memory")
+        annotation = QgsAnnotationLayer(
+            "notes", QgsAnnotationLayer.LayerOptions(project.transformContext())
+        )
+        assert project.addMapLayers([vector, annotation], addToLegend=False)
+        layer_ids = {"vector": vector.id(), "annotation": annotation.id()}
+        if stored is not None:
+            QgsExpressionContextUtils.setProjectVariable(
+                project,
+                variable_name(params.STRATIFICATION_LAYER),
+                layer_ids.get(stored, stored),
+            )
+        algorithm = _DummyAlgorithm()
+        declare_parameters(algorithm, project=project, settings=fake_settings)
+        definition = algorithm.parameterDefinition(params.STRATIFICATION_LAYER)
+        assert definition is not None
+        assert definition.defaultValue() == (vector.id() if prefilled else None)
 
     def test_enum_parameters_use_static_tokens(self, algorithm: _DummyAlgorithm) -> None:
         """Enum parameters run in static-strings mode with the SPEC tokens."""
