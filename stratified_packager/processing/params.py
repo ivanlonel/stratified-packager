@@ -38,6 +38,7 @@ from qgis.core import (
     QgsProcessingParameterString,
     QgsProcessingParameterVectorLayer,
     QgsProviderRegistry,
+    QgsVectorLayer,
 )
 from qgis.PyQt.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 
@@ -53,7 +54,6 @@ if TYPE_CHECKING:
         QgsProcessingContext,
         QgsProcessingParameterDefinition,
         QgsProject,
-        QgsVectorLayer,
     )
 
     from stratified_packager.settings import StratifiedPackagerSettings
@@ -1101,6 +1101,21 @@ def eligible_layer_ids(project: QgsProject, /) -> list[str]:
     return ids
 
 
+def project_vector_layer(project: QgsProject, layer_id: object, /) -> QgsVectorLayer | None:
+    """
+    Return the vector layer a stored ``STRATIFICATION_LAYER`` default names (SPEC §5/§19).
+
+    The project variable holds a layer **id**; a stale id or one naming a non-vector layer
+    resolves to nothing rather than to a guess.
+
+    :param project: The project to look the layer up in.
+    :param layer_id: The stored layer id (any falsy value means unset).
+    :return: The project's vector layer with that id, or :data:`None`.
+    """
+    candidate = project.mapLayer(str(layer_id or ""))
+    return candidate if isinstance(candidate, QgsVectorLayer) else None
+
+
 # ---------------------------------------------------------------------------
 # Declaration (SPEC §3 table; defaults resolved through the chain)
 # ---------------------------------------------------------------------------
@@ -1145,6 +1160,14 @@ def declare_parameters(
             optional=True,
         )
     )
+    # Unlike LAYERS, the single-layer widget wrapper round-trips the id it is given (it stores
+    # layer->id()), so an id default is safe; a stale or non-vector id prefills nothing rather
+    # than showing as raw text in the combo (SPEC §5).
+    strat_layer = (
+        project_vector_layer(project, default(STRATIFICATION_LAYER))
+        if project is not None
+        else None
+    )
     add(
         QgsProcessingParameterVectorLayer(
             STRATIFICATION_LAYER,
@@ -1152,6 +1175,7 @@ def declare_parameters(
             # TypeVector admits geometryless tables (SPEC §3 footnote on the strat layer).
             # Scoped-enum access verified on QGIS 4.0.3; the bundled stubs lag it.
             types=[QgsProcessing.SourceType.TypeVector],  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            defaultValue=strat_layer.id() if strat_layer is not None else None,
             optional=True,
         )
     )

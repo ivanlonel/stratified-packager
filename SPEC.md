@@ -264,6 +264,15 @@ Resolution chain per input: **input > project variable > plugin setting > builti
   Properties / Layer Properties pages and the all-layers table.
   `LAYERS` values that *are* source strings (a saved model, a script, `qgis_process --LAYERS=<source>`) cannot be disambiguated after the fact; the algorithm reports the collapsed
   entries and keeps one per layer rather than failing or guessing.
+- **`STRATIFICATION_LAYER` prefills with the project variable's layer id** — only when that id
+  names a vector layer currently in the project (`params.project_vector_layer`, the same lookup
+  the runtime fallback uses); a stale or non-vector id prefills nothing, since the combo would
+  otherwise show it as raw text. Unlike `LAYERS`, the single-layer widget wrapper round-trips
+  identity — it resolves the default through `mapLayerFromString` (id first) and hands back
+  `layer->id()` — so an id default is safe even when layers share a source. A cleared combo
+  sends `None`, which `parameterAsVectorLayer` (and, for a stale instance, the runtime fallback)
+  answers with the project default, so a blank strat layer (§3 footnote ¹, full package only)
+  requires the project variable to be unset.
 - **Runtime fallback**: `processAlgorithm` (via `_resolve_inputs`) re-resolves omitted / `None`
   parameters through the same chain, covering headless runs and stale instances. The resolver is
   a single shared helper (`params.InputReader` over `params.resolve_default`) — no per-call drift.
