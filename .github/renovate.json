@@ -98,22 +98,6 @@
       // value as the exact version it is, and tolerates choco's occasional 4-part versions.
       "versioningTemplate": "loose",
       "registryUrlTemplate": "https://community.chocolatey.org/api/v2/"
-    },
-    {
-      "customType": "regex",
-      // prek-action installs prek at `latest` unless told otherwise, so the prek that
-      // runs the CI hooks could change under any PR. Its `prek-version` input is pinned
-      // to uv.lock's prek and tracked here; the grouping rule below lands each bump on
-      // the same PR as the dev group's prek.
-      "managerFilePatterns": [
-        "/^\\.github/workflows/[^/]+\\.ya?ml$/"
-      ],
-      "matchStrings": [
-        "prek-version:\\s*[\"']?(?<currentValue>[0-9][^\"'\\s]*)[\"']?"
-      ],
-      "depNameTemplate": "prek",
-      "datasourceTemplate": "pypi",
-      "versioningTemplate": "pep440"
     }
   ],
   "packageRules": [
@@ -187,12 +171,15 @@
       ]
     },
     {
+      // One PR for the week's action bumps instead of one per action. Majors still get a
+      // separate "(major)" group PR: separateMajorMinor outranks packageRule groups.
       "matchManagers": [
         "github-actions"
       ],
       "addLabels": [
         "github-actions"
-      ]
+      ],
+      "groupName": "github-actions"
     },
     {
       // QGIS is pulled from the Chocolatey community feed by the custom.regex
@@ -249,10 +236,13 @@
       "rangeStrategy": "bump"
     },
     {
-      // The workflows' pinned prek-version (custom regex manager above) moves with the
-      // dev group's prek, in the same PR.
+      // prek-action installs prek at `latest` unless told otherwise, so its `prek-version`
+      // input is pinned to uv.lock's prek. The github-actions manager tracks that input
+      // natively (as `prek`, from j178/prek's v-prefixed GitHub releases), and this rule,
+      // placed after the github-actions group, moves it with the dev group's prek in the
+      // same PR.
       "matchManagers": [
-        "custom.regex"
+        "github-actions"
       ],
       "matchDepNames": [
         "prek"
