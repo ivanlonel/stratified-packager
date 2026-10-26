@@ -292,6 +292,31 @@ def test_tristate_bool_keeps_force_off_expressible() -> None:
     assert editor.scope_value() == "true"
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        *((token, "true") for token in ("yes", " Y ", "On", "t", "1")),
+        *((token, "false") for token in ("no", " N ", "Off", "f", "0")),
+    ],
+)
+@pytest.mark.parametrize(
+    ("inheriting", "tristate"),
+    [(True, False), (False, True), (False, False)],
+    ids=["project-combo", "layer-tristate-combo", "layer-checkbox"],
+)
+def test_bool_editors_accept_every_runtime_token(
+    raw: str, expected: str, *, inheriting: bool, tristate: bool
+) -> None:
+    """Every ``coerce_bool`` alias loads as its canonical value instead of collapsing to unset."""
+    spec = FieldSpec("b", "L", FieldKind.BOOL, placeholder="auto", tristate=tristate)
+    editor = make_override_editor(spec, inheriting=inheriting)
+    editor.set_scope_value(raw)
+    if isinstance(editor, OverrideCheckBox):
+        assert editor.isChecked() == (expected == "true")
+    else:
+        assert editor.scope_value() == expected
+
+
 def test_non_inheriting_placeholders_are_plain() -> None:
     """Layer text/predicate/fields editors use plain placeholders, never the 'inherit' idiom."""
     line = make_override_editor(

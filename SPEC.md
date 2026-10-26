@@ -1108,7 +1108,10 @@ default-aware, so a True-default bool would render inverted: checked = unset, un
 enum as an `OverrideComboBox` whose plain sentinel item (`auto`, data `None`) is the unset
 default, so selecting it clears the variable while `stage`'s explicit `Enabled`/`Disabled`
 (`true`/`false`, force-on/force-off) stay expressible; and `layer_name` / `relation_path` /
-`spatial_predicate` as plain placeholders ("keep original" / "auto"). Token-enum combos on every
+`spatial_predicate` as plain placeholders ("keep original" / "auto"). Every boolean editor loads
+the full `coerce_bool` token set the runtime accepts (`yes`/`on`/`t`/…) and writes back the
+canonical `true`/`false`, so applying a page never clears an accepted alias; an unrecognized
+token loads as unset. Token-enum combos on every
 defaults surface show translated labels and store the §3 token (`FieldSpec.labeled_choices`, read
 back via `currentData()`), as the multi-enum editors already did; only the Processing run dialog
 shows raw tokens (§20). The Options page instead

@@ -66,6 +66,7 @@ from stratified_packager.processing.params import (
     provider_keys,
     translated_label,
 )
+from stratified_packager.toolbelt.utils import coerce_bool
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping, Sequence
@@ -180,6 +181,26 @@ def _set_checkable_csv(combo: QgsCheckableComboBox, csv: str) -> None:
         combo.setItemCheckState(
             index, Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
         )
+
+
+def _canonical_bool(value: str | None) -> str | None:
+    """
+    Map any boolean token the runtime accepts to the canonical ``true`` / ``false``.
+
+    Shares :func:`~stratified_packager.toolbelt.utils.coerce_bool` with the runtime, so an
+    editor never treats an accepted alias (``yes``, ``on``, ``t``, …) as unset and clears it.
+
+    :param value: The stored token, or :data:`None`.
+    :return: ``"true"`` / ``"false"`` for a recognized token; *value* unchanged when blank
+        (unset — ``coerce_bool`` would read it as false) or unrecognized (the editor then
+        falls back to unset).
+    """
+    if value is None or not value.strip():
+        return value
+    try:
+        return "true" if coerce_bool(value) else "false"
+    except ValueError:
+        return value
 
 
 class FieldKind(Enum):
@@ -363,6 +384,19 @@ class OverrideComboBox(QComboBox):
         if self._sentinel_label is not None:
             return
         self.setItemText(0, inherit_placeholder(effective))
+
+
+class OverrideBoolCombo(OverrideComboBox):
+    """An :class:`OverrideComboBox` over ``true`` / ``false`` that loads every boolean alias."""
+
+    @override
+    def set_scope_value(self, value: str | None) -> None:
+        """
+        Select the item matching *value*'s canonical boolean token (or the unset state).
+
+        :param value: Any boolean token, or :data:`None`/empty to unset.
+        """
+        super().set_scope_value(_canonical_bool(value))
 
 
 class OverrideCheckableCombo(QgsCheckableComboBox):
@@ -712,7 +746,7 @@ class OverrideCheckBox(QCheckBox):
         if value is None or str(value).strip() == "":
             self.setChecked(self._default)
         else:
-            self.setChecked(str(value).strip().lower() in {"true", "1", "yes", "on"})
+            self.setChecked(_canonical_bool(value) == "true")
 
     def set_effective(self, effective: str) -> None:
         """
@@ -874,7 +908,7 @@ def make_override_editor(
         case FieldKind.BOOL if not inheriting and not spec.tristate:
             editor = OverrideCheckBox(default_value=spec.default_true, parent=parent)
         case FieldKind.BOOL:
-            editor = OverrideComboBox(
+            editor = OverrideBoolCombo(
                 [
                     (QCoreApplication.translate("StratifiedPackagerWidgets", "Enabled"), "true"),
                     (QCoreApplication.translate("StratifiedPackagerWidgets", "Disabled"), "false"),
@@ -1117,7 +1151,7 @@ def set_concrete_value(spec: FieldSpec, editor: QWidget, value: str) -> None:
         case FieldKind.BOOL:
             if not isinstance(editor, QCheckBox):
                 raise TypeError(_unexpected_editor(spec, editor))
-            editor.setChecked(str(value).strip().lower() in {"true", "1", "yes", "on"})
+            editor.setChecked(_canonical_bool(value) == "true")
         case FieldKind.INT:
             if not isinstance(editor, QSpinBox):
                 raise TypeError(_unexpected_editor(spec, editor))

@@ -35,6 +35,7 @@ _OVERWRITE_VAR = f"{VARIABLE_PREFIX}overwrite_mode"
 _COMPRESSION_VAR = f"{VARIABLE_PREFIX}compression_level"
 _STRAT_LAYER_VAR = f"{VARIABLE_PREFIX}stratification_layer"
 _STRATUM_NAME_VAR = f"{VARIABLE_PREFIX}stratum_name_expression"
+_FULL_PACKAGE_VAR = f"{VARIABLE_PREFIX}export_full_package"
 
 
 @pytest.fixture
@@ -119,6 +120,15 @@ def test_stale_stratification_layer_id_clears_on_apply(parent: QWidget) -> None:
     assert page.defaults_form.dump()["stratification_layer"] is None
     page.apply()
     assert ProjectVariables(project=project).get(_STRAT_LAYER_VAR) is None
+
+
+def test_boolean_alias_survives_apply(parent: QWidget) -> None:
+    """An accepted boolean alias (``yes``) is kept — canonicalized to ``true`` — on apply."""
+    project = QgsProject.instance()
+    QgsExpressionContextUtils.setProjectVariable(project, _FULL_PACKAGE_VAR, "yes")
+    page = ProjectOptionsPageWidget(parent)
+    page.apply()
+    assert str(ProjectVariables(project=project).get(_FULL_PACKAGE_VAR)) == "true"
 
 
 def test_factory_requires_a_parent(parent: QWidget) -> None:
