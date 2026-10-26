@@ -12,6 +12,7 @@ license-files = [ "LICENSE" ]
 authors = [
   { name = "Ivan Donisete Lonel", email = "ivanlonel91@gmail.com" },
 ]
+# Moving the floor? Move .github/renovate.json's constraints.python with it.
 requires-python = ">=3.12"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
