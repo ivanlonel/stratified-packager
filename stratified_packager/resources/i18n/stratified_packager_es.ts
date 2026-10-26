@@ -1191,122 +1191,122 @@
 </context><context>
   <name>StratifiedPackagerWidgets</name>
   <message>
-    <location filename="../../gui/widgets.py" line="82" />
+    <location filename="../../gui/widgets.py" line="83" />
     <source>Overwrite</source>
     <translation>Sobrescribir</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="85" />
+    <location filename="../../gui/widgets.py" line="86" />
     <source>Error if exists</source>
     <translation>Error si existe</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="88" />
+    <location filename="../../gui/widgets.py" line="89" />
     <source>Skip existing</source>
     <translation>Omitir existentes</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="95" />
+    <location filename="../../gui/widgets.py" line="96" />
     <source>None</source>
     <translation>Ninguno</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="96" />
+    <location filename="../../gui/widgets.py" line="97" />
     <source>Embedded in GeoPackage</source>
     <translation>Incrustado en el GeoPackage</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="99" />
+    <location filename="../../gui/widgets.py" line="100" />
     <source>Standalone .qgz project</source>
     <translation>Proyecto .qgz independiente</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="106" />
+    <location filename="../../gui/widgets.py" line="107" />
     <source>Off</source>
     <translation>Desactivado</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="107" />
+    <location filename="../../gui/widgets.py" line="108" />
     <source>Start from warm cache</source>
     <translation>Iniciar desde la caché en caliente</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="110" />
+    <location filename="../../gui/widgets.py" line="111" />
     <source>Refresh warm cache</source>
     <translation>Actualizar la caché en caliente</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="117" />
+    <location filename="../../gui/widgets.py" line="118" />
     <source>By attribute (relations)</source>
     <translation>Por atributo (relaciones)</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="120" />
+    <location filename="../../gui/widgets.py" line="121" />
     <source>Spatial</source>
     <translation>Espacial</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="123" />
+    <location filename="../../gui/widgets.py" line="124" />
     <source>Whole export</source>
     <translation>Exportación completa</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="126" />
+    <location filename="../../gui/widgets.py" line="127" />
     <source>Embedded project only</source>
     <translation>Solo en el proyecto incrustado</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="143" />
+    <location filename="../../gui/widgets.py" line="144" />
     <source>inherit (= {})</source>
     <translation>heredar (= {})</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="145" />
+    <location filename="../../gui/widgets.py" line="146" />
     <source>inherit</source>
     <translation>heredar</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="409" />
+    <location filename="../../gui/widgets.py" line="443" />
     <source>all</source>
     <translation>todas</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="505" />
+    <location filename="../../gui/widgets.py" line="539" />
     <source>DE-9IM pattern(s)…</source>
     <translation>Patrón(es) DE-9IM…</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="512" />
+    <location filename="../../gui/widgets.py" line="546" />
     <source>DE-9IM:</source>
     <translation>DE-9IM:</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="604" />
+    <location filename="../../gui/widgets.py" line="638" />
     <source>Invalid DE-9IM pattern(s): {}</source>
     <translation>Patrón(es) DE-9IM no válido(s): {}</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="792" />
+    <location filename="../../gui/widgets.py" line="826" />
     <source>not set</source>
     <translation>sin definir</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="879" />
+    <location filename="../../gui/widgets.py" line="913" />
     <source>Enabled</source>
     <translation>Activado</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="880" />
+    <location filename="../../gui/widgets.py" line="914" />
     <source>Disabled</source>
     <translation>Desactivado</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="1288" />
+    <location filename="../../gui/widgets.py" line="1322" />
     <source>auto</source>
     <translation>auto</translation>
   </message>
   <message>
-    <location filename="../../gui/widgets.py" line="1299" />
+    <location filename="../../gui/widgets.py" line="1333" />
     <source>keep original</source>
     <translation>mantener original</translation>
   </message>
