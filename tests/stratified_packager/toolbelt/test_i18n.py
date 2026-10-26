@@ -58,20 +58,20 @@ class TestTranslatableTr:
         """The calling class' name must be used as the context."""
         with patch(_QCA) as mock_qca:
             Translatable.tr("Source")
-        mock_qca.translate.assert_called_once_with("Translatable", "Source", None, -1)
+        mock_qca.translate.assert_called_once_with("Translatable", "Source", "", -1)
 
     def test_subclass_context_is_subclass_name(self) -> None:
         """A subclass must translate under its own class name, not :class:`Translatable`."""
         with patch(_QCA) as mock_qca:
             _Widget.tr("Source")
-        mock_qca.translate.assert_called_once_with("_Widget", "Source", None, -1)
+        mock_qca.translate.assert_called_once_with("_Widget", "Source", "", -1)
 
     @pytest.mark.parametrize(
         ("disambiguation", "n"),
-        [(None, -1), ("role", 0), ("plural", 3)],
+        [("", -1), ("role", 0), ("plural", 3)],
         ids=["defaults", "disambiguation", "plural"],
     )
-    def test_forwards_disambiguation_and_n(self, disambiguation: str | None, n: int) -> None:
+    def test_forwards_disambiguation_and_n(self, disambiguation: str, n: int) -> None:
         """
         ``disambiguation`` and ``n`` must be forwarded positionally to
         :meth:`~qgis.PyQt.QtCore.QCoreApplication.translate`.

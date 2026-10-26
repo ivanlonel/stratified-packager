@@ -26,7 +26,7 @@ class Translatable(Protocol):
     def tr(
         cls,
         sourceText: str,  # noqa: N803  # Just to keep the same name as in QObject.tr
-        disambiguation: str | None = None,
+        disambiguation: str = "",
         n: int = -1,
     ) -> str:
         """

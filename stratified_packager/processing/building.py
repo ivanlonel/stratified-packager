@@ -256,9 +256,7 @@ def write_template(
             feedback=steps,
         )
     feedback.pushDebugInfo(
-        QCoreApplication.translate(
-            "Building", "template gpkg holds %n layer(s)", None, len(layers)
-        )
+        QCoreApplication.translate("Building", "template gpkg holds %n layer(s)", "", len(layers))
     )
 
 

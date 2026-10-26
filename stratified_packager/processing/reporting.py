@@ -257,7 +257,7 @@ def account_orphans(
                 QCoreApplication.translate(
                     "StratifiedPackagerAlgorithm",
                     "Layer {}: %n feature(s) match no stratum.",
-                    None,
+                    "",
                     orphans,
                 ).format(prep.layer.name())
             )
