@@ -11,6 +11,15 @@
     "* 0-7 * * 1"
   ],
   "minimumReleaseAge": "1 day",
+  // Skip releases that drop the oldest Python requires-python accepts (sphinx 9.2 needs
+  // >=3.13: #98). A bare version, not the ">=3.12" range Renovate extracts from pyproject.toml:
+  // pep440 versioning has no subset(), so strict filtering falls back to matches(), which needs
+  // a bare version and would drop nearly every release against a range. Keep it at
+  // pyproject.toml's requires-python floor.
+  "constraints": {
+    "python": "3.12"
+  },
+  "constraintsFiltering": "strict",
   "prHourlyLimit": 5,
   // Automatically merge updates if CI build status is passing.
   "automerge": true,
@@ -30,17 +39,16 @@
   "pre-commit": {
     "enabled": true
   },
-  // main's ruleset requires branches to be up to date (strict required status checks), and
-  // GitHub's native auto-merge waits without ever refreshing a stale branch. Rebasing only on
-  // conflict therefore left every PR that a sibling PR overtook blocked until the rebase
-  // checkbox was ticked by hand. Not the "auto" default: that only resolves to
-  // behind-base-branch here through automerge=true, since main is guarded by a ruleset and
-  // Renovate's autodetection reads the classic branch-protection API, which returns 404.
-  "rebaseWhen": "behind-base-branch",
+  // main's ruleset doesn't require branches to be up to date: with it, GitHub's native
+  // auto-merge never refreshes a stale branch, so each merge stalled every sibling PR until the
+  // next Renovate run rebased it (and human PRs forever). Rebasing a PR that's merely behind
+  // would now only re-run the CI matrix, and main's own push CI covers the combination. Not
+  // the "auto" default: that resolves to behind-base-branch here through automerge=true.
+  "rebaseWhen": "conflicted",
   // The Post-Renovate Hooks workflow commits the sync-with-uv / pyproject-fmt results onto
   // pep621 + pre-commit branches as github-actions[bot] (author and committer). Renovate
   // counts a branch carrying a foreign commit author OR committer as modified and then refuses
-  // to rebase it, so without this those PRs would still need the manual tick. The flip side:
+  // to rebase it, so without this those PRs would need the manual tick on conflict. The flip side:
   // Renovate is then free to rebuild such a branch, dropping that commit for the workflow to
   // re-add, so no pep621 update may be lockfile-only (see vulnerabilityAlerts below).
   "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"],
