@@ -14,7 +14,7 @@ repos:
       - id: check-useless-excludes
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.13.5
+    rev: 0.13.6
     hooks:
       - id: uv-lock
         name: uv-lock (frozen)
@@ -93,7 +93,7 @@ repos:
         language: python
         additional_dependencies:
           - mdformat-footnote==0.1.3  # sync-with-uv
-          - mdformat-frontmatter==2.1.2  # sync-with-uv
+          - mdformat-frontmatter==2.2.0  # sync-with-uv
           - mdformat-gfm==1.0.0  # sync-with-uv
           - mdformat-ruff==0.1.3  # sync-with-uv
           - mdformat-toc==0.5.0  # sync-with-uv
@@ -102,7 +102,7 @@ repos:
           - mdit-py-plugins==0.6.1  # sync-with-uv
           - mdurl==0.1.2  # sync-with-uv
           - ruamel-yaml==0.19.1  # sync-with-uv
-          - ruff==0.17.2  # sync-with-uv
+          - ruff==0.17.3  # sync-with-uv
           - wcwidth==0.9.4  # sync-with-uv
 
   - repo: https://github.com/tox-dev/pyproject-fmt
@@ -111,7 +111,7 @@ repos:
       - id: pyproject-fmt
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.2
+    rev: v0.17.3
     hooks:
       - id: ruff-check
         args:
@@ -120,7 +120,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.4.1
+    rev: 7.5.0
     hooks:
       - id: flake8
         args:
@@ -130,14 +130,14 @@ repos:
           - flake8-cognitive-complexity==0.1.0  # sync-with-uv
           - flake8-qgis==2.1.0  # sync-with-uv
           - flake8-rst-docstrings==0.4.0  # sync-with-uv
-          - pydoclint[flake8]==0.11.1  # sync-with-uv
+          - pydoclint[flake8]==0.12.0  # sync-with-uv
           # The checks' engines, pinned so they too change only with uv.lock.
           - cognitive-complexity==1.3.0  # sync-with-uv
           - docstring-parser-fork==0.0.16  # sync-with-uv
           - docutils==0.22.4  # sync-with-uv
           - mccabe==0.7.0  # sync-with-uv
           - pycodestyle==2.15.0  # sync-with-uv
-          - pyflakes==4.0.3  # sync-with-uv
+          - pyflakes==4.1.0  # sync-with-uv
           - pygments==2.21.0  # sync-with-uv
           - restructuredtext-lint==2.0.2  # sync-with-uv
 
