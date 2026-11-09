@@ -86,7 +86,7 @@ def start_debug_server(host: str | None = None, port: int | None = None) -> bool
     try:
         # debugpy is an optional dependency, imported lazily so a missing install is a contained
         # ImportError; it is absent from the type-checking environment.
-        import debugpy  # noqa: PLC0415  # ty: ignore[unresolved-import]
+        import debugpy  # noqa: PLC0415  # ty: ignore[import-not-found]
 
         # sys.executable is the QGIS host binary, not the interpreter; tell debugpy which
         # Python to use for its adapter subprocess.

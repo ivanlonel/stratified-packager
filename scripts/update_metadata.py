@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from qgispluginci import (  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
+from qgispluginci import (  # type: ignore[import-not-found]  # ty: ignore[import-not-found]
     changelog,
     parameters,
     utils,

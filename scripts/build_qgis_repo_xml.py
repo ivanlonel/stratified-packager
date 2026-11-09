@@ -77,7 +77,7 @@ def resolve_plugin_path(explicit: str | os.PathLike[str] | None = None) -> Path:
     )
 
     try:
-        from qgispluginci.parameters import (  # type: ignore[import-not-found]  # noqa: PLC0415  # ty: ignore[unresolved-import]
+        from qgispluginci.parameters import (  # type: ignore[import-not-found]  # noqa: PLC0415  # ty: ignore[import-not-found]
             Parameters,
         )
 
