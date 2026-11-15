@@ -148,6 +148,7 @@
         "repository"
       ],
       "matchDepNames": [
+        "gitleaks/gitleaks",
         "pre-commit/pygrep-hooks",
         "renovatebot/pre-commit-hooks",
         "rhysd/actionlint"
