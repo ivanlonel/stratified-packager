@@ -251,7 +251,7 @@ def _write_members(
         # from_file() defaults to ZIP_STORED; mirror ZipFile.write(), which stamps the
         # archive's compression onto each member (no public API exposes the level).
         info.compress_type = compression
-        info._compresslevel = compression_level or None  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]  # noqa: SLF001
+        info._compresslevel = compression_level or None  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]  # noqa: SLF001
         with source.open("rb") as src, archive.open(info, "w") as dst:
             _copy_stream(src, dst, abort, arcname)
 

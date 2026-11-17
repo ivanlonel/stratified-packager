@@ -397,7 +397,7 @@ class MappingProxy(MutableMapping[str, object]):
     def get[T](self, key: str, default: T | None = ..., *, cast: type[T]) -> T | None: ...
 
     @override
-    def get(  # ty: ignore[invalid-method-override]
+    def get(  # ty: ignore[incompatible-method-override]
         self, key: str, default: object = None, *, cast: type[object] | None = None
     ) -> object:
         """
