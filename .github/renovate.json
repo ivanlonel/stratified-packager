@@ -47,20 +47,21 @@
   "rebaseWhen": "conflicted",
   // The Post-Renovate Hooks workflow commits the sync-with-uv / pyproject-fmt results onto
   // pep621 + pre-commit branches as github-actions[bot] (author and committer). Renovate
-  // counts a branch carrying a foreign commit author OR committer as modified and then refuses
-  // to rebase it, so without this those PRs would need the manual tick on conflict. The flip side:
-  // Renovate is then free to rebuild such a branch, dropping that commit for the workflow to
-  // re-add, so no pep621 update may be lockfile-only (see vulnerabilityAlerts below).
-  "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"],
+  // counts a branch carrying a foreign commit author OR committer as edited and leaves it
+  // alone: processBranch returns "pr-edited" before any reuse or commit logic. That is the
+  // whole loop protection, so NEVER list that author in gitIgnoredAuthors (GitHub's only
+  // platform-ignored author is noreply@github.com). With it ignored, Renovate rebuilds the
+  // branch from main whenever it judges it stale, dropping the hooks commit; the workflow
+  // re-adds it, and that push starts the next Renovate run: 24 force-pushes on #80, 310 on
+  // #110, for unrelated reasons. A conflicted PR is handed back through the "rebase" label
+  // (the workflow's rebase-conflicted job), which rebuilds it exactly once.
+  // Every such PR is "edited" by design, so the warning comment about it would be noise.
+  "suppressNotifications": ["prEditedNotification"],
   // Raise PRs for known vulnerabilities from the osv.dev database, independent of the schedule.
   "osvVulnerabilityAlerts": true,
   // Security PRs default to rangeStrategy "update-lockfile" (a uv.lock-only change), which is
-  // forced over the pep621 rule below. pep621 has no updateLockedDependency, so Renovate can't
-  // tell that such a branch is still current: once the Post-Renovate Hooks commit lands, every
-  // run re-locks against the base branch's uv.lock, sees a change and rebuilds the branch from
-  // main without that commit, which the workflow then re-adds -- an endless force-push loop
-  // (#80). With a bumped range, Renovate finds the bump already on the branch and leaves it
-  // alone, as on every other pep621 PR.
+  // forced over the pep621 rule below. Bump the range instead, as on every other pep621 PR,
+  // so pyproject.toml records the fixed version as the floor.
   "vulnerabilityAlerts": {
     "rangeStrategy": "bump"
   },
@@ -68,8 +69,8 @@
   // Renovate PR touches current instead of piling up as Dependabot security PRs, runs in the
   // Post-Renovate Hooks workflow on the weekly "pep621 and pre-commit" PR instead. There
   // sync-with-uv re-pins the hooks to the refreshed lock in the same commit. Renovate's own
-  // maintenance branch is lockfile-only, so it would be rebuilt on every run once that commit
-  // landed (#80), and its pins would lag the lock.
+  // maintenance PR would conflict with that group PR on uv.lock, and its hook pins would lag
+  // the lock.
   "lockFileMaintenance": {
     "enabled": false
   },
