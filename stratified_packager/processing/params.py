@@ -1156,7 +1156,7 @@ def declare_parameters(
             LAYERS,
             translated_label(LAYERS),
             # Scoped-enum access verified on QGIS 4.0.3; the bundled stubs lag it.
-            QgsProcessing.SourceType.TypeMapLayer,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            QgsProcessing.SourceType.TypeMapLayer,  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             optional=True,
         )
     )
@@ -1174,7 +1174,7 @@ def declare_parameters(
             translated_label(STRATIFICATION_LAYER),
             # TypeVector admits geometryless tables (SPEC §3 footnote on the strat layer).
             # Scoped-enum access verified on QGIS 4.0.3; the bundled stubs lag it.
-            types=[QgsProcessing.SourceType.TypeVector],  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            types=[QgsProcessing.SourceType.TypeVector],  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             defaultValue=strat_layer.id() if strat_layer is not None else None,
             optional=True,
         )
@@ -1335,7 +1335,7 @@ def declare_parameters(
             ),
             # TypeVector admits the geometryless run-report table.
             # Scoped-enum access verified on QGIS 4.0.3; the bundled stubs lag it.
-            type=QgsProcessing.SourceType.TypeVector,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            type=QgsProcessing.SourceType.TypeVector,  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
             createByDefault=True,
             # The sink itself stays required (§9.1: always produced), but the default
             # keeps the parameter omittable on qgis_process, matching §3's "no path ⇒
