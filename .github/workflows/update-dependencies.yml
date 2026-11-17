@@ -5,16 +5,21 @@ on:
     types:
       - opened
       - synchronize
+  # For rebase-conflicted only: post-renovate-hooks' condition reads the pull_request payload,
+  # which is empty on a push, so that job is skipped there.
+  push:
+    branches:
+      - main
 
 jobs:
   post-renovate-hooks:
     # Only run on PRs opened by the Renovate GitHub App. Check the PR author from the event
     # payload rather than github.actor, which reflects whoever triggered the latest run
     # (e.g. a re-run or a pushed commit) and is spoofable (zizmor bot-conditions).
-    # Renovate's lock file maintenance is never a trigger: that branch is lockfile-only, so
-    # Renovate would rebuild it on every run once this job committed to it (the force-push
-    # loop #80 hit). The weekly group PR refreshes the whole lock in step 0 instead, and
-    # renovate.json disables lockFileMaintenance.
+    # Renovate's lock file maintenance is never a trigger: renovate.json disables it, and the
+    # weekly group PR refreshes the whole lock in step 0 instead.
+    # This job's commit makes Renovate count the branch as edited and stop rewriting it (see
+    # renovate.json).
     if: github.event.pull_request.user.login == 'renovate[bot]' &&
       (contains(github.event.pull_request.labels.*.name, 'pep621') ||
       contains(github.event.pull_request.labels.*.name, 'pre-commit'))
@@ -25,6 +30,27 @@ jobs:
       pull-requests: write
 
     steps:
+      # Circuit breaker. Failing without committing is what ends a loop: with no hooks commit
+      # on the branch, Renovate's rebuilt commit equals the tip and it stops pushing. The
+      # comment is the notification (a failed run triggered by renovate[bot] emails nobody).
+      - name: Stop if Renovate keeps rebuilding this branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # Legitimate rebuilds follow a push to main or a ticked box: a few an hour at most.
+          # A loop is one every ~2 minutes.
+          since=$(( $(date +%s) - 1800 ))
+          pushes=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/timeline" --paginate --jq \
+            ".[] | select(.event == \"head_ref_force_pushed\" and .actor.login == \"renovate[bot]\"
+                   and (.created_at | fromdateiso8601) > $since) | .created_at" | wc -l)
+          if [ "$pushes" -gt 5 ]; then
+            msg="Renovate force-pushed this branch $pushes times in 30 minutes. Not committing the post-Renovate hooks again, to break the loop."
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$msg"
+            echo "::error::$msg"
+            exit 1
+          fi
+
       # artipacked is ignored on the checkout below: this job intentionally persists the
       # checkout credentials so git-auto-commit-action (last step) can push the hook results
       # back to the Renovate PR branch — persist-credentials: false would break that push.
@@ -90,8 +116,37 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c # v7.2.1
         with:
           commit_message: "chore(deps): apply post-Renovate hooks"
-          # Pin the author (default: github.actor). The run triggered by this job's own push
-          # has the RENOVATE_TOKEN owner as actor; if Renovate force-pushed meanwhile, that run
-          # commits the hooks onto Renovate's new head under the owner's name, which Renovate
-          # doesn't ignore, so it would count the PR as modified and stop rebasing it.
+          # Pin the author. The default is github.actor, which is renovate[bot] on the runs its
+          # pushes trigger, and this commit must never carry Renovate's own identity: a foreign
+          # author is what makes Renovate count the branch as edited and stop rewriting it
+          # (see renovate.json).
           commit_author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+
+  # A branch the job above committed to is "edited", so Renovate no longer rebases it on
+  # conflict by itself. A PR only becomes conflicted when main moves, so check then and hand
+  # each conflicted one back with Renovate's rebaseLabel: it removes the label and rebuilds
+  # the branch once from main, the job above re-adds its commit, and the branch is "edited"
+  # again. One rebuild per conflict, so this cannot feed itself, and a label set with
+  # GITHUB_TOKEN triggers no workflow.
+  rebase-conflicted:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Ask Renovate to rebuild its conflicted PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # GitHub computes mergeability lazily: right after a push it may still be UNKNOWN.
+          for _ in 1 2 3 4 5 6; do
+            prs=$(gh pr list --author app/renovate --json number,mergeable)
+            [ "$(jq 'any(.mergeable == "UNKNOWN")' <<<"$prs")" = false ] && break
+            sleep 10
+          done
+          jq '.[] | select(.mergeable == "CONFLICTING") | .number' <<<"$prs" | while read -r pr; do
+            gh api --method POST "repos/$GH_REPO/issues/$pr/labels" -f "labels[]=rebase"
+          done
