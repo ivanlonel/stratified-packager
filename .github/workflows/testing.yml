@@ -191,7 +191,7 @@ jobs:
       # verified), cached as an installed tree; it also runs `qgis_process --version`.
       - name: Install QGIS
         id: qgis
-        uses: ivanlonel/setup-qgis-osgeo4w@9797a1d726e799dde1561f844316845a5cec5de4 # v1.0.0
+        uses: ivanlonel/setup-qgis-osgeo4w@8ea7965bacc0c168dc62dde6aee6b5f800dc4944 # v1.0.1
         with:
           version: ${{ matrix.qgis_line }}
 
