@@ -91,8 +91,8 @@ create-venv qgis_prefix_path="":
 
 [doc('Configure .env with git-ignored environment variables (`just setup-env-vars --help` for details)')]
 [group('Environment setup')]
-[script]
 [positional-arguments]
+[script]
 setup-env-vars *args:
     # $args, not interpolation, so a quoted path keeps its spaces (pass a path as
     # `--flag VALUE`, not `--flag=C:/x`: a dashed token with a colon splits there).
@@ -124,7 +124,7 @@ sync:
         uv sync --frozen
     } else {
         {{ error }} "Directory .venv not found."
-        {{ error }} "Run 'just create-venv \"\<qgis_prefix_path\>\"' first to create the workspace virtual environment using the QGIS Python."
+        {{ error }} 'Run `just create-venv "<qgis_prefix_path>"` first to create the workspace virtual environment using the QGIS Python.'
         exit 1
     }
 
@@ -214,8 +214,8 @@ bandit:
 
 [doc('Generate plugins.xml from metadata.txt and command-line options (`just build-xml --help` for details)')]
 [group('Publishing')]
-[script]
 [positional-arguments]
+[script]
 build-xml *args:
     # $args, not interpolation, so a quoted path keeps its spaces (pass a path as
     # `--flag VALUE`, not `--flag=C:/x`: a dashed token with a colon splits there).
@@ -226,8 +226,8 @@ build-xml *args:
 
 [doc('Package plugin for distribution (`just package --help` for usage details)')]
 [group('Publishing')]
-[script]
 [positional-arguments]
+[script]
 package *qgis-plugin-ci_args:
     # $args, not interpolation, so a quoted path keeps its spaces (pass a path as
     # `--flag VALUE`, not `--flag=C:/x`: a dashed token with a colon splits there).
@@ -414,8 +414,8 @@ qgis-process *args:
 
 [doc('Run tests')]
 [group('Testing')]
-[script]
 [positional-arguments]
+[script]
 test *pytest_args:
     # A variadic parameter arrives as one space-joined string, so interpolating it would split
     # `-m "not qgis"` into three pytest arguments; $args keeps the word boundaries. ($args does
