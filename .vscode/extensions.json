@@ -18,7 +18,6 @@
     "njpwerner.autodocstring",
     "redhat.vscode-yaml",
     "swyddfa.esbonio",
-    "tamasfe.even-better-toml",
-    "TheQtCompany.qt-python-pack"
+    "tamasfe.even-better-toml"
   ]
 }
