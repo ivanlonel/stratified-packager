@@ -163,10 +163,10 @@ jobs:
           if-no-files-found: warn
 
   qa-qgis-windows:
-    # Named by qgis_line, never qgis_version: this job is a required status check, and the
-    # check name IS the required context. Putting the patch version here would rename the
-    # context on every Renovate patch bump, so the old context would stop reporting and
-    # every PR would block on a check that no longer exists. Keep qgis_line patch-free.
+    # Named by qgis_line: this job is a required status check, and the check name IS the
+    # required context. Keep it patch-free: the action below floats on the line's newest build,
+    # so a patch in the name would rename the context on every QGIS release, and every PR
+    # would block on a check that no longer exists.
     name: "🪟 QGIS QA · ${{ matrix.qgis_line }}"
     runs-on: windows-latest
     timeout-minutes: 60
@@ -176,18 +176,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # qgis_line must follow qgis_version: the renovate.json custom manager matches the
-        # two adjacent qgis_variant / qgis_version lines, so nothing may come between them.
-        include:
-          - qgis_variant: qgis-ltr
-            qgis_version: "3.40.15"
-            qgis_line: "3.40"
-          - qgis_variant: qgis-ltr
-            qgis_version: "3.44.15"
-            qgis_line: "3.44"
-          - qgis_variant: qgis
-            qgis_version: "4.2.2"
-            qgis_line: "4.2"
+        qgis_line:
+          - "3.40"
+          - "3.44"
+          - "4.4"
 
     steps:
       - name: Get source code
@@ -195,33 +187,21 @@ jobs:
         with:
           persist-credentials: false
 
-      # Cache the downloaded QGIS installer (large), but ALWAYS run the install below so QGIS
-      # is actually extracted to Program Files. Caching chocolatey\lib instead made choco
-      # report "already installed" on a cache hit and skip the real install, leaving
-      # Program Files\QGIS empty (the 4.0.3 job then failed to find qgis_process).
-      - name: Cache Chocolatey download
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}\choco-cache
-          key: choco-dl-${{ matrix.qgis_variant }}-${{ matrix.qgis_version }}
-
+      # Newest official OSGeo4W MSI of the line from download.osgeo.org (SHA-256 + Authenticode
+      # verified), cached as an installed tree; it also runs `qgis_process --version`.
       - name: Install QGIS
-        run: >-
-          choco install ${{ matrix.qgis_variant }}
-          --version ${{ matrix.qgis_version }}
-          -y
-          --no-progress
-          --cache-location ${{ runner.temp }}\choco-cache
-
-      - name: Print QGIS version
-        run: >-
-          & "${env:ProgramFiles}\QGIS ${{ matrix.qgis_version }}\bin\qgis_process-${{ matrix.qgis_variant }}.bat"
-          --version
+        id: qgis
+        uses: ivanlonel/setup-qgis-osgeo4w@858985f92806be1ca588499861f33eb15143a185 # v1.0.0
+        with:
+          version: ${{ matrix.qgis_line }}
 
       - name: Set up virtual environment
         id: setup-venv
+        env:
+          # <root>\apps\qgis or <root>\apps\qgis-ltr, whichever the build ships.
+          QGIS_PREFIX: ${{ steps.qgis.outputs.prefix }}
         run: |
-          scripts/venv_setup.ps1 "${env:ProgramFiles}\QGIS ${{ matrix.qgis_version }}\apps\${{ matrix.qgis_variant }}"
+          scripts/venv_setup.ps1 $env:QGIS_PREFIX
           # Persist PATH so the "Run prek" step can find `just`.
           $env:PATH -split ';' | ForEach-Object {
               $_ | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -241,14 +221,14 @@ jobs:
         env:
           # ty/mypy target Qt6, so skip them on the Qt5 (QGIS 3.x) builds
           # (qgis.PyQt is PyQt5, with no stubs).
-          PREK_SKIP: ${{ startsWith(matrix.qgis_version, '3') && 'ty-check,mypy' }}
+          PREK_SKIP: ${{ startsWith(matrix.qgis_line, '3') && 'ty-check,mypy' }}
         run: just prek-qgis
 
       - name: Upload QA reports
         if: ${{ !cancelled() && steps.setup-venv.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: qa-reports-windows-${{ matrix.qgis_variant }}-${{ matrix.qgis_version }}
+          name: qa-reports-windows-qgis-${{ matrix.qgis_line }}
           path: |
             junit/test-results-qgis.xml
             coverage-reports/coverage-qgis.xml

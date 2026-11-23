@@ -29,11 +29,7 @@
   "enabledManagers": [
     "github-actions",
     "pep621",
-    "pre-commit",
-    // Enables the custom regex manager below (tracks the QGIS Chocolatey packages
-    // pinned in the Windows QA matrix). enabledManagers is a strict allowlist, so
-    // custom.regex must be named explicitly or the custom manager never runs.
-    "custom.regex"
+    "pre-commit"
   ],
   // pre-commit support is currently in beta and requires explicit opt-in.
   "pre-commit": {
@@ -74,33 +70,6 @@
   "lockFileMaintenance": {
     "enabled": false
   },
-  // Renovate has no Chocolatey datasource, so the QGIS / QGIS-LTR Chocolatey
-  // packages pinned in the Windows QA matrix (.github/workflows/testing.yml) are tracked
-  // by querying the Chocolatey community feed (a NuGet v2 OData API) through the
-  // nuget datasource. depName is the choco package id captured from qgis_variant;
-  // the version comes from the adjacent qgis_version line.
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^\\.github/workflows/testing\\.yml$/"
-      ],
-      // RE2 matches per-file (not per-line), so \s spans the newline + indentation
-      // between the paired qgis_variant / qgis_version lines. Quotes are optional to
-      // tolerate either YAML quoting style.
-      "matchStrings": [
-        "qgis_variant:\\s*[\"']?(?<depName>[\\w.-]+)[\"']?\\s+qgis_version:\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?"
-      ],
-      "datasourceTemplate": "nuget",
-      // NOT nuget versioning: in NuGet a bare "3.44.12" is the range ">= 3.44.12", so
-      // Renovate resolves currentVersion to the newest release, finds the range already
-      // satisfied and never proposes an update (pinning it the NuGet way, "[3.44.12]", is
-      // not an option -- choco install --version needs the bare string). loose treats the
-      // value as the exact version it is, and tolerates choco's occasional 4-part versions.
-      "versioningTemplate": "loose",
-      "registryUrlTemplate": "https://community.chocolatey.org/api/v2/"
-    }
-  ],
   "packageRules": [
     {
       "matchDepNames": [
@@ -182,48 +151,6 @@
         "github-actions"
       ],
       "groupName": "github-actions"
-    },
-    {
-      // QGIS is pulled from the Chocolatey community feed by the custom.regex
-      // manager (see customManagers), so tag those PRs `chocolatey` to match how the
-      // other ecosystems are labelled. (The path labeler also adds `ci-cd` for the
-      // workflow-file edit.)
-      "matchManagers": [
-        "custom.regex"
-      ],
-      "matchDepNames": [
-        "qgis",
-        "qgis-ltr"
-      ],
-      "addLabels": [
-        "chocolatey"
-      ],
-      // Give patch its own bucket instead of the default shared "non-major" one, which keeps
-      // only the highest candidate: the 3.40 pin would see 3.44.x (dropped as minor by the
-      // next rule) and never be offered its own 3.40.x patch. It also splits the branch topic
-      // per line (qgis-ltr-3.40.x / -3.44.x), which would otherwise collide on qgis-ltr-3.x.
-      // Must live here and not on the rule below: a rule carrying matchUpdateTypes never
-      // matches before lookup, which is where bucketing happens.
-      "separateMinorPatch": true
-    },
-    {
-      // Only bump the micro (patch) version of the QGIS Chocolatey packages so CI
-      // keeps exercising the pinned major.minor lines (the qgis_line values 3.40, 3.44,
-      // 4.2). Major/minor moves change the tested QGIS baseline, and they also rename the
-      // required status checks, so they stay a deliberate, manual edit paired with a
-      // ruleset update.
-      "matchManagers": [
-        "custom.regex"
-      ],
-      "matchDepNames": [
-        "qgis",
-        "qgis-ltr"
-      ],
-      "matchUpdateTypes": [
-        "major",
-        "minor"
-      ],
-      "enabled": false
     },
     {
       // Group pep621 and pre-commit updates into a single PR so the pre-commit
