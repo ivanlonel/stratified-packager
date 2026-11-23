@@ -57,6 +57,7 @@ from stratified_packager.processing.project_builder import (
     validate_repointed_sources,
 )
 from stratified_packager.toolbelt import gpkg
+from stratified_packager.toolbelt.utils import nullable
 from tests.stratified_packager._qgis_helpers import add_relation
 from tests.stratified_packager.processing.test_bundling import _write_tif
 
@@ -141,7 +142,7 @@ def built(qgis_new_project: QgsProject, tmp_path: Path) -> Built:
     # layer's) survives into the embedded project (SPEC §13).
     project.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))  # ty: ignore  # stub lacks ctor
     assert project.addMapLayers([cities, states, raster], addToLegend=False)
-    root = project.layerTreeRoot()
+    root = nullable(project.layerTreeRoot())
     assert root is not None
     group = root.addGroup("G")
     assert group is not None
@@ -233,13 +234,13 @@ class TestQgzMode:
         names = sorted(layer.name() for layer in reopened.mapLayers().values())
         assert names == ["cities", "dem", "states"]
 
-        root = reopened.layerTreeRoot()
+        root = nullable(reopened.layerTreeRoot())
         assert root is not None
         group = root.findGroup("G")
         assert isinstance(group, QgsLayerTreeGroup)
         assert [child.name() for child in group.children()] == ["cities"]
 
-        manager = reopened.relationManager()
+        manager = nullable(reopened.relationManager())
         assert manager is not None
         relations = manager.relations()
         assert set(relations) == {"r_cs"}
@@ -272,7 +273,7 @@ class TestQgzMode:
 
         reopened = QgsProject()
         assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
-        settings = reopened.viewSettings()
+        settings = nullable(reopened.viewSettings())
         assert settings is not None
         restored = settings.defaultViewExtent()
         assert not restored.isNull()
@@ -284,7 +285,7 @@ class TestQgzMode:
 
     def test_layer_tree_node_state_is_mirrored(self, built: Built) -> None:
         """Collapsed state, legend tweaks and mutually-exclusive groups carry over (§13)."""
-        root = built.project.layerTreeRoot()
+        root = nullable(built.project.layerTreeRoot())
         assert root is not None
         group = root.findGroup("G")
         assert group is not None
@@ -307,7 +308,7 @@ class TestQgzMode:
         )
         reopened = QgsProject()
         assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
-        new_root = reopened.layerTreeRoot()
+        new_root = nullable(reopened.layerTreeRoot())
         assert new_root is not None
         new_group = new_root.findGroup("G")
         assert new_group is not None
@@ -347,7 +348,7 @@ class TestQgzMode:
         assert reopened.read(str(built.gpkg.with_suffix(".qgz")))
         names = sorted(layer.name() for layer in reopened.mapLayers().values())
         assert names == ["cities", "dem"]
-        manager = reopened.relationManager()
+        manager = nullable(reopened.relationManager())
         assert manager is not None
         assert manager.relations() == {}
 
@@ -397,7 +398,7 @@ class TestLiveVirtualLayer:
         definition.setSubsetString(subset)  # noqa: QGS201
         vlayer = QgsVectorLayer(definition.toString(), "v_cities", "virtual")
         assert built.project.addMapLayer(vlayer, addToLegend=False)
-        root = built.project.layerTreeRoot()
+        root = nullable(built.project.layerTreeRoot())
         assert root is not None
         root.addLayer(vlayer)
         return vlayer
@@ -745,7 +746,7 @@ class TestEmbeddedOnlyLayers:
         basemap = QgsRasterLayer(str(_write_tif(tmp_path / "basemap.tif")), "basemap", "gdal")
         assert basemap.isValid()
         assert built.project.addMapLayer(basemap, addToLegend=False)
-        root = built.project.layerTreeRoot()
+        root = nullable(built.project.layerTreeRoot())
         assert root is not None
         root.addLayer(basemap)
         return basemap
@@ -960,7 +961,7 @@ class TestResolveInitialView:
         project = qgis_new_project
         project.setFileName(str(path))
         project.setCrs(QgsCoordinateReferenceSystem("EPSG:4326"))  # ty: ignore  # stub lacks ctor
-        settings = project.viewSettings()
+        settings = nullable(project.viewSettings())
         assert settings is not None
         settings.setDefaultViewExtent(
             QgsReferencedRectangle(QgsRectangle(1.0, 2.0, 3.0, 4.0), project.crs())
@@ -979,7 +980,7 @@ class TestResolveInitialView:
         """Without a saved canvas, the configured default view extent is used."""
         project = qgis_new_project
         project.setCrs(QgsCoordinateReferenceSystem("EPSG:4326"))  # ty: ignore  # stub lacks ctor
-        settings = project.viewSettings()
+        settings = nullable(project.viewSettings())
         assert settings is not None
         settings.setDefaultViewExtent(
             QgsReferencedRectangle(QgsRectangle(1.0, 2.0, 3.0, 4.0), project.crs())

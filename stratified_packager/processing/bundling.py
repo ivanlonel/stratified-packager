@@ -23,6 +23,7 @@ from qgis.core import (
     QgsStyleEntityVisitorInterface,
 )
 
+from stratified_packager.toolbelt.utils import nullable
 from stratified_packager.toolbelt.zipping import iter_file_members
 
 if TYPE_CHECKING:
@@ -59,7 +60,7 @@ def local_source_path(layer: QgsMapLayer) -> Path | None:
     :param layer: Any map layer.
     :return: The decoded ``path`` component, or :data:`None` for non-file sources.
     """
-    registry = QgsProviderRegistry.instance()
+    registry = nullable(QgsProviderRegistry.instance())
     if registry is None:
         return None
     decoded = registry.decodeUri(layer.providerType(), layer.source())

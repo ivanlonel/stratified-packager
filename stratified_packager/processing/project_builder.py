@@ -51,6 +51,7 @@ from stratified_packager.toolbelt.sql import (
     source_tables,
     sqlite_where_error,
 )
+from stratified_packager.toolbelt.utils import nullable
 
 from .material import slowest_summary
 from .params import ProjectInclusion
@@ -252,7 +253,7 @@ def _apply_initial_view(fresh: QgsProject, plan: StratumProjectPlan) -> None:
     """
     if plan.initial_view is None or plan.initial_view.isNull():
         return
-    settings = fresh.viewSettings()
+    settings = nullable(fresh.viewSettings())
     if settings is not None:
         settings.setDefaultViewExtent(plan.initial_view)
 
@@ -273,7 +274,7 @@ def resolve_initial_view(project: QgsProject) -> QgsReferencedRectangle | None:
     saved = read_saved_view_extent(Path(project.fileName()))
     if saved is not None:
         return QgsReferencedRectangle(QgsRectangle(*saved), project.crs())
-    settings = project.viewSettings()
+    settings = nullable(project.viewSettings())
     if settings is not None:
         default = settings.defaultViewExtent()
         if not default.isNull():
@@ -991,8 +992,8 @@ def _replicate_tree(
     :param replacements: Source layer id -> replacement layer.
     :param feedback: Execution feedback channel.
     """
-    source_root = source.layerTreeRoot()
-    fresh_root = fresh.layerTreeRoot()
+    source_root = nullable(source.layerTreeRoot())
+    fresh_root = nullable(fresh.layerTreeRoot())
     if source_root is None or fresh_root is None:
         feedback.pushWarning(
             QCoreApplication.translate(
@@ -1128,8 +1129,8 @@ def _remap_relations(
     :param replacements: Source layer id -> replacement layer.
     :param feedback: Execution feedback channel.
     """
-    source_manager = source.relationManager()
-    fresh_manager = fresh.relationManager()
+    source_manager = nullable(source.relationManager())
+    fresh_manager = nullable(fresh.relationManager())
     if source_manager is None or fresh_manager is None:
         return
     for relation in source_manager.relations().values():

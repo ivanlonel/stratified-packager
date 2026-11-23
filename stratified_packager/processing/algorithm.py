@@ -62,6 +62,7 @@ from stratified_packager.toolbelt.relations import build_relation_graph
 from stratified_packager.toolbelt.settings import LayerVariables
 from stratified_packager.toolbelt.utils import (
     dedupe_names,
+    nullable,
     remove_tree,
     sanitize_filename,
 )
@@ -1158,7 +1159,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
                 )
                 for layer in ordered
             }
-        manager = project.relationManager()
+        manager = nullable(project.relationManager())
         if manager is None:
             raise QgsProcessingException(self.tr("The project has no relation manager."))
         graph = build_relation_graph(manager)
@@ -1787,7 +1788,7 @@ class StratifiedPackagerAlgorithm(QgsProcessingAlgorithm):
         :param layers: The layers to order.
         :return: The ordered layers (tree order; unlisted ones keep input order).
         """
-        root = project.layerTreeRoot()
+        root = nullable(project.layerTreeRoot())
         tree_order = [layer.id() for layer in root.layerOrder()] if root is not None else []
         position = {layer_id: index for index, layer_id in enumerate(tree_order)}
         return sorted(layers, key=lambda lyr: position.get(lyr.id(), len(position)))

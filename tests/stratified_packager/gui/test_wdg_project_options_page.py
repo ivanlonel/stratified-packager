@@ -24,6 +24,7 @@ from qgis.PyQt.QtWidgets import QWidget
 from stratified_packager.gui import ProjectOptionsPageWidget, ProjectOptionsPageWidgetFactory
 from stratified_packager.processing.params import VARIABLE_PREFIX
 from stratified_packager.toolbelt.settings import ProjectVariables
+from stratified_packager.toolbelt.utils import nullable
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -76,7 +77,7 @@ def test_apply_writes_then_clears_variables(parent: QWidget) -> None:
 
 def test_load_reads_project_only_variables(parent: QWidget) -> None:
     """The page reflects the two variable-only rows' project variables."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     layer = QgsVectorLayer("Point", "pts", "memory")
     assert project.addMapLayer(layer) is not None
@@ -90,7 +91,7 @@ def test_load_reads_project_only_variables(parent: QWidget) -> None:
 
 def test_apply_writes_then_clears_project_only_variables(parent: QWidget) -> None:
     """Applying explicit values writes both variables; clearing removes them again."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     layer = QgsVectorLayer("Point", "pts", "memory")
     assert project.addMapLayer(layer) is not None

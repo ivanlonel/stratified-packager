@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING, Final, override
 from qgis.core import Qgis, QgsApplication, QgsProject
 from qgis.PyQt.QtWidgets import QMessageBox, QPushButton
 
+from .utils import nullable
+
 if TYPE_CHECKING:
     from qgis.gui import QgisInterface
 
@@ -220,7 +222,7 @@ class QgisContextFilter(logging.Filter):
         record.qgis_version = Qgis.version()
         if app := QgsApplication.instance():
             record.qgis_locale = app.locale()
-        if project := QgsProject.instance():
+        if project := nullable(QgsProject.instance()):
             record.qgis_project_path = project.absoluteFilePath()
 
         if self._iface is not None:

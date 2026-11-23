@@ -42,6 +42,7 @@ from stratified_packager.toolbelt.logging_records import (
     _qmsgbox_icon,
     level_to_qgis,
 )
+from stratified_packager.toolbelt.utils import nullable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -103,7 +104,7 @@ def _expected_locale() -> str:
 
 def _expected_project_path() -> str:
     """Return the current project's absolute file path, asserting a project exists."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     return project.absoluteFilePath()
 

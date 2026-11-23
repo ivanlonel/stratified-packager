@@ -26,7 +26,7 @@ from stratified_packager.processing.params import (
 )
 from stratified_packager.toolbelt.logging import QgisLoggerWrapper, Target
 from stratified_packager.toolbelt.settings import LayerVariables
-from stratified_packager.toolbelt.utils import remove_diacritical_marks
+from stratified_packager.toolbelt.utils import nullable, remove_diacritical_marks
 
 from .widgets import (
     OverridePredicateCombo,
@@ -159,7 +159,7 @@ class LayersTableDialog(QDialog, FORM_CLASS):  # type: ignore[misc,valid-type]
 
     def _populate(self) -> None:
         """Create one row per (non-plugin) layer with an editor per §4 column."""
-        project = QgsProject.instance()
+        project = nullable(QgsProject.instance())
         root = project.layerTreeRoot() if project is not None else None
         layers = [
             layer
@@ -301,7 +301,7 @@ class LayersTableDialog(QDialog, FORM_CLASS):  # type: ignore[misc,valid-type]
 
         Contained at this QGIS-invoked boundary: a failed write is reported, not raised.
         """
-        project = QgsProject.instance()
+        project = nullable(QgsProject.instance())
         if project is None:
             return
         grouped: dict[str, dict[str, str | None]] = {}
@@ -339,7 +339,7 @@ class LayersTableDialog(QDialog, FORM_CLASS):  # type: ignore[misc,valid-type]
 
         :param layer_id: The id of the layer whose properties to open.
         """
-        project = QgsProject.instance()
+        project = nullable(QgsProject.instance())
         if project is None:
             return
         if layer := project.mapLayer(layer_id):
