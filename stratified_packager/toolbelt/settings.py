@@ -86,6 +86,7 @@ from .mapping_proxy import (
     from_storage,
     register_converter,
 )
+from .utils import nullable
 
 __all__: list[str] = [
     "BoolSetting",
@@ -992,7 +993,7 @@ def _resolve_project(project: QgsProject | None) -> QgsProject:
     :return: A non-:data:`None` :class:`~qgis.core.QgsProject`.
     :raise RuntimeError: If no project is available.
     """
-    resolved = project if project is not None else QgsProject.instance()
+    resolved = project if project is not None else nullable(QgsProject.instance())
     if resolved is None:
         msg = "No QgsProject available; pass project= or ensure QGIS is initialized."
         raise RuntimeError(msg)

@@ -21,6 +21,7 @@ from .settings import StratifiedPackagerSettings
 from .toolbelt.debugging import start_debug_server
 from .toolbelt.i18n import Translatable
 from .toolbelt.logging import QgisLoggerWrapper, Target
+from .toolbelt.utils import nullable
 
 if TYPE_CHECKING:
     from qgis.gui import QgisInterface
@@ -143,7 +144,7 @@ class StratifiedPackager(Translatable):
         # Give the submenu that addPluginToMenu created (identified by the actions it holds,
         # not by title, dodging & mnemonics) the plugin icon. QGIS owns the submenu, so
         # removePluginMenu disposes it — and the icon — in unload(); nothing extra to track.
-        if plugin_menu := self.iface.pluginMenu():
+        if plugin_menu := nullable(self.iface.pluginMenu()):
             for menu_action in plugin_menu.actions():
                 submenu = menu_action.menu()
                 if submenu is not None and self.action_settings in submenu.actions():
@@ -159,7 +160,7 @@ class StratifiedPackager(Translatable):
             self.provider.connect_project_signals()
 
         # -- Plugin help menu
-        plugin_help_menu = self.iface.pluginHelpMenu()
+        plugin_help_menu = nullable(self.iface.pluginHelpMenu())
         if plugin_help_menu is None:
             log.error(self.tr("Could not find QGIS plugin help menu to add documentation link."))
             return
@@ -195,7 +196,7 @@ class StratifiedPackager(Translatable):
     def initProcessing(self) -> None:  # noqa: N802
         """Initialize the processing provider."""
         self.provider = StratifiedPackagerProvider()
-        if processing_registry := QgsApplication.processingRegistry():
+        if processing_registry := nullable(QgsApplication.processingRegistry()):
             if processing_registry.addProvider(self.provider):
                 log.debug(self.tr("Processing provider added successfully."))
             else:
@@ -245,7 +246,7 @@ class StratifiedPackager(Translatable):
         if self.provider is None:
             return
         self.provider.disconnect_project_signals()
-        if processing_registry := QgsApplication.processingRegistry():
+        if processing_registry := nullable(QgsApplication.processingRegistry()):
             if not processing_registry.removeProvider(self.provider):
                 log.warning(self.tr("Failed to remove processing provider during plugin unload."))
         else:
@@ -268,7 +269,7 @@ class StratifiedPackager(Translatable):
         self.action_project_defaults = None
         self.action_layers = None
 
-        plugin_help_menu = self.iface.pluginHelpMenu()
+        plugin_help_menu = nullable(self.iface.pluginHelpMenu())
         for action in (
             self.action_plugin_help_menu_documentation,
             self.action_plugin_help_menu_separator,

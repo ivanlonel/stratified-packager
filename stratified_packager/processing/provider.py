@@ -10,6 +10,7 @@ from qgis.PyQt.QtCore import QMetaObject, QObject, QTimer
 from stratified_packager.__about__ import __title__, __version__
 from stratified_packager.identity import PLUGIN_SLUG, plugin_icon
 from stratified_packager.toolbelt.logging import QgisLoggerWrapper
+from stratified_packager.toolbelt.utils import nullable
 
 from .algorithm import StratifiedPackagerAlgorithm
 
@@ -70,7 +71,7 @@ class StratifiedPackagerProvider(QgsProcessingProvider):
         """
         if self._refresh_timer is not None:
             return
-        project = QgsProject.instance()
+        project = nullable(QgsProject.instance())
         if project is None:
             log.warning(self.tr("No project available; default-refresh signals not connected."))
             return

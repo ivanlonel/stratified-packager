@@ -37,6 +37,7 @@ from stratified_packager.processing.params import (
     VARIABLE_PREFIX,
 )
 from stratified_packager.toolbelt.settings import LayerVariables
+from stratified_packager.toolbelt.utils import nullable
 
 if TYPE_CHECKING:
     from qgis.gui import QgisInterface
@@ -62,7 +63,7 @@ def layers(
     :param qgis_new_project: pytest-qgis fixture giving each test a clean project.
     :return: The registered layers.
     """
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     created: list[QgsVectorLayer] = []
     for name in ("alpha", "beta"):
@@ -182,9 +183,9 @@ def test_rows_follow_tree_order_and_sorting_is_opt_in(
     layers: list[QgsVectorLayer], qgis_iface: QgisInterface
 ) -> None:
     """Rows default to layer-tree order; sorting is enabled but not applied until requested."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
-    root = project.layerTreeRoot()
+    root = nullable(project.layerTreeRoot())
     assert root is not None
     expected = [
         layer.name()
@@ -204,7 +205,7 @@ def test_name_sort_is_case_and_accent_insensitive(
     qgis_iface: QgisInterface,
 ) -> None:
     """Layer sort ignores case/accents, but accents break ties (SPEC §19)."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     for name in ("Zulu", "ábaco", "Banana", "abaco"):
         vector = QgsVectorLayer("Point?crs=EPSG:4326", name, "memory")
@@ -221,14 +222,14 @@ def test_layer_header_cycles_through_tree_order(
     qgis_iface: QgisInterface,
 ) -> None:
     """The Layer header cycles name-asc → name-desc → default layer-tree order (SPEC §19)."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     # Names inserted out of order so tree order differs from both ascending and descending.
     for name in ("mango", "apple", "zebra"):
         vector = QgsVectorLayer("Point?crs=EPSG:4326", name, "memory")
         assert vector.isValid()
         assert project.addMapLayer(vector) is not None
-    root = project.layerTreeRoot()
+    root = nullable(project.layerTreeRoot())
     assert root is not None
     tree_order = [
         layer.name() for node in root.findLayers() if (layer := node.layer()) is not None
@@ -258,7 +259,7 @@ def test_identical_names_keep_layer_tree_order_when_sorted(
     qgis_iface: QgisInterface,
 ) -> None:
     """Same-named layers retain their layer-tree order after sorting (stable sort, SPEC §19)."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     duplicate_ids: list[str] = []
     for _ in range(2):
@@ -267,7 +268,7 @@ def test_identical_names_keep_layer_tree_order_when_sorted(
         assert project.addMapLayer(vector) is not None
         duplicate_ids.append(vector.id())
     dups = set(duplicate_ids)
-    root = project.layerTreeRoot()
+    root = nullable(project.layerTreeRoot())
     assert root is not None
     expected = [
         layer.id()
@@ -287,7 +288,7 @@ def test_non_vector_layer_gates_warm_marked(
     qgis_iface: QgisInterface,
 ) -> None:
     """Non-vector rows expose only layer-agnostic columns; warm_marked is gated (SPEC §4)."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     annotation = QgsAnnotationLayer(
         "ann", QgsAnnotationLayer.LayerOptions(project.transformContext())

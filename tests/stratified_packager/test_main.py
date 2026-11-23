@@ -33,6 +33,7 @@ from stratified_packager.identity import PLUGIN_SLUG
 from stratified_packager.main import StratifiedPackager
 from stratified_packager.settings import StratifiedPackagerSettings
 from stratified_packager.toolbelt.logging import QgisLoggerWrapper
+from stratified_packager.toolbelt.utils import nullable
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -144,7 +145,7 @@ class TestLifecycle:
         """``initGui`` registers the provider and builds the factories and menu actions."""
         packager.initGui()
 
-        registry = QgsApplication.processingRegistry()
+        registry = nullable(QgsApplication.processingRegistry())
         assert registry is not None
         assert packager.provider is not None
         assert registry.providerById(packager.provider.id()) is not None
@@ -160,7 +161,7 @@ class TestLifecycle:
     def test_unload_reverses_init_gui(self, packager: StratifiedPackager) -> None:
         """``unload`` unregisters the provider and resets every owned attribute (Cleanup rule)."""
         packager.initGui()
-        registry = QgsApplication.processingRegistry()
+        registry = nullable(QgsApplication.processingRegistry())
         assert registry is not None
         assert packager.provider is not None
         provider_id = packager.provider.id()
@@ -181,7 +182,7 @@ class TestLifecycle:
     def test_init_processing_registers_provider(self, packager: StratifiedPackager) -> None:
         """``initProcessing`` alone adds the provider to the live registry."""
         packager.initProcessing()
-        registry = QgsApplication.processingRegistry()
+        registry = nullable(QgsApplication.processingRegistry())
         assert registry is not None
         assert packager.provider is not None
         assert registry.providerById(packager.provider.id()) is not None
@@ -209,7 +210,7 @@ class TestLifecycle:
     ) -> None:
         """A failing teardown step is contained — ``unload`` still unregisters the provider."""
         packager.initGui()
-        registry = QgsApplication.processingRegistry()
+        registry = nullable(QgsApplication.processingRegistry())
         assert registry is not None
         assert packager.provider is not None
         provider_id = packager.provider.id()

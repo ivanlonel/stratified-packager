@@ -25,6 +25,7 @@ from stratified_packager.toolbelt.utils import (
     _MAX_FILENAME_LENGTH,
     _WINDOWS_RESERVED_NAMES,
     coerce_bool,
+    nullable,
     python_executable,
     remove_diacritical_marks,
     remove_tree,
@@ -36,6 +37,12 @@ from ._unicode_blocks import UNICODE_BLOCKS
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.mark.parametrize("value", [None, object()])
+def test_nullable_returns_its_argument(value: object) -> None:
+    """``nullable`` is the identity at runtime; only its static type widens."""
+    assert nullable(value) is value
 
 
 # ---------------------------------------------------------------------------

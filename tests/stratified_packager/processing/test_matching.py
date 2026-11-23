@@ -43,6 +43,7 @@ from stratified_packager.processing.matching import (
 )
 from stratified_packager.processing.params import MatchingMethod
 from stratified_packager.toolbelt.relations import RelationGraph, build_relation_graph
+from stratified_packager.toolbelt.utils import nullable
 from tests.stratified_packager._qgis_helpers import add_relation
 
 pytestmark = pytest.mark.qgis
@@ -108,7 +109,7 @@ class Network:
 
     def graph(self) -> RelationGraph:
         """Return a fresh relation graph over the current manager state."""
-        manager = self.project.relationManager()
+        manager = nullable(self.project.relationManager())
         assert manager is not None
         return build_relation_graph(manager)
 

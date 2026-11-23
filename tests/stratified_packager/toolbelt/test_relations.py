@@ -25,6 +25,7 @@ from stratified_packager.toolbelt.relations import (
     build_relation_graph,
     validate_pinned_path,
 )
+from stratified_packager.toolbelt.utils import nullable
 from tests.stratified_packager._qgis_helpers import add_relation, relation_manager
 
 pytestmark = pytest.mark.qgis
@@ -73,7 +74,7 @@ def network(qgis_new_project: QgsProject) -> RelationNetwork:
         [("state_country", "country"), ("state_code", "code")],
     )
     add_relation("r_districts_cities", districts, cities, [("city_id", "cid")])
-    manager = project.relationManager()
+    manager = nullable(project.relationManager())
     assert manager is not None
     graph = build_relation_graph(manager)
     return RelationNetwork(states=states, cities=cities, districts=districts, graph=graph)
@@ -188,7 +189,7 @@ class TestAllShortestPaths:
         :param network: The fixture network.
         """
         loner = QgsVectorLayer("NoGeometry?field=a:integer", "loner", "memory")
-        project = QgsProject.instance()
+        project = nullable(QgsProject.instance())
         assert project is not None
         assert project.addMapLayer(loner, addToLegend=False)
         assert not all_shortest_paths(network.graph, loner.id(), network.states.id())

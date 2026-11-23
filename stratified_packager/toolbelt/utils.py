@@ -40,6 +40,20 @@ class OperationAbortedError(RuntimeError):
     """Raised when a long-running toolbelt operation is aborted via its abort callback."""
 
 
+def nullable[T](value: T | None, /) -> T | None:
+    """
+    Return *value* unchanged, typed as optional.
+
+    Wrap a getter whose stubs differ in ``Optional``-ness across the supported versions, so
+    a :data:`None` guard on its result type-checks under all of them: QGIS 4.4+ stubs drop
+    ``Optional`` from e.g. ``QgsProject.instance()``, which older stubs still declare.
+
+    :param value: The value to widen.
+    :return: *value* itself.
+    """
+    return value
+
+
 def coerce_bool(raw: object, /) -> bool:
     """
     Interpret a raw value as a boolean.

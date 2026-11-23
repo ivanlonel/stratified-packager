@@ -54,6 +54,7 @@ from stratified_packager.processing.params import (
     MatchingMethod,
 )
 from stratified_packager.settings import StratifiedPackagerSettings
+from stratified_packager.toolbelt.utils import nullable
 
 pytestmark = pytest.mark.qgis
 """Marks the whole module as requiring a Qt runtime."""
@@ -207,7 +208,7 @@ def test_override_layer_combo_round_trips_layer_ids(
     qgis_new_project: Never,  # noqa: ARG001  # clean project
 ) -> None:
     """The layer combo starts unset, stores layer ids, and treats unknown ids as unset."""
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
     points = QgsVectorLayer("Point", "pts", "memory")
     table = QgsVectorLayer("None", "tbl", "memory")  # geometryless: must pass the filter

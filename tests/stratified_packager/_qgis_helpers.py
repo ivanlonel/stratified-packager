@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from stratified_packager.toolbelt.utils import nullable
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -50,9 +52,9 @@ def relation_manager() -> QgsRelationManager:
     # GDAL helpers without a qgis installation.
     from qgis.core import QgsProject  # noqa: PLC0415
 
-    project = QgsProject.instance()
+    project = nullable(QgsProject.instance())
     assert project is not None
-    manager = project.relationManager()
+    manager = nullable(project.relationManager())
     assert manager is not None
     return manager
 

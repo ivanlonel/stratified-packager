@@ -29,6 +29,7 @@ from qgis.core import (
 
 from stratified_packager.processing.params import COMPRESSION_LEVEL, variable_name
 from stratified_packager.processing.provider import StratifiedPackagerProvider
+from stratified_packager.toolbelt.utils import nullable
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -47,7 +48,7 @@ def provider(
     :param qgis_processing: pytest-qgis fixture that initialises the Processing framework.
     :yield: The freshly registered provider.
     """
-    registry = QgsApplication.processingRegistry()
+    registry = nullable(QgsApplication.processingRegistry())
     assert registry is not None
     _provider = StratifiedPackagerProvider()
     registry.addProvider(_provider)

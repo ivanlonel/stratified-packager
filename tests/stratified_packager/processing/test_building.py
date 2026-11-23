@@ -43,6 +43,7 @@ from stratified_packager.processing.matching import LayerMatchPlan, in_filter_ex
 from stratified_packager.processing.params import MatchingMethod
 from stratified_packager.toolbelt import gpkg
 from stratified_packager.toolbelt.relations import RelationEdge, RelationHop
+from stratified_packager.toolbelt.utils import nullable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -163,7 +164,7 @@ def feedback() -> QgsProcessingFeedback:
 @pytest.fixture
 def project() -> QgsProject:
     """Return the QGIS project (supplies the transform context)."""
-    instance = QgsProject.instance()
+    instance = nullable(QgsProject.instance())
     assert instance is not None
     return instance
 

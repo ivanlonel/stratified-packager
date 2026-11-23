@@ -44,7 +44,7 @@ from qgis.PyQt.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 
 from stratified_packager.identity import PLUGIN_SLUG
 from stratified_packager.toolbelt.settings import LayerVariables, ProjectVariables
-from stratified_packager.toolbelt.utils import coerce_bool
+from stratified_packager.toolbelt.utils import coerce_bool, nullable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -474,7 +474,7 @@ def provider_keys() -> list[str]:
     :return: The provider registry's keys, sorted.
     :raise RuntimeError: If the provider registry is unavailable (QGIS not initialized).
     """
-    registry = QgsProviderRegistry.instance()
+    registry = nullable(QgsProviderRegistry.instance())
     if registry is None:  # only reachable outside a running QGIS
         msg = "QgsProviderRegistry is unavailable — QGIS is not initialized."
         raise RuntimeError(msg)

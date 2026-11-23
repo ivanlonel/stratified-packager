@@ -66,7 +66,7 @@ from stratified_packager.processing.params import (
     provider_keys,
     translated_label,
 )
-from stratified_packager.toolbelt.utils import coerce_bool
+from stratified_packager.toolbelt.utils import coerce_bool, nullable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping, Sequence
@@ -843,7 +843,7 @@ class OverrideLayerCombo(QgsMapLayerComboBox):
 
         :param value: The layer id, or :data:`None`/empty to unset.
         """
-        project = QgsProject.instance()
+        project = nullable(QgsProject.instance())
         layer = project.mapLayer(value) if project is not None and value else None
         if isinstance(layer, QgsVectorLayer):
             self.setLayer(layer)

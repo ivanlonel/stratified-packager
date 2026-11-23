@@ -17,6 +17,7 @@ from qgis.core import QgsProviderRegistry
 from qgis.PyQt.QtCore import QCoreApplication
 
 from stratified_packager.toolbelt.sql import sqlite_where_error
+from stratified_packager.toolbelt.utils import nullable
 
 from . import params
 from .matching import LayerMatchPlan
@@ -198,7 +199,7 @@ def normalized_source_key(
     :param feedback: Execution feedback channel.
     :return: The hashable key, or :data:`None` when the source cannot be decoded.
     """
-    registry = QgsProviderRegistry.instance()
+    registry = nullable(QgsProviderRegistry.instance())
     if registry is None:
         return None
     decoded = registry.decodeUri(provider_type, source)
