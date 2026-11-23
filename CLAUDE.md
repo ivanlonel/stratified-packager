@@ -189,3 +189,5 @@ just bootstrap "C:\Program Files\QGIS 3.40.15\apps\qgis-ltr"
 ```
 
 `just bootstrap` chains: `install-uv` → `create-venv` → `setup-env-vars` → `install-debugpy` → `customize-pth` → `install-hooks`.
+
+A **git worktree** needs its own QGIS-linked venv before it can commit. `git worktree add` fires the post-checkout hooks, whose `uv-sync` builds a plain `.venv` (no QGIS site-packages) in the new worktree, and the always-run `deptry` hook then fails every commit on the unresolved `qgis`/`osgeo` imports. In the worktree, delete that `.venv` and run only `just create-venv <prefix>` and `just customize-pth`: the rest of `just bootstrap` updates uv globally and rewrites the git hooks all worktrees share.
