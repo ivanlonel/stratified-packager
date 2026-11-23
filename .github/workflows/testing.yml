@@ -30,6 +30,7 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.14"
+          - "3.15"
         runner:
           - windows-latest
           - ubuntu-latest
@@ -68,8 +69,7 @@ jobs:
         qgis_tag:
           - "3.40-noble" # Ubuntu 24.04, Python 3.12
           - "3.44-trixie" # Debian 13, Python 3.13
-          - "4.2"
-          # - "4.2-resolute" # Ubuntu 26.04, Python 3.14
+          - "4.4-resolute" # Ubuntu 26.04, Python 3.14
 
     container:
       image: qgis/qgis:${{ matrix.qgis_tag }}
